@@ -1,0 +1,55 @@
+@import "tailwindcss";
+
+@theme {
+  --color-primary: #00BCD4;     /* Bright Cyber Cyan */
+  --color-accent: #00897B;      /* Deep Teal */
+  --color-urgency: #FACC15;     /* Keep yellow/orange for urgency badges */
+  --color-background: #F8FAFC;  /* Very icy white/gray bg */
+  --font-inter: "Inter", sans-serif;
+  --font-sans: "Inter", sans-serif;
+}
+
+:root {
+  background-color: var(--color-background);
+  color: #111111; 
+}
+
+/* Glassmorphism & Animations */
+.glass-panel {
+  background: rgba(255, 255, 255, 0.7);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.5);
+  box-shadow: 0 8px 32px 0 rgba(0, 150, 180, 0.05);
+}
+
+.hero-gradient-overlay {
+  background: linear-gradient(180deg, #0f687a 0%, #159ba3 40%, rgba(200, 240, 245, 0.8) 80%, #F8FAFC 100%);
+}
+
+.floating-glass-rect {
+  background: linear-gradient(145deg, rgba(255,255,255,0.1), rgba(255,255,255,0.02));
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255,255,255,0.1);
+}
+
+.hover-glow:hover {
+  box-shadow: 0 0 15px rgba(0, 188, 212, 0.6);
+}
+
+body {
+  margin: 0;
+  display: flex;
+  min-height: 100vh;
+  min-width: 320px;
+}
+
+#root {
+  width: 100%;
+}
+
+/* Micro-animations */
+.btn-tap:active {
+  transform: scale(0.98);
+  transition: transform 0.1s;
+}
