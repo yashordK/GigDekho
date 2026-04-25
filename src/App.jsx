@@ -31,7 +31,8 @@ function MainLayout() {
   const location = useLocation();
   const { user } = useAuth();
 
-  const isLanding  = (location.pathname === '/' && !user) || location.pathname === '/landing';
+  const isIndexLanding = location.pathname === '/' && !user && !localStorage.getItem('hasSeenLanding');
+  const isLanding  = isIndexLanding || location.pathname === '/landing';
   const isAuth     = location.pathname.startsWith('/auth') || location.pathname.startsWith('/setup');
   const isGigDetail = location.pathname.startsWith('/gig/');
 
@@ -62,8 +63,13 @@ function IndexRoute() {
     );
   }
 
-  // Not logged in → always show Landing (ignore old userIntent)
-  if (!user) return <LandingScreen />;
+  // Not logged in
+  if (!user) {
+    if (localStorage.getItem('hasSeenLanding')) {
+      return <HomeScreen />;
+    }
+    return <LandingScreen />;
+  }
 
   // Logged in → route by role
   if (profile?.role === 'organizer') return <OrganizerHomeScreen />;

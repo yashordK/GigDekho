@@ -4,9 +4,8 @@ export default function LandingScreen() {
   const navigate = useNavigate();
 
   const handleWorkerFlow = () => {
-    // Clear any stale intent so landing always shows fresh
-    localStorage.removeItem('userIntent');
-    navigate('/auth');
+    localStorage.setItem('hasSeenLanding', 'true');
+    navigate('/');
   };
 
   const handleOrganizerFlow = () => {
