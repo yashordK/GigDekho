@@ -68,7 +68,7 @@ function IndexRoute() {
     if (localStorage.getItem('hasSeenLanding')) {
       return <HomeScreen />;
     }
-    return <LandingScreen />;
+    return <Navigate to="/landing" replace />;
   }
 
   // Logged in → route by role
@@ -85,10 +85,8 @@ function App() {
           {/* Auth screens (no layout) */}
           <Route path="/auth" element={<AuthScreen />} />
 
-          {/* Landing accessible without auth (no role selected yet) */}
-          <Route path="/landing" element={<LandingScreen />} />
-
           <Route element={<MainLayout />}>
+            <Route path="/landing" element={<LandingScreen />} />
             <Route path="/setup" element={
               <ProtectedRoute><SetupProfileScreen /></ProtectedRoute>
             } />
