@@ -138,31 +138,31 @@ export default function HomeScreen() {
             {stats.live} gigs live right now. Participate, volunteer and earn through events in Indore!
           </p>
           <div className="flex flex-col sm:flex-row items-center justify-center space-y-4 sm:space-y-0 sm:space-x-4 mb-10">
-             <button id="browse-gigs" onClick={() => document.getElementById('available-jobs')?.scrollIntoView({ behavior: 'smooth' })} className="bg-[#00BCD4] hover:bg-[#00BCD4]/90 text-white font-bold px-8 py-3.5 rounded-full shadow-lg transition-all btn-tap w-full sm:w-auto">
+             <button id="browse-gigs" onClick={() => document.getElementById('available-jobs')?.scrollIntoView({ behavior: 'smooth' })} className="bg-[#F4511E] hover:bg-[#D84315] text-white font-bold px-8 py-3.5 rounded-full shadow-lg transition-all btn-tap w-full sm:w-auto">
                Browse Gigs
              </button>
-             <button onClick={() => setShowHowItWorks(true)} className="border border-white/50 hover:bg-white/10 text-black font-bold px-8 py-3.5 rounded-full glass-panel shadow-sm transition-all btn-tap w-full sm:w-auto">
+             <button onClick={() => setShowHowItWorks(true)} className="border border-white/30 hover:bg-white hover:text-[#111111] text-white font-bold px-8 py-3.5 rounded-full glass-panel shadow-sm transition-all btn-tap w-full sm:w-auto">
                How it works
              </button>
           </div>
           
           {/* Stat Cards */}
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3 lg:gap-4 max-w-4xl mx-auto">
-             <div className="glass-panel border border-white/20 p-4 rounded-2xl flex flex-col items-center justify-center text-center">
-                <span className="text-black/80 text-[10px] uppercase font-black tracking-widest mb-1">Live Gigs</span>
-                <span className="text-2xl font-black text-black tracking-tight">{stats.live}</span>
+             <div className="glass-panel p-4 rounded-2xl flex flex-col items-center justify-center text-center">
+                <span className="text-white/60 text-[10px] uppercase font-black tracking-widest mb-1">Live Gigs</span>
+                <span className="text-2xl font-black text-white tracking-tight">{stats.live}</span>
              </div>
-             <div className="glass-panel border border-white/20 p-4 rounded-2xl flex flex-col items-center justify-center text-center">
-                <span className="text-black/80 text-[10px] uppercase font-black tracking-widest mb-1">Top Pay</span>
-                <span className="text-2xl font-black text-[#00BCD4] tracking-tight">₹{stats.topPay >= 1000 ? (stats.topPay/1000).toFixed(1)+'k' : stats.topPay}</span>
+             <div className="glass-panel p-4 rounded-2xl flex flex-col items-center justify-center text-center">
+                <span className="text-white/60 text-[10px] uppercase font-black tracking-widest mb-1">Top Pay</span>
+                <span className="text-2xl font-black text-[#F4511E] tracking-tight">₹{stats.topPay >= 1000 ? (stats.topPay/1000).toFixed(1)+'k' : stats.topPay}</span>
              </div>
-             <div className="glass-panel border border-white/20 p-4 rounded-2xl flex flex-col items-center justify-center text-center">
-                <span className="text-black/80 text-[10px] uppercase font-black tracking-widest mb-1">Hired Today</span>
-                <span className="text-2xl font-black text-black tracking-tight">{stats.hiredToday}</span>
+             <div className="glass-panel p-4 rounded-2xl flex flex-col items-center justify-center text-center">
+                <span className="text-white/60 text-[10px] uppercase font-black tracking-widest mb-1">Hired Today</span>
+                <span className="text-2xl font-black text-white tracking-tight">{stats.hiredToday}</span>
              </div>
-             <div className="glass-panel border border-white/20 p-4 rounded-2xl flex flex-col items-center justify-center text-center">
-                <span className="text-black/80 text-[10px] uppercase font-black tracking-widest mb-1">Payout</span>
-                <span className="text-2xl font-black text-black tracking-tight">1hr</span>
+             <div className="glass-panel p-4 rounded-2xl flex flex-col items-center justify-center text-center">
+                <span className="text-white/60 text-[10px] uppercase font-black tracking-widest mb-1">Payout</span>
+                <span className="text-2xl font-black text-white tracking-tight">1hr</span>
              </div>
           </div>
         </div>
@@ -194,15 +194,15 @@ export default function HomeScreen() {
 
       {/* Category Strip (overlaps the fade) */}
       <div className="px-4 xl:px-12 w-full mx-auto relative z-20 -mt-16 lg:-mt-24 mb-12">
-        <div className="bg-white/80 backdrop-blur-xl border border-white shadow-[0_8px_30px_rgb(0,0,0,0.04)] rounded-full p-2 flex space-x-1 overflow-x-auto hide-scrollbar max-w-6xl mx-auto items-center">
+        <div className="bg-[#1C1C1C]/80 backdrop-blur-xl border border-white/10 shadow-lg rounded-full p-2 flex space-x-1 overflow-x-auto category-strip max-w-6xl mx-auto items-center">
           {roleCategories.map(cat => (
              <button 
                key={cat.id}
                onClick={() => setSelectedRole(cat.id)}
                className={`flex items-center px-6 lg:px-8 py-3 rounded-full text-[13px] font-bold whitespace-nowrap transition-all flex-shrink-0 ${
                  selectedRole === cat.id 
-                   ? 'bg-[#00BCD4] text-white shadow-md' 
-                   : 'text-slate-600 hover:bg-slate-100/60 hover:text-slate-900'
+                   ? 'bg-[#F4511E] text-white shadow-md' 
+                   : 'text-white/60 hover:bg-white/5 hover:text-white'
                }`}
              >
                {cat.id === 'All Roles' ? 'All' : cat.id}
@@ -218,14 +218,14 @@ export default function HomeScreen() {
           {/* List Header */}
           <div className="mb-6 lg:mb-8 flex justify-between items-start">
              <div className="flex flex-col">
-                <h2 className="text-2xl font-black text-slate-900 tracking-tight mb-1">Available Jobs</h2>
-                <p className="text-[13px] font-medium text-slate-500">Handpicked gigs in Indore based on your profile</p>
+                <h2 className="text-2xl font-black text-white tracking-tight mb-1">Available Jobs</h2>
+                <p className="text-[13px] font-medium text-white/50">Handpicked gigs in Indore based on your profile</p>
              </div>
              <div className="flex space-x-2">
-                <button className="bg-slate-100 hover:bg-slate-200 p-2 rounded-full text-slate-700 transition-colors shadow-sm">
+                <button className="bg-[#1C1C1C] hover:bg-white/10 p-2 rounded-full text-white/70 transition-colors shadow-sm border border-white/5">
                   <SlidersHorizontal size={18} />
                 </button>
-                <button className="bg-slate-100 hover:bg-slate-200 p-2 rounded-full text-slate-700 transition-colors shadow-sm">
+                <button className="bg-[#1C1C1C] hover:bg-white/10 p-2 rounded-full text-white/70 transition-colors shadow-sm border border-white/5">
                   <ArrowDownAZ size={18} />
                 </button>
              </div>
@@ -241,12 +241,12 @@ export default function HomeScreen() {
           {loading && (
             <div className="space-y-4 lg:grid lg:grid-cols-2 lg:gap-5 lg:space-y-0">
               {[1, 2, 3, 4].map(i => (
-                <div key={i} className="bg-white rounded-2xl p-5 lg:p-6 shadow-sm border border-slate-100 animate-pulse">
-                  <div className="h-4 bg-slate-200 rounded w-1/4 mb-3"></div>
-                  <div className="h-6 bg-slate-200 rounded w-3/4 mb-4"></div>
+                <div key={i} className="bg-[#1C1C1C] rounded-2xl p-5 lg:p-6 shadow-sm border border-white/5 animate-pulse">
+                  <div className="h-4 bg-white/10 rounded w-1/4 mb-3"></div>
+                  <div className="h-6 bg-white/10 rounded w-3/4 mb-4"></div>
                   <div className="flex justify-between">
-                    <div className="h-8 bg-slate-200 rounded w-1/3"></div>
-                    <div className="h-8 bg-slate-200 rounded w-1/4"></div>
+                    <div className="h-8 bg-white/10 rounded w-1/3"></div>
+                    <div className="h-8 bg-white/10 rounded w-1/4"></div>
                   </div>
                 </div>
               ))}
@@ -255,14 +255,14 @@ export default function HomeScreen() {
 
           {/* Empty State */}
           {!loading && filteredGigs.length === 0 && !error && (
-             <div className="bg-slate-50 border border-slate-100 rounded-2xl p-8 lg:p-16 flex flex-col items-center justify-center text-center mt-6">
-               <div className="w-20 h-20 bg-blue-50 rounded-full flex items-center justify-center mb-5 text-primary opacity-80">
+             <div className="bg-[#1C1C1C] border border-white/5 rounded-2xl p-8 lg:p-16 flex flex-col items-center justify-center text-center mt-6">
+               <div className="w-20 h-20 bg-white/5 rounded-full flex items-center justify-center mb-5 text-[#F4511E]">
                  <Briefcase size={36} />
                </div>
-               <p className="text-slate-600 font-medium mb-5">No gigs right now — check back in a bit.</p>
+               <p className="text-white/60 font-medium mb-5">No gigs right now — check back in a bit.</p>
                <button 
                  onClick={fetchData}
-                 className="flex items-center justify-center bg-primary text-white px-5 py-2.5 rounded-xl font-bold min-h-[44px] text-sm shadow-sm hover:bg-orange-600 transition-colors btn-tap"
+                 className="flex items-center justify-center bg-[#F4511E] text-white px-5 py-2.5 rounded-xl font-bold min-h-[44px] text-sm shadow-sm hover:bg-[#D84315] transition-colors btn-tap"
                >
                  <RefreshCw size={16} className="mr-2" /> Refresh
                </button>
@@ -287,25 +287,25 @@ export default function HomeScreen() {
            
            {/* Your Activity - Restricted to logged in users */}
            {user && (
-             <div className="bg-[#F8FAFC] rounded-3xl p-6 shadow-sm border border-slate-100 flex flex-col items-start relative">
+             <div className="bg-[#1C1C1C] rounded-3xl p-6 shadow-sm border border-white/5 flex flex-col items-start relative">
                 <div className="flex items-center mb-6">
-                   <div className="w-10 h-10 bg-cyan-100 rounded-full flex items-center justify-center text-[#00BCD4] mr-4 border border-cyan-200 shadow-sm">
+                   <div className="w-10 h-10 bg-[#F4511E]/10 rounded-full flex items-center justify-center text-[#F4511E] mr-4 border border-[#F4511E]/20 shadow-sm">
                      <Zap size={20} fill="currentColor" />
                    </div>
                    <div>
-                     <h3 className="font-extrabold text-slate-900 text-[15px] leading-tight">Your Activity</h3>
-                     <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Worker Performance</span>
+                     <h3 className="font-extrabold text-white text-[15px] leading-tight">Your Activity</h3>
+                     <span className="text-[10px] font-black text-white/40 uppercase tracking-widest">Worker Performance</span>
                    </div>
                 </div>
                 
                 <div className="grid grid-cols-2 gap-4 w-full">
-                   <div className="bg-white rounded-full py-4 flex flex-col items-center justify-center shadow-sm border border-slate-100">
-                      <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1 leading-none">Gigs Done</p>
-                      <p className="text-2xl font-black text-slate-900 leading-none tracking-tight">{userStats.done}</p>
+                   <div className="bg-[#111111] rounded-2xl py-4 flex flex-col items-center justify-center shadow-sm border border-white/5">
+                      <p className="text-[9px] font-black text-white/40 uppercase tracking-widest mb-1 leading-none">Gigs Done</p>
+                      <p className="text-2xl font-black text-white leading-none tracking-tight">{userStats.done}</p>
                    </div>
-                   <div className="bg-white rounded-full py-4 flex flex-col items-center justify-center shadow-sm border border-slate-100 relative">
-                      <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1 leading-none">Rating</p>
-                      <p className="text-2xl font-black text-slate-900 leading-none tracking-tight">{userStats.rating}</p>
+                   <div className="bg-[#111111] rounded-2xl py-4 flex flex-col items-center justify-center shadow-sm border border-white/5 relative">
+                      <p className="text-[9px] font-black text-white/40 uppercase tracking-widest mb-1 leading-none">Rating</p>
+                      <p className="text-2xl font-black text-[#F4511E] leading-none tracking-tight">{userStats.rating}</p>
                    </div>
                 </div>
              </div>
@@ -313,24 +313,24 @@ export default function HomeScreen() {
 
            {/* Trending Now */}
            {trendingGigs.length > 0 && (
-             <div className="bg-white rounded-3xl shadow-sm border border-slate-100 py-6">
-                <h3 className="font-extrabold text-slate-900 px-6 mb-6 tracking-tight text-[17px]">
+             <div className="bg-[#1C1C1C] rounded-3xl shadow-sm border border-white/5 py-6">
+                <h3 className="font-extrabold text-white px-6 mb-6 tracking-tight text-[17px]">
                   Trending Now
                 </h3>
                 
                 <div className="space-y-5 mt-2 px-6">
                    {trendingGigs.map((trend, i) => (
-                     <div key={trend.id} className={`flex items-start ${i > 0 && 'border-t border-slate-50 pt-5'}`}>
+                     <div key={trend.id} className={`flex items-start ${i > 0 && 'border-t border-white/5 pt-5'}`}>
                         <div className={`w-9 h-9 rounded-full flex items-center justify-center mr-4 border shrink-0 ${
-                          i === 0 ? 'bg-orange-50 text-orange-600 border-orange-100' :
-                          i === 1 ? 'bg-cyan-50 text-cyan-500 border-cyan-100' :
-                          'bg-purple-50 text-purple-500 border-purple-100'
+                          i === 0 ? 'bg-orange-500/10 text-orange-500 border-orange-500/20' :
+                          i === 1 ? 'bg-cyan-500/10 text-cyan-400 border-cyan-500/20' :
+                          'bg-purple-500/10 text-purple-400 border-purple-500/20'
                         }`}>
                           <Star size={16} fill="none" strokeWidth={3}/>
                         </div>
                         <div className="cursor-pointer hover:underline" onClick={() => navigate(`/gig/${trend.id}`)}>
-                          <p className="font-bold text-slate-900 text-sm leading-tight line-clamp-1">{trend.title}</p>
-                          <p className="text-slate-400 font-bold text-[11px] mt-0.5">{trend.slots_filled || 0}+ applications in last hour</p>
+                          <p className="font-bold text-white text-sm leading-tight line-clamp-1">{trend.title}</p>
+                          <p className="text-white/40 font-bold text-[11px] mt-0.5">{trend.slots_filled || 0}+ applications in last hour</p>
                         </div>
                      </div>
                    ))}

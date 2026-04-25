@@ -26,7 +26,7 @@ export default function GigCard({ gig, onClick }) {
   return (
     <div 
       onClick={onClick}
-      className={`bg-white rounded-3xl shadow-sm hover:shadow-md border border-slate-100 overflow-hidden cursor-pointer transition-all mb-4 btn-tap flex flex-col p-4 w-full`}
+      className={`bg-[#1C1C1C] rounded-3xl shadow-sm hover:shadow-md border border-white/5 overflow-hidden cursor-pointer transition-all mb-4 btn-tap flex flex-col p-4 w-full`}
     >
        {/* Large Embedded Image Area */}
        <div className="relative h-48 w-full bg-slate-900 rounded-2xl overflow-hidden mb-4">
@@ -36,7 +36,7 @@ export default function GigCard({ gig, onClick }) {
            loading="lazy"
            className="w-full h-full object-cover opacity-80"
          />
-         <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent"></div>
+         <div className="absolute inset-0 bg-gradient-to-t from-[#111111]/90 via-black/20 to-transparent"></div>
          
          <div className="absolute top-4 left-4 flex gap-2">
             {is_urgent ? (
@@ -45,7 +45,7 @@ export default function GigCard({ gig, onClick }) {
               </span>
             ) : null}
             {!is_urgent && (
-               <span className="bg-white/90 backdrop-blur-md text-slate-900 text-[10px] font-black uppercase tracking-widest px-3 py-1.5 rounded-full shadow-sm">
+               <span className="bg-white/10 backdrop-blur-md text-white text-[10px] font-black uppercase tracking-widest px-3 py-1.5 rounded-full shadow-sm border border-white/20">
                  FEATURED
                </span>
             )}
@@ -64,18 +64,18 @@ export default function GigCard({ gig, onClick }) {
 
        {/* Body Texts */}
        <div className="flex justify-between items-start mb-2 px-1">
-          <h3 className="text-lg font-black text-slate-900 leading-tight">{title}</h3>
-          <span className="text-lg font-black text-[#00BCD4] drop-shadow-sm ml-4">₹{totalEarning.toLocaleString('en-IN')}</span>
+          <h3 className="text-lg font-black text-white leading-tight">{title}</h3>
+          <span className="text-lg font-black text-[#F4511E] drop-shadow-sm ml-4">₹{totalEarning.toLocaleString('en-IN')}</span>
        </div>
 
-       <div className="flex items-center text-slate-500 text-xs font-bold px-1 mb-5 flex-wrap gap-y-2">
+       <div className="flex items-center text-white/50 text-xs font-bold px-1 mb-5 flex-wrap gap-y-2">
           <Calendar size={12} className="mr-1 shrink-0" />
-          <span className="mr-2 text-[#00BCD4]">{dateFormatted}</span>
-          <span className="mr-2 text-slate-300 hidden sm:inline">•</span>
+          <span className="mr-2 text-[#F4511E]">{dateFormatted}</span>
+          <span className="mr-2 text-white/20 hidden sm:inline">•</span>
           
           <MapPin size={12} className="mr-1 shrink-0 lg:ml-0 md:ml-0 sm:ml-0" />
           <span className="mr-2 truncate max-w-[120px]">{location_text}</span>
-          <span className="mr-2 text-slate-300">•</span>
+          <span className="mr-2 text-white/20">•</span>
           
           <Clock size={12} className="mr-1 shrink-0" />
           <span>{duration_hrs}h</span>
@@ -92,7 +92,7 @@ export default function GigCard({ gig, onClick }) {
        ) : (
          <button 
             onClick={(e) => { e.stopPropagation(); onClick(); }}
-            className="w-full bg-transparent border-2 border-slate-200 hover:border-slate-300 text-slate-700 font-black py-3 rounded-2xl text-[14px] transition-colors btn-tap"
+            className="w-full bg-transparent border-2 border-white/10 hover:border-white/20 hover:bg-white/5 text-white/80 font-black py-3 rounded-2xl text-[14px] transition-colors btn-tap"
           >
             View Details
          </button>

@@ -1,55 +1,93 @@
 @import "tailwindcss";
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap');
 
 @theme {
-  --color-primary: #00BCD4;     /* Bright Cyber Cyan */
-  --color-accent: #00897B;      /* Deep Teal */
-  --color-urgency: #FACC15;     /* Keep yellow/orange for urgency badges */
-  --color-background: #F8FAFC;  /* Very icy white/gray bg */
+  --color-primary: #F4511E;       /* GigDekho Orange */
+  --color-accent:  #FF8A50;       /* Light Orange / Highlight */
+  --color-urgency: #F4511E;       /* Same orange for urgency */
+  --color-background: #111111;    /* Dark background */
+  --color-surface: #1C1C1C;       /* Card surface */
+  --color-border: #2A2A2A;        /* Subtle border */
   --font-inter: "Inter", sans-serif;
   --font-sans: "Inter", sans-serif;
 }
 
 :root {
-  background-color: var(--color-background);
-  color: #111111; 
+  background-color: #111111;
+  color: #F5F5F5;
 }
 
-/* Glassmorphism & Animations */
+/* ── Scrollbar Hiding ───────────────────────────────────────────── */
+.hide-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+.hide-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
+/* ── Glass Panel (dark flavour) ─────────────────────────────────── */
 .glass-panel {
-  background: rgba(255, 255, 255, 0.7);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-  border: 1px solid rgba(255, 255, 255, 0.5);
-  box-shadow: 0 8px 32px 0 rgba(0, 150, 180, 0.05);
+  background: rgba(255, 255, 255, 0.06);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  border: 1px solid rgba(255, 255, 255, 0.08);
 }
 
+/* ── Hero Gradient ──────────────────────────────────────────────── */
 .hero-gradient-overlay {
-  background: linear-gradient(180deg, #0f687a 0%, #159ba3 40%, rgba(200, 240, 245, 0.8) 80%, #F8FAFC 100%);
+  background: linear-gradient(
+    160deg,
+    #1A0A00 0%,
+    #2D1400 25%,
+    #3D1800 50%,
+    #1A0800 75%,
+    #111111 100%
+  );
 }
 
+/* ── Floating Glass Rects ───────────────────────────────────────── */
 .floating-glass-rect {
-  background: linear-gradient(145deg, rgba(255,255,255,0.1), rgba(255,255,255,0.02));
+  background: linear-gradient(145deg, rgba(244,81,30,0.07), rgba(244,81,30,0.01));
   backdrop-filter: blur(10px);
-  border: 1px solid rgba(255,255,255,0.1);
+  border: 1px solid rgba(244,81,30,0.08);
+  border-radius: 24px;
 }
 
+/* ── Hover Glow ─────────────────────────────────────────────────── */
 .hover-glow:hover {
-  box-shadow: 0 0 15px rgba(0, 188, 212, 0.6);
+  box-shadow: 0 0 20px rgba(244, 81, 30, 0.4);
 }
 
+/* ── Base Body ──────────────────────────────────────────────────── */
 body {
   margin: 0;
   display: flex;
   min-height: 100vh;
   min-width: 320px;
+  font-family: "Inter", sans-serif;
+  background-color: #111111;
+  color: #F5F5F5;
 }
 
 #root {
   width: 100%;
 }
 
-/* Micro-animations */
+/* ── Micro Interactions ─────────────────────────────────────────── */
 .btn-tap:active {
-  transform: scale(0.98);
+  transform: scale(0.97);
   transition: transform 0.1s;
+}
+
+/* ── Category / pill strip ──────────────────────────────────────── */
+.category-strip {
+  display: flex;
+  overflow-x: auto;
+  gap: 8px;
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+.category-strip::-webkit-scrollbar {
+  display: none;
 }
