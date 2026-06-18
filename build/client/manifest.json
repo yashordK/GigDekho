@@ -1,0 +1,16 @@
+{
+  "name": "GigDekho",
+  "short_name": "GigDekho",
+  "description": "Earn on your schedule. The best gig work platform.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#FAFAF8",
+  "theme_color": "#F4511E",
+  "icons": [
+    {
+      "src": "/favicon.svg",
+      "sizes": "192x192 512x512",
+      "type": "image/svg+xml"
+    }
+  ]
+}

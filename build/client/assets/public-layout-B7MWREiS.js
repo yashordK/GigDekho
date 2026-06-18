@@ -1,0 +1,1 @@
+import{r as e,s as t,t as n}from"./jsx-runtime-CHMssfQ2.js";import{n as r,r as i,t as a}from"./Footer-CV8vCAJ4.js";var o=n(),s=t(function(){return(0,o.jsxs)(o.Fragment,{children:[(0,o.jsx)(i,{}),(0,o.jsx)(`main`,{id:`main-content`,className:`min-h-screen pt-[64px] pb-24 lg:pb-0`,children:(0,o.jsx)(e,{})}),(0,o.jsx)(r,{}),(0,o.jsx)(a,{})]})});export{s as default};
