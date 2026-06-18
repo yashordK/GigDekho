@@ -1,9 +1,16 @@
 {
   "buildCommand": "npm run build",
-  "outputDirectory": "build/client",
   "installCommand": "npm install",
   "framework": null,
-  "rewrites": [
-    { "source": "/(.*)", "destination": "/build/server/index.js" }
+  "outputDirectory": "build/client",
+  "routes": [
+    {
+      "src": "/(.*\\.(js|css|ico|png|jpg|jpeg|gif|svg|woff|woff2|ttf|eot|map)$)",
+      "dest": "/$1"
+    },
+    {
+      "src": "/(.*)",
+      "dest": "/build/server/index.js"
+    }
   ]
 }
