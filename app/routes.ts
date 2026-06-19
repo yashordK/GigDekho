@@ -23,6 +23,6 @@ export default [
   ]),
 
   // Utility routes
-  route("sitemap.xml", "routes/sitemap[.]xml.tsx"),
-  route("robots.txt", "routes/robots[.]txt.tsx"),
+  route("sitemap.xml", "routes/sitemap.xml.ts"),
+  route("robots.txt", "routes/robots.txt.ts"),
 ] satisfies RouteConfig;
