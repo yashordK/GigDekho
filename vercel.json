@@ -1,4 +1,20 @@
 {
   "buildCommand": "npm run build",
-  "installCommand": "npm install --legacy-peer-deps"
+  "outputDirectory": "build/client",
+  "installCommand": "npm install --legacy-peer-deps",
+  "framework": null,
+  "rewrites": [
+    {
+      "source": "/sitemap.xml",
+      "destination": "/sitemap.xml"
+    },
+    {
+      "source": "/robots.txt",
+      "destination": "/robots.txt"
+    },
+    {
+      "source": "/(.*)",
+      "destination": "/build/server/index.js"
+    }
+  ]
 }
