@@ -71,10 +71,20 @@ export default function AuthModal({ isOpen, onClose, defaultIntent = 'worker' }:
       // Check intent to set in user metadata or local storage if needed
       localStorage.setItem('userIntent', intent);
       
+      // Store starting origin to restore it in callback if Supabase redirects to a different domain/protocol
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('authOrigin', window.location.origin);
+      }
+
+      let redirectTo = `${window.location.origin}/auth/callback`;
+      if (typeof window !== 'undefined' && !window.location.hostname.includes('localhost') && !window.location.hostname.includes('127.0.0.1')) {
+        redirectTo = redirectTo.replace('http://', 'https://');
+      }
+      
       const { error } = await supabase.auth.signInWithOAuth({
         provider: "google",
         options: {
-          redirectTo: `${window.location.origin}/auth/callback`,
+          redirectTo,
           queryParams: {
             access_type: "offline",
           },

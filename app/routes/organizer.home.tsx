@@ -9,7 +9,7 @@ import PostGigModal from "~/components/PostGigModal";
 import Toast from "~/components/Toast";
 
 export default function OrganizerHomeScreen() {
-  const { user, loading: authLoading } = useAuth();
+  const { user, setProfile: setGlobalProfile, loading: authLoading } = useAuth();
   const navigate = useNavigate();
 
   const [profile, setProfile] = useState<any>(null);
@@ -102,6 +102,9 @@ export default function OrganizerHomeScreen() {
         .eq("id", user.id);
       
       if (!error) {
+        if (setGlobalProfile) {
+          setGlobalProfile((prev: any) => ({ ...prev, role: "worker" }));
+        }
         navigate("/worker/home");
       } else {
         console.error("Error switching role:", error);
