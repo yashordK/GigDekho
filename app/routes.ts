@@ -6,6 +6,7 @@ export default [
   route("auth", "routes/auth.tsx"),
   route("auth/callback", "routes/auth.callback.tsx"),
   route("setup-profile", "routes/setup-profile.tsx"),
+  route("organizer/preview", "routes/organizer.preview.tsx"),
 
   // Public gig pages — SSR for SEO
   route("gigs/:id", "routes/gigs.$id.tsx"),

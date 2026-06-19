@@ -46,7 +46,7 @@ export default function LandingScreen() {
 
   const handleOrganizerFlow = () => {
     localStorage.setItem('userIntent', 'organizer');
-    navigate('/auth');
+    navigate('/organizer/preview');
   };
 
   return (

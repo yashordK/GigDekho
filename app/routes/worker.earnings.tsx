@@ -6,7 +6,7 @@ import { formatRelativeDate } from '~/lib/utils';
 
 export default function EarningsScreen() {
   const { user } = useAuth();
-  const [apps, setApps] = useState([]);
+  const [apps, setApps] = useState<any[]>([]);
   const [totalEarned, setTotalEarned] = useState(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');

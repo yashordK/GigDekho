@@ -95,7 +95,7 @@ export default function GigDetailScreen() {
   const [gig, setGig] = useState(ssrGig);
   const [loading, setLoading] = useState(false);
   const [applying, setApplying] = useState(false);
-  const [applicationStatus, setApplicationStatus] = useState(null); 
+  const [applicationStatus, setApplicationStatus] = useState<string | null>(null); 
   const [toastMessage, setToastMessage] = useState('');
   const [isErrorToast, setIsErrorToast] = useState(false);
   const [showTerms, setShowTerms] = useState(false);

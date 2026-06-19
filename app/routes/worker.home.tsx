@@ -6,8 +6,8 @@ import GigCard from '~/components/GigCard';
 import { Briefcase, RefreshCw, Zap, Calendar, Users, SlidersHorizontal, ArrowDownAZ, Star } from 'lucide-react';
 
 export default function HomeScreen() {
-  const [gigs, setGigs] = useState([]);
-  const [trendingGigs, setTrendingGigs] = useState([]);
+  const [gigs, setGigs] = useState<any[]>([]);
+  const [trendingGigs, setTrendingGigs] = useState<any[]>([]);
   const [stats, setStats] = useState({ live: 0, topPay: 0, hiredToday: 0, sumToday: 0 });
   const [userStats, setUserStats] = useState({ done: 0, rating: 4.9 });
   const [loading, setLoading] = useState(true);

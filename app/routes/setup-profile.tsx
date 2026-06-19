@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { supabase } from '~/lib/supabase.client';
 import { useNavigate, Navigate } from 'react-router';
 import { useAuth } from '~/context/AuthContext';
@@ -10,12 +10,37 @@ export default function SetupProfileScreen() {
   const [intent] = useState(() => localStorage.getItem('userIntent') || 'worker');
   const [fullName, setFullName] = useState('');
   const [city] = useState('Indore');
-  const [selectedSkills, setSelectedSkills] = useState([]);
+  const [selectedSkills, setSelectedSkills] = useState<string[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [avatarUrl, setAvatarUrl] = useState('');
 
   const navigate = useNavigate();
   const { user, setProfile, loading: authLoading } = useAuth();
+
+  // Load Google OAuth metadata on mount
+  useEffect(() => {
+    async function loadGoogleMetadata() {
+      try {
+        const { data: { user: supabaseUser } } = await supabase.auth.getUser();
+        if (supabaseUser) {
+          const googleName = supabaseUser?.user_metadata?.full_name ?? "";
+          const googleAvatar = supabaseUser?.user_metadata?.avatar_url ?? "";
+          if (googleName) {
+            setFullName(googleName);
+          }
+          if (googleAvatar) {
+            setAvatarUrl(googleAvatar);
+          }
+        }
+      } catch (err) {
+        console.error("Error loading Google metadata:", err);
+      }
+    }
+    if (user) {
+      loadGoogleMetadata();
+    }
+  }, [user]);
 
   if (authLoading) {
     return (
@@ -29,7 +54,7 @@ export default function SetupProfileScreen() {
     return <Navigate to="/auth" replace />;
   }
 
-  const toggleSkill = (skill) => {
+  const toggleSkill = (skill: string) => {
     if (selectedSkills.includes(skill)) {
       setSelectedSkills(selectedSkills.filter(s => s !== skill));
     } else {
@@ -37,7 +62,7 @@ export default function SetupProfileScreen() {
     }
   };
 
-  const handleCompleteSetup = async (e) => {
+  const handleCompleteSetup = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
     setError('');
@@ -51,7 +76,8 @@ export default function SetupProfileScreen() {
           full_name: fullName,
           city: city,
           email: user.email,
-          role: intent
+          role: intent,
+          avatar_url: avatarUrl || null
         })
         .select()
         .single();

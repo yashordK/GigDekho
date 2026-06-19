@@ -13,6 +13,9 @@
     "isolatedModules": true,
     "noEmit": true,
     "jsx": "react-jsx",
+    "allowJs": true,
+    "noImplicitAny": false,
+    "types": ["vite/client", "node"],
 
     /* Path mapping */
     "ignoreDeprecations": "6.0",

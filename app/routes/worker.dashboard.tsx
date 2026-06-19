@@ -20,7 +20,7 @@ const getImageUrl = (role) => {
 
 export default function DashboardScreen() {
   const [tab, setTab] = useState('active'); // active, past
-  const [apps, setApps] = useState([]);
+  const [apps, setApps] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const { user } = useAuth();
   const navigate = useNavigate();

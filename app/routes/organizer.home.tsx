@@ -93,6 +93,26 @@ export default function OrganizerHomeScreen() {
     }
   }, [user]);
 
+  const handleSwitchToWorker = async () => {
+    if (!user) return;
+    try {
+      const { error } = await supabase
+        .from("profiles")
+        .update({ role: "worker" })
+        .eq("id", user.id);
+      
+      if (!error) {
+        navigate("/worker/home");
+      } else {
+        console.error("Error switching role:", error);
+        showToast("Failed to switch to Worker mode. Try again.", "error");
+      }
+    } catch (err: any) {
+      console.error(err);
+      showToast(err.message || "Failed to switch role.", "error");
+    }
+  };
+
   const showToast = (message: string, type: "success" | "error" | "info") => {
     setToast({ message, type });
   };
@@ -145,9 +165,15 @@ export default function OrganizerHomeScreen() {
         <h1 className="text-3xl lg:text-4xl font-black text-white mb-2 tracking-tight relative z-10 drop-shadow-md">
           Indore Organizer Center
         </h1>
-        <p className="text-white/60 font-medium text-sm lg:text-base max-w-md relative z-10">
+        <p className="text-white/60 font-medium text-sm lg:text-base max-w-md relative z-10 mb-4">
           Post and manage your hyperlocal event staffing instantly.
         </p>
+        <button
+          onClick={handleSwitchToWorker}
+          className="relative z-10 btn-tap px-4 py-2 rounded-full border border-[#F4511E] text-[#F4511E] hover:bg-[#F4511E]/10 font-bold text-xs cursor-pointer transition-all"
+        >
+          Switch to Worker Mode
+        </button>
       </div>
 
       {/* Stats Bar */}

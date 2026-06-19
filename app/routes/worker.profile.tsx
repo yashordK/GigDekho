@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { supabase } from '~/lib/supabase.client';
 import { useAuth } from '~/context/AuthContext';
 import { MapPin, Star, Award, Lock, X, LogOut, Edit2, Check } from 'lucide-react';
+import { useNavigate } from 'react-router';
 
 const ALL_SKILLS = ['Waiter', 'Bartender', 'Event Helper', 'Singer', 'Dancer', 'Sketch Artist', 'Photographer', 'DJ', 'Emcee', 'Security'];
 
@@ -13,11 +14,12 @@ const MOCK_TROPHIES = [
 
 export default function ProfileScreen() {
   const { user, profile, setProfile, signOut } = useAuth();
+  const navigate = useNavigate();
   
   const [loading, setLoading] = useState(true);
   const [stats, setStats] = useState({ completedGigs: 0, avgRating: 0, totalEarned: 0 });
-  const [skills, setSkills] = useState([]);
-  const [ratings, setRatings] = useState([]);
+  const [skills, setSkills] = useState<any[]>([]);
+  const [ratings, setRatings] = useState<any[]>([]);
   
   // Profile inline edit
   const [isEditingProfile, setIsEditingProfile] = useState(false);
@@ -27,8 +29,32 @@ export default function ProfileScreen() {
   
   // Modal state
   const [showSkillsModal, setShowSkillsModal] = useState(false);
-  const [tempSkills, setTempSkills] = useState([]);
+  const [tempSkills, setTempSkills] = useState<any[]>([]);
   const [savingSkills, setSavingSkills] = useState(false);
+
+  const handleSwitchToOrganizer = async () => {
+    const { error } = await supabase
+      .from("profiles")
+      .update({ role: "organizer" })
+      .eq("id", user.id);
+    
+    if (!error) {
+      setProfile((prev: any) => ({ ...prev, role: "organizer" }));
+      navigate("/organizer/home");
+    }
+  };
+
+  const handleSwitchToWorker = async () => {
+    const { error } = await supabase
+      .from("profiles")
+      .update({ role: "worker" })
+      .eq("id", user.id);
+    
+    if (!error) {
+      setProfile((prev: any) => ({ ...prev, role: "worker" }));
+      navigate("/worker/home");
+    }
+  };
 
   useEffect(() => {
     if (user) {
@@ -36,11 +62,33 @@ export default function ProfileScreen() {
       setEditCity(profile?.city || 'Indore');
       fetchWorkerData();
     }
-  }, [user, profile]);
+  }, [user, profile?.role]);
 
   const fetchWorkerData = async () => {
     setLoading(true);
     try {
+      if (profile?.role === 'organizer') {
+        const { data: gigsData, count: gigsCount } = await supabase
+          .from('gigs')
+          .select('*, gig_payments(*)', { count: 'exact' })
+          .eq('organizer_id', user.id);
+        
+        const completedGigs = gigsCount || 0;
+        const totalEarned = (gigsData || []).reduce((acc, gig) => {
+          const pay = Array.isArray(gig.gig_payments) ? gig.gig_payments[0] : gig.gig_payments;
+          if (pay && pay.final_paid) {
+            return acc + (pay.organizer_total || 0);
+          }
+          return acc;
+        }, 0);
+
+        setStats({ completedGigs, avgRating: profile.avg_rating || 5.0, totalEarned });
+        setSkills([]);
+        setRatings([]);
+        setLoading(false);
+        return;
+      }
+
       // 1. Fetch Completed Gigs & Total Earnings
       const { data: appsData, count } = await supabase
         .from('applications')
@@ -66,14 +114,14 @@ export default function ProfileScreen() {
         .order('created_at', { ascending: false })
         .limit(3);
       
-      let fetchedRatings = [];
-      let avgRating = 0;
+      let fetchedRatings: any[] = [];
+      let avgRating: any = 0;
       
       if (!ratingError && ratingData) {
         fetchedRatings = ratingData.map(r => ({
           score: r.score,
           comment: r.comment,
-          reviewer_name: r.rater?.full_name || 'Verified Organizer'
+          reviewer_name: (Array.isArray(r.rater) ? r.rater[0]?.full_name : (r.rater as any)?.full_name) || 'Verified Organizer'
         }));
         
         if (fetchedRatings.length > 0) {
@@ -240,9 +288,13 @@ export default function ProfileScreen() {
               <LogOut size={20} />
             </button>
 
-            <div className="w-20 h-20 bg-primary rounded-full flex items-center justify-center text-white text-3xl font-black mb-3 shadow-md lg:w-32 lg:h-32 lg:text-5xl lg:mb-5">
-              {profile?.full_name?.charAt(0) || 'W'}
-            </div>
+            {profile?.avatar_url ? (
+              <img src={profile.avatar_url} alt="" className="w-20 h-20 lg:w-32 lg:h-32 rounded-full object-cover mb-3 lg:mb-5 shadow-md border border-white/10" />
+            ) : (
+              <div className="w-20 h-20 bg-primary rounded-full flex items-center justify-center text-white text-3xl font-black mb-3 shadow-md lg:w-32 lg:h-32 lg:text-5xl lg:mb-5">
+                {profile?.full_name?.charAt(0) || 'W'}
+              </div>
+            )}
             
             {isEditingProfile ? (
               <div className="flex flex-col items-center w-full max-w-[250px] mb-3">
@@ -290,54 +342,58 @@ export default function ProfileScreen() {
           </div>
 
           {/* Level Block */}
-          <div className="mx-5 lg:mx-0 bg-[#1C1C1C] rounded-2xl p-5 lg:p-8 shadow-sm border border-white/5">
-             <div className="flex justify-between items-center mb-3 lg:mb-4">
-                <div>
-                   <h3 className="text-sm font-bold text-white/40 uppercase tracking-widest mb-0.5">Current Status</h3>
-                   <div className={`text-xl lg:text-2xl font-black ${levelColor === 'text-primary' ? 'text-[#00BCD4]' : levelColor === 'text-accent' ? 'text-[#F4511E]' : levelColor === 'text-amber-500' ? 'text-amber-400' : 'text-white/60'}`}>{level}</div>
-                </div>
-                <div className="w-12 h-12 lg:w-16 lg:h-16 bg-white/5 rounded-full flex items-center justify-center text-white/30 border border-white/10 shadow-inner">
-                   <Award size={24} className="lg:w-8 lg:h-8" />
-                </div>
-             </div>
-             
-             <div className="w-full bg-[#111111] rounded-full h-3 lg:h-4 overflow-hidden mb-2">
-                <div className="bg-[#F4511E] h-full rounded-full transition-all duration-1000" style={{ width: `${progress}%` }}></div>
-             </div>
-             <p className="text-xs lg:text-sm font-bold text-white/40 text-right">
-                {nextLevelGigs - gigs} gigs to next level
-             </p>
-          </div>
+          {profile?.role !== 'organizer' && (
+            <div className="mx-5 lg:mx-0 bg-[#1C1C1C] rounded-2xl p-5 lg:p-8 shadow-sm border border-white/5">
+               <div className="flex justify-between items-center mb-3 lg:mb-4">
+                  <div>
+                     <h3 className="text-sm font-bold text-white/40 uppercase tracking-widest mb-0.5">Current Status</h3>
+                     <div className={`text-xl lg:text-2xl font-black ${levelColor === 'text-primary' ? 'text-[#00BCD4]' : levelColor === 'text-accent' ? 'text-[#F4511E]' : levelColor === 'text-amber-500' ? 'text-amber-400' : 'text-white/60'}`}>{level}</div>
+                  </div>
+                  <div className="w-12 h-12 lg:w-16 lg:h-16 bg-white/5 rounded-full flex items-center justify-center text-white/30 border border-white/10 shadow-inner">
+                     <Award size={24} className="lg:w-8 lg:h-8" />
+                  </div>
+               </div>
+               
+               <div className="w-full bg-[#111111] rounded-full h-3 lg:h-4 overflow-hidden mb-2">
+                  <div className="bg-[#F4511E] h-full rounded-full transition-all duration-1000" style={{ width: `${progress}%` }}></div>
+               </div>
+               <p className="text-xs lg:text-sm font-bold text-white/40 text-right">
+                  {nextLevelGigs - gigs} gigs to next level
+               </p>
+            </div>
+          )}
 
           {/* Benefits Block */}
-          <div className="mx-5 lg:mx-0 bg-[#1C1C1C] rounded-2xl shadow-sm border border-white/5 overflow-hidden">
-             <details className="group">
-                <summary className="font-bold text-white p-5 cursor-pointer flex justify-between items-center list-none outline-none">
-                  Benefits you can unlock
-                  <span className="transition group-open:rotate-180">
-                    <svg fill="none" height="24" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" viewBox="0 0 24 24" w="24" className="text-white/50"><polyline points="6 9 12 15 18 9"></polyline></svg>
-                  </span>
-                </summary>
-                <div className="p-5 border-t border-white/5 space-y-4">
-                   <div className="flex items-start">
-                     <div className="w-6 h-6 rounded-full bg-green-500/10 text-green-400 flex items-center justify-center mr-3 shrink-0"><Check size={14} /></div>
-                     <div><p className="text-sm font-bold text-white">Basic Access</p><p className="text-xs text-white/50">Unlocked at 0 gigs.</p></div>
-                   </div>
-                   <div className="flex items-start">
-                     <div className={`w-6 h-6 rounded-full flex items-center justify-center mr-3 shrink-0 ${gigs >= 5 ? 'bg-green-500/10 text-green-400' : 'bg-white/5 text-white/30'}`}>{gigs >= 5 ? <Check size={14} /> : <Lock size={14} />}</div>
-                     <div><p className={`text-sm font-bold ${gigs >= 5 ? 'text-white' : 'text-white/60'}`}>Premium Gigs</p><p className="text-xs text-white/50">Unlock exclusive high-paying gigs at 5 gigs.</p></div>
-                   </div>
-                   <div className="flex items-start">
-                     <div className={`w-6 h-6 rounded-full flex items-center justify-center mr-3 shrink-0 ${gigs >= 15 ? 'bg-green-500/10 text-green-400' : 'bg-white/5 text-white/30'}`}>{gigs >= 15 ? <Check size={14} /> : <Lock size={14} />}</div>
-                     <div><p className={`text-sm font-bold ${gigs >= 15 ? 'text-white' : 'text-white/60'}`}>Cash Bonus</p><p className="text-xs text-white/50">Earn a ₹500 bonus upon completing 15 gigs.</p></div>
-                   </div>
-                   <div className="flex items-start">
-                     <div className={`w-6 h-6 rounded-full flex items-center justify-center mr-3 shrink-0 ${gigs >= 30 ? 'bg-green-500/10 text-green-400' : 'bg-white/5 text-white/30'}`}>{gigs >= 30 ? <Check size={14} /> : <Lock size={14} />}</div>
-                     <div><p className={`text-sm font-bold ${gigs >= 30 ? 'text-white' : 'text-white/60'}`}>Top Tier Pro</p><p className="text-xs text-white/50">Priority selection & voucher rewards at 30 gigs.</p></div>
-                   </div>
-                </div>
-             </details>
-          </div>
+          {profile?.role !== 'organizer' && (
+            <div className="mx-5 lg:mx-0 bg-[#1C1C1C] rounded-2xl shadow-sm border border-white/5 overflow-hidden">
+               <details className="group">
+                  <summary className="font-bold text-white p-5 cursor-pointer flex justify-between items-center list-none outline-none">
+                    Benefits you can unlock
+                    <span className="transition group-open:rotate-180">
+                      <svg fill="none" height="24" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" viewBox="0 0 24 24" width="24" className="text-white/50"><polyline points="6 9 12 15 18 9"></polyline></svg>
+                    </span>
+                  </summary>
+                  <div className="p-5 border-t border-white/5 space-y-4">
+                     <div className="flex items-start">
+                       <div className="w-6 h-6 rounded-full bg-green-500/10 text-green-400 flex items-center justify-center mr-3 shrink-0"><Check size={14} /></div>
+                       <div><p className="text-sm font-bold text-white">Basic Access</p><p className="text-xs text-white/50">Unlocked at 0 gigs.</p></div>
+                     </div>
+                     <div className="flex items-start">
+                       <div className={`w-6 h-6 rounded-full flex items-center justify-center mr-3 shrink-0 ${gigs >= 5 ? 'bg-green-500/10 text-green-400' : 'bg-white/5 text-white/30'}`}>{gigs >= 5 ? <Check size={14} /> : <Lock size={14} />}</div>
+                       <div><p className={`text-sm font-bold ${gigs >= 5 ? 'text-white' : 'text-white/60'}`}>Premium Gigs</p><p className="text-xs text-white/50">Unlock exclusive high-paying gigs at 5 gigs.</p></div>
+                     </div>
+                     <div className="flex items-start">
+                       <div className={`w-6 h-6 rounded-full flex items-center justify-center mr-3 shrink-0 ${gigs >= 15 ? 'bg-green-500/10 text-green-400' : 'bg-white/5 text-white/30'}`}>{gigs >= 15 ? <Check size={14} /> : <Lock size={14} />}</div>
+                       <div><p className={`text-sm font-bold ${gigs >= 15 ? 'text-white' : 'text-white/60'}`}>Cash Bonus</p><p className="text-xs text-white/50">Earn a ₹500 bonus upon completing 15 gigs.</p></div>
+                     </div>
+                     <div className="flex items-start">
+                       <div className={`w-6 h-6 rounded-full flex items-center justify-center mr-3 shrink-0 ${gigs >= 30 ? 'bg-green-500/10 text-green-400' : 'bg-white/5 text-white/30'}`}>{gigs >= 30 ? <Check size={14} /> : <Lock size={14} />}</div>
+                       <div><p className={`text-sm font-bold ${gigs >= 30 ? 'text-white' : 'text-white/60'}`}>Top Tier Pro</p><p className="text-xs text-white/50">Priority selection & voucher rewards at 30 gigs.</p></div>
+                     </div>
+                  </div>
+               </details>
+            </div>
+          )}
 
         </div>
 
@@ -345,7 +401,9 @@ export default function ProfileScreen() {
         <div className="px-5 lg:px-0 mt-6 lg:mt-0 space-y-6 lg:space-y-8">
           
           <div className="hero-gradient-overlay rounded-2xl p-6 lg:p-8 text-white shadow-lg space-y-4 border border-white/10">
-            <div className="text-white/60 text-xs lg:text-sm font-bold uppercase tracking-wider mb-2">Total Earned</div>
+            <div className="text-white/60 text-xs lg:text-sm font-bold uppercase tracking-wider mb-2">
+              {profile?.role === 'organizer' ? 'Total Spent' : 'Total Earned'}
+            </div>
             <div className="text-4xl lg:text-6xl font-black mb-5 lg:mb-8 flex items-baseline">
                <span>₹{stats.totalEarned.toLocaleString('en-IN')}</span> 
                <span className="text-sm lg:text-base font-medium text-[#F4511E] ml-2 lg:ml-4">lifetime</span>
@@ -354,7 +412,9 @@ export default function ProfileScreen() {
             <div className="flex justify-between border-t border-white/20 pt-5 lg:pt-6">
                <div className="text-center">
                  <p className="text-xl lg:text-2xl font-black mb-1">{stats.completedGigs}</p>
-                 <p className="text-[10px] lg:text-xs text-white/50 font-bold uppercase tracking-widest">Gigs Done</p>
+                 <p className="text-[10px] lg:text-xs text-white/50 font-bold uppercase tracking-widest">
+                   {profile?.role === 'organizer' ? 'Gigs Hosted' : 'Gigs Done'}
+                 </p>
                </div>
                <div className="text-center">
                  <p className="text-xl lg:text-2xl font-black mb-1 flex items-center justify-center">
@@ -369,98 +429,142 @@ export default function ProfileScreen() {
             </div>
           </div>
 
-          <div className="bg-[#1C1C1C] rounded-2xl shadow-sm border border-white/5 p-5 lg:p-8">
-            <div className="flex justify-between items-center mb-4 lg:mb-6">
-               <h3 className="font-bold text-white lg:text-xl">My Skills</h3>
-               <button 
-                 type="button"
-                 onClick={() => {
-                   setTempSkills([...skills]);
-                   setShowSkillsModal(true);
-                 }} 
-                 className="text-[#F4511E] text-sm font-bold hover:underline btn-tap min-h-[44px] flex items-center"
-               >
-                 Edit
-               </button>
-            </div>
-            
-            {skills.length > 0 ? (
-               <div className="flex flex-wrap gap-2 lg:gap-3">
-                 {skills.map(skill => (
-                   <div key={skill} className="px-3 py-1.5 lg:px-4 lg:py-2 bg-[#111111] text-white/80 border border-white/10 rounded-lg text-sm lg:text-base font-bold shadow-sm">
-                     {skill}
-                   </div>
-                 ))}
-               </div>
-            ) : (
-               <div className="text-sm font-medium text-white/40 bg-[#111111] p-4 rounded-xl border border-white/5 border-dashed">
-                 No skills added yet. Tap edit to select some.
-               </div>
-            )}
-          </div>
-
-          <div className="bg-[#1C1C1C] rounded-2xl p-5 lg:p-8 shadow-sm border border-white/5 overflow-hidden">
-             <h3 className="font-bold text-white mb-4 lg:mb-6 lg:text-xl">Trophies <span className="text-white/40 font-medium text-xs ml-2">({MOCK_TROPHIES.length})</span></h3>
-             
-             <div className="flex space-x-3 overflow-x-auto pb-2 hide-scrollbar">
-                {MOCK_TROPHIES.map(trophy => (
-                   <div key={trophy.id} className="min-w-[120px] lg:min-w-[150px] bg-[#111111] rounded-2xl p-4 border border-white/5 flex flex-col items-center justify-center text-center">
-                      <div className="text-3xl lg:text-4xl mb-3 mt-1 bg-[#1C1C1C] w-14 h-14 lg:w-16 lg:h-16 rounded-full flex items-center justify-center shadow-sm border border-white/5">
-                        {trophy.icon}
-                      </div>
-                      <p className="font-bold text-white text-sm leading-tight mb-1">{trophy.title}</p>
-                      <p className="text-[10px] text-white/40 font-bold uppercase tracking-wider">{trophy.date}</p>
-                   </div>
-                ))}
-                
-                <div className="min-w-[120px] lg:min-w-[150px] bg-[#1C1C1C] rounded-2xl p-4 border border-white/10 border-dashed flex flex-col items-center justify-center text-center opacity-70">
-                    <div className="text-3xl mb-3 mt-1 text-white/30 bg-[#111111] w-14 h-14 lg:w-16 lg:h-16 rounded-full flex items-center justify-center shadow-inner">
-                      <Lock size={20} />
-                    </div>
-                    <p className="font-bold text-white/40 text-sm leading-tight mb-1">Locked</p>
-                    <p className="text-[10px] text-white/30 font-bold uppercase tracking-wider">Do 50 gigs</p>
+          {profile?.role !== 'organizer' ? (
+            <>
+              <div className="bg-[#1C1C1C] rounded-2xl shadow-sm border border-white/5 p-5 lg:p-8">
+                <div className="flex justify-between items-center mb-4 lg:mb-6">
+                   <h3 className="font-bold text-white lg:text-xl">My Skills</h3>
+                   <button 
+                     type="button"
+                     onClick={() => {
+                       setTempSkills([...skills]);
+                       setShowSkillsModal(true);
+                     }} 
+                     className="text-[#F4511E] text-sm font-bold hover:underline btn-tap min-h-[44px] flex items-center"
+                   >
+                     Edit
+                   </button>
                 </div>
-             </div>
-          </div>
+                
+                {skills.length > 0 ? (
+                   <div className="flex flex-wrap gap-2 lg:gap-3">
+                     {skills.map(skill => (
+                       <div key={skill} className="px-3 py-1.5 lg:px-4 lg:py-2 bg-[#111111] text-white/80 border border-white/10 rounded-lg text-sm lg:text-base font-bold shadow-sm">
+                         {skill}
+                       </div>
+                     ))}
+                   </div>
+                ) : (
+                   <div className="text-sm font-medium text-white/40 bg-[#111111] p-4 rounded-xl border border-white/5 border-dashed">
+                     No skills added yet. Tap edit to select some.
+                   </div>
+                )}
+              </div>
 
-          <div className="bg-[#1C1C1C] rounded-2xl shadow-sm border border-white/5 p-5 lg:p-8 mb-8">
-            <div className="flex justify-between items-center mb-4 lg:mb-6">
-              <h3 className="font-bold text-white lg:text-xl">Reviews</h3>
-              <div className="flex items-center">
-                 <Star size={16} className="text-amber-400 fill-current mr-1" />
-                 <span className="font-black text-white">{stats.avgRating > 0 ? stats.avgRating : 'New'}</span>
+              <div className="bg-[#1C1C1C] rounded-2xl p-5 lg:p-8 shadow-sm border border-white/5 overflow-hidden">
+                 <h3 className="font-bold text-white mb-4 lg:mb-6 lg:text-xl">Trophies <span className="text-white/40 font-medium text-xs ml-2">({MOCK_TROPHIES.length})</span></h3>
+                 
+                 <div className="flex space-x-3 overflow-x-auto pb-2 hide-scrollbar">
+                    {MOCK_TROPHIES.map(trophy => (
+                       <div key={trophy.id} className="min-w-[120px] lg:min-w-[150px] bg-[#111111] rounded-2xl p-4 border border-white/5 flex flex-col items-center justify-center text-center">
+                          <div className="text-3xl lg:text-4xl mb-3 mt-1 bg-[#1C1C1C] w-14 h-14 lg:w-16 lg:h-16 rounded-full flex items-center justify-center shadow-sm border border-white/5">
+                            {trophy.icon}
+                          </div>
+                          <p className="font-bold text-white text-sm leading-tight mb-1">{trophy.title}</p>
+                          <p className="text-[10px] text-white/40 font-bold uppercase tracking-wider">{trophy.date}</p>
+                       </div>
+                    ))}
+                    
+                    <div className="min-w-[120px] lg:min-w-[150px] bg-[#1C1C1C] rounded-2xl p-4 border border-white/10 border-dashed flex flex-col items-center justify-center text-center opacity-70">
+                        <div className="text-3xl mb-3 mt-1 text-white/30 bg-[#111111] w-14 h-14 lg:w-16 lg:h-16 rounded-full flex items-center justify-center shadow-inner">
+                          <Lock size={20} />
+                        </div>
+                        <p className="font-bold text-white/40 text-sm leading-tight mb-1">Locked</p>
+                        <p className="text-[10px] text-white/30 font-bold uppercase tracking-wider">Do 50 gigs</p>
+                    </div>
+                 </div>
+              </div>
+
+              <div className="bg-[#1C1C1C] rounded-2xl shadow-sm border border-white/5 p-5 lg:p-8 mb-8">
+                <div className="flex justify-between items-center mb-4 lg:mb-6">
+                  <h3 className="font-bold text-white lg:text-xl">Reviews</h3>
+                  <div className="flex items-center">
+                     <Star size={16} className="text-amber-400 fill-current mr-1" />
+                     <span className="font-black text-white">{stats.avgRating > 0 ? stats.avgRating : 'New'}</span>
+                  </div>
+                </div>
+
+                {ratings.length > 0 ? (
+                  <div className="space-y-4 lg:space-y-6">
+                    {ratings.map((r, i) => (
+                       <div key={i} className="border-b border-white/5 pb-4 lg:pb-6 last:border-0 last:pb-0">
+                          <div className="flex mb-2 text-amber-400">
+                            {Array.from({length: r.score}).map((_, idx) => (
+                               <Star key={idx} size={14} className="fill-current" />
+                            ))}
+                          </div>
+                          <p className="text-white/80 font-medium text-sm lg:text-base leading-relaxed mb-3">
+                             "{r.comment}"
+                          </p>
+                          <div className="flex items-center text-xs font-bold text-white/50">
+                             <div className="w-5 h-5 bg-white/10 text-white/60 rounded-full flex items-center justify-center mr-2">
+                                {r.reviewer_name?.charAt(0)}
+                             </div>
+                             {r.reviewer_name}
+                          </div>
+                       </div>
+                    ))}
+                  </div>
+                ) : (
+                   <div className="bg-[#111111] border border-white/5 rounded-2xl p-6 lg:p-10 flex flex-col items-center justify-center text-center">
+                      <div className="w-12 h-12 bg-white/5 rounded-full flex items-center justify-center text-amber-400 shadow-sm mb-3">
+                        <Star size={20} />
+                      </div>
+                      <p className="text-white/50 font-medium text-sm lg:text-base">No reviews yet. Complete your first gig to get rated.</p>
+                   </div>
+                )}
+              </div>
+            </>
+          ) : (
+            <div className="bg-[#1C1C1C] rounded-2xl shadow-sm border border-white/5 p-5 lg:p-8 space-y-4 mb-8">
+              <h3 className="font-bold text-white lg:text-xl">Organizer Profile Info</h3>
+              <div className="space-y-3 text-sm text-left">
+                <div>
+                  <span className="text-white/40 font-bold block uppercase text-[10px] tracking-wider mb-0.5">Company / Agency</span>
+                  <span className="text-white font-semibold">{profile?.company_name || 'Individual Organizer'}</span>
+                </div>
+                {profile?.website && (
+                  <div>
+                    <span className="text-white/40 font-bold block uppercase text-[10px] tracking-wider mb-0.5">Website</span>
+                    <a href={profile.website} target="_blank" rel="noopener noreferrer" className="text-[#F4511E] font-semibold hover:underline">{profile.website}</a>
+                  </div>
+                )}
+                <div>
+                  <span className="text-white/40 font-bold block uppercase text-[10px] tracking-wider mb-0.5">Bio / Description</span>
+                  <p className="text-white/70 font-medium leading-relaxed">{profile?.bio || 'This organizer has not added a bio yet.'}</p>
+                </div>
               </div>
             </div>
+          )}
 
-            {ratings.length > 0 ? (
-              <div className="space-y-4 lg:space-y-6">
-                {ratings.map((r, i) => (
-                   <div key={i} className="border-b border-white/5 pb-4 lg:pb-6 last:border-0 last:pb-0">
-                      <div className="flex mb-2 text-amber-400">
-                        {Array.from({length: r.score}).map((_, idx) => (
-                           <Star key={idx} size={14} className="fill-current" />
-                        ))}
-                      </div>
-                      <p className="text-white/80 font-medium text-sm lg:text-base leading-relaxed mb-3">
-                         "{r.comment}"
-                      </p>
-                      <div className="flex items-center text-xs font-bold text-white/50">
-                         <div className="w-5 h-5 bg-white/10 text-white/60 rounded-full flex items-center justify-center mr-2">
-                            {r.reviewer_name?.charAt(0)}
-                         </div>
-                         {r.reviewer_name}
-                      </div>
-                   </div>
-                ))}
-              </div>
-            ) : (
-               <div className="bg-[#111111] border border-white/5 rounded-2xl p-6 lg:p-10 flex flex-col items-center justify-center text-center">
-                  <div className="w-12 h-12 bg-white/5 rounded-full flex items-center justify-center text-amber-400 shadow-sm mb-3">
-                    <Star size={20} />
-                  </div>
-                  <p className="text-white/50 font-medium text-sm lg:text-base">No reviews yet. Complete your first gig to get rated.</p>
-               </div>
-            )}
+          {/* Switch Role Section */}
+          <div className="glass-panel p-5 rounded-2xl border border-white/5 space-y-3 mb-8 text-left">
+            <h3 className="font-semibold text-white">
+              {profile?.role === 'organizer' ? 'Want to earn?' : 'Want to post gigs?'}
+            </h3>
+            <p className="text-white/50 text-xs font-semibold leading-relaxed">
+              {profile?.role === 'organizer' 
+                ? 'Switch to Worker mode to browse live gigs and start earning.' 
+                : 'Switch to Organizer mode to post gigs and hire workers.'}
+              {" "}You can switch back anytime.
+            </p>
+            <button
+              onClick={profile?.role === 'organizer' ? handleSwitchToWorker : handleSwitchToOrganizer}
+              className="btn-tap w-full py-3 rounded-xl border border-[#F4511E] 
+                         text-[#F4511E] font-semibold hover:bg-[#F4511E]/10 transition-all cursor-pointer text-sm"
+            >
+              {profile?.role === 'organizer' ? 'Switch to Worker Mode' : 'Switch to Organizer Mode'}
+            </button>
           </div>
 
         </div>

@@ -50,17 +50,25 @@ export default function TopNav() {
         {/* Center Nav Links */}
         {user && (
           <div className="hidden lg:flex space-x-8 items-center h-full absolute left-1/2 -translate-x-1/2">
-            <NavLink to="/worker/home" end className={({ isActive }) =>
-              `text-sm font-bold px-1 py-1 transition-all ${isActive ? activeLinkClass : defaultLinkClass}`
-            }>Home</NavLink>
+            {profile?.role === 'organizer' ? (
+              <NavLink to="/organizer/home" end className={({ isActive }) =>
+                `text-sm font-bold px-1 py-1 transition-all ${isActive ? activeLinkClass : defaultLinkClass}`
+              }>Home</NavLink>
+            ) : (
+              <>
+                <NavLink to="/worker/home" end className={({ isActive }) =>
+                  `text-sm font-bold px-1 py-1 transition-all ${isActive ? activeLinkClass : defaultLinkClass}`
+                }>Home</NavLink>
 
-            <NavLink to="/worker/dashboard" className={({ isActive }) =>
-              `text-sm font-bold px-1 py-1 transition-all ${isActive ? activeLinkClass : defaultLinkClass}`
-            }>My Gigs</NavLink>
+                <NavLink to="/worker/dashboard" className={({ isActive }) =>
+                  `text-sm font-bold px-1 py-1 transition-all ${isActive ? activeLinkClass : defaultLinkClass}`
+                }>My Gigs</NavLink>
 
-            <NavLink to="/worker/earnings" className={({ isActive }) =>
-              `text-sm font-bold px-1 py-1 transition-all ${isActive ? activeLinkClass : defaultLinkClass}`
-            }>Earnings</NavLink>
+                <NavLink to="/worker/earnings" className={({ isActive }) =>
+                  `text-sm font-bold px-1 py-1 transition-all ${isActive ? activeLinkClass : defaultLinkClass}`
+                }>Earnings</NavLink>
+              </>
+            )}
           </div>
         )}
 

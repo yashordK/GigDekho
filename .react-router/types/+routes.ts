@@ -17,7 +17,13 @@ type Pages = {
   "/auth": {
     params: {};
   };
+  "/auth/callback": {
+    params: {};
+  };
   "/setup-profile": {
+    params: {};
+  };
+  "/organizer/preview": {
     params: {};
   };
   "/gigs/:id": {
@@ -45,7 +51,7 @@ type Pages = {
 type RouteFiles = {
   "root.tsx": {
     id: "root";
-    page: "/" | "/auth" | "/setup-profile" | "/gigs/:id" | "/worker/home" | "/worker/dashboard" | "/worker/earnings" | "/worker/profile" | "/organizer/home";
+    page: "/" | "/auth" | "/auth/callback" | "/setup-profile" | "/organizer/preview" | "/gigs/:id" | "/worker/home" | "/worker/dashboard" | "/worker/earnings" | "/worker/profile" | "/organizer/home";
   };
   "routes/home.tsx": {
     id: "routes/home";
@@ -55,9 +61,17 @@ type RouteFiles = {
     id: "routes/auth";
     page: "/auth";
   };
+  "routes/auth.callback.tsx": {
+    id: "routes/auth.callback";
+    page: "/auth/callback";
+  };
   "routes/setup-profile.tsx": {
     id: "routes/setup-profile";
     page: "/setup-profile";
+  };
+  "routes/organizer.preview.tsx": {
+    id: "routes/organizer.preview";
+    page: "/organizer/preview";
   };
   "routes/gigs.$id.tsx": {
     id: "routes/gigs.$id";
@@ -97,7 +111,9 @@ type RouteModules = {
   "root": typeof import("./app/root.tsx");
   "routes/home": typeof import("./app/routes/home.tsx");
   "routes/auth": typeof import("./app/routes/auth.tsx");
+  "routes/auth.callback": typeof import("./app/routes/auth.callback.tsx");
   "routes/setup-profile": typeof import("./app/routes/setup-profile.tsx");
+  "routes/organizer.preview": typeof import("./app/routes/organizer.preview.tsx");
   "routes/gigs.$id": typeof import("./app/routes/gigs.$id.tsx");
   "routes/public-layout": typeof import("./app/routes/public-layout.tsx");
   "routes/worker.home": typeof import("./app/routes/worker.home.tsx");
