@@ -74,8 +74,13 @@ export default function AuthCallback() {
         return;
       }
 
-      // Existing user — redirect based on role
-      if (profile.role === "organizer") {
+      // Existing user — redirect based on last active view, fall back to signup role
+      const lastView = localStorage.getItem('activeView');
+      if (lastView === 'organizer') {
+        navigate("/organizer/home");
+      } else if (lastView === 'worker') {
+        navigate("/worker/home");
+      } else if (profile.role === "organizer") {
         navigate("/organizer/home");
       } else {
         navigate("/worker/home");

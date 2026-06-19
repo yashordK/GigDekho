@@ -22,7 +22,7 @@ export default function DashboardScreen() {
   const [tab, setTab] = useState('active'); // active, past
   const [apps, setApps] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  const { user } = useAuth();
+  const { user, profile } = useAuth();
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -69,6 +69,7 @@ export default function DashboardScreen() {
       {/* Edge to Edge Faded Header */}
       <div className="relative w-full pt-12 pb-24 hero-gradient-overlay flex flex-col items-center justify-center text-center px-4 overflow-hidden mb-6">
         <div className="absolute top-0 right-[20%] w-[250px] h-[250px] floating-glass-rect rotate-12 z-0 hidden lg:block opacity-40"></div>
+        
         
         <h1 className="text-4xl lg:text-5xl font-black text-white mb-3 tracking-tight relative z-10 drop-shadow-md">My Gigs</h1>
         <p className="text-white/60 font-medium text-base lg:text-lg mb-8 max-w-md relative z-10 leading-relaxed">

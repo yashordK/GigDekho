@@ -49,7 +49,7 @@ export default function OrganizerPreviewScreen() {
           </span>
         </div>
         <button
-          onClick={() => navigate("/auth")}
+          onClick={() => navigate("/auth?mode=organizer")}
           className="bg-white/10 hover:bg-white/20 text-white font-bold px-5 py-1.5 rounded-full text-xs tracking-wider transition-colors btn-tap min-h-[38px] flex items-center"
         >
           Sign In

@@ -93,27 +93,9 @@ export default function OrganizerHomeScreen() {
     }
   }, [user]);
 
-  const handleSwitchToWorker = async () => {
-    if (!user) return;
-    try {
-      const { error } = await supabase
-        .from("profiles")
-        .update({ role: "worker" })
-        .eq("id", user.id);
-      
-      if (!error) {
-        if (setGlobalProfile) {
-          setGlobalProfile((prev: any) => ({ ...prev, role: "worker" }));
-        }
-        navigate("/worker/home");
-      } else {
-        console.error("Error switching role:", error);
-        showToast("Failed to switch to Worker mode. Try again.", "error");
-      }
-    } catch (err: any) {
-      console.error(err);
-      showToast(err.message || "Failed to switch role.", "error");
-    }
+  const handleSwitchToWorker = () => {
+    localStorage.setItem('activeView', 'worker');
+    navigate("/worker/home");
   };
 
   const showToast = (message: string, type: "success" | "error" | "info") => {

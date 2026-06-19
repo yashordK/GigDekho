@@ -4,7 +4,10 @@ import { useAuth } from '~/context/AuthContext';
 
 export default function BottomNav() {
   const { profile } = useAuth();
-  const isOrganizer = profile?.role === 'organizer';
+  const activeView = (typeof window !== 'undefined' ? localStorage.getItem('activeView') : null)
+    || profile?.role
+    || 'worker';
+  const isOrganizer = activeView === 'organizer';
 
   const items = isOrganizer
     ? [

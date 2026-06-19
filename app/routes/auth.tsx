@@ -29,7 +29,14 @@ export default function AuthScreen() {
       if (!profile.full_name) {
         navigate('/setup-profile');
       } else {
-        navigate(profile.role === 'organizer' ? '/organizer/home' : '/worker/home');
+        const lastView = localStorage.getItem('activeView');
+        if (lastView === 'organizer') {
+          navigate('/organizer/home');
+        } else if (lastView === 'worker') {
+          navigate('/worker/home');
+        } else {
+          navigate(profile.role === 'organizer' ? '/organizer/home' : '/worker/home');
+        }
       }
     }
   }, [user, profile, authLoading, navigate]);

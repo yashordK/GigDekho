@@ -1,6 +1,6 @@
 import { NavLink, useNavigate } from 'react-router';
 import { useAuth } from '~/context/AuthContext';
-import { User, LogOut, Bell } from 'lucide-react';
+import { User, LogOut, Bell, ArrowLeftRight } from 'lucide-react';
 import { useState, useRef, useEffect } from 'react';
 
 export default function TopNav() {
@@ -8,6 +8,11 @@ export default function TopNav() {
   const navigate = useNavigate();
   const [menuOpen, setMenuOpen] = useState(false);
   const dropdownRef = useRef(null);
+
+  const activeView = (typeof window !== 'undefined' ? localStorage.getItem('activeView') : null)
+    || profile?.role
+    || 'worker';
+  const isOrganizerView = activeView === 'organizer';
 
   useEffect(() => {
     function handleClickOutside(event) {
@@ -26,9 +31,20 @@ export default function TopNav() {
 
   const handleLogoClick = () => {
     if (user) {
-      navigate(profile?.role === 'organizer' ? '/organizer/home' : '/worker/home');
+      navigate(isOrganizerView ? '/organizer/home' : '/worker/home');
     } else {
       navigate('/');
+    }
+  };
+
+  const handleSwitchView = () => {
+    setMenuOpen(false);
+    if (isOrganizerView) {
+      localStorage.setItem('activeView', 'worker');
+      navigate('/worker/home');
+    } else {
+      localStorage.setItem('activeView', 'organizer');
+      navigate('/organizer/home');
     }
   };
 
@@ -50,7 +66,7 @@ export default function TopNav() {
         {/* Center Nav Links */}
         {user && (
           <div className="hidden lg:flex space-x-8 items-center h-full absolute left-1/2 -translate-x-1/2">
-            {profile?.role === 'organizer' ? (
+            {isOrganizerView ? (
               <NavLink to="/organizer/home" end className={({ isActive }) =>
                 `text-sm font-bold px-1 py-1 transition-all ${isActive ? activeLinkClass : defaultLinkClass}`
               }>Home</NavLink>
@@ -76,6 +92,18 @@ export default function TopNav() {
         <div className="flex items-center space-x-3">
           {user ? (
             <>
+              {/* Switch Mode — visible on all screen sizes */}
+              <button
+                type="button"
+                onClick={handleSwitchView}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-[#F4511E]/50 text-[#F4511E] hover:bg-[#F4511E]/10 font-bold text-xs transition-all btn-tap"
+              >
+                <ArrowLeftRight size={13} />
+                <span className="hidden sm:inline">
+                  {isOrganizerView ? 'Worker Mode' : 'Organizer Mode'}
+                </span>
+              </button>
+
               {/* Notifications */}
               <button className="p-2 rounded-full text-white/40 hover:text-white hover:bg-white/10 transition-colors">
                 <Bell size={18} />
@@ -88,16 +116,18 @@ export default function TopNav() {
                   className="flex items-center gap-2 pl-1 pr-3 py-1 rounded-full hover:bg-white/10 transition-all"
                 >
                   <div className="w-8 h-8 rounded-full bg-[#F4511E] text-white font-black flex items-center justify-center text-sm shadow-sm">
-                    {profile?.full_name?.charAt(0) || 'W'}
+                    {profile?.full_name?.charAt(0) || 'U'}
                   </div>
-                  <span className="text-sm font-bold text-white hidden lg:block">{profile?.full_name?.split(' ')[0] || 'Worker'}</span>
+                  <span className="text-sm font-bold text-white hidden lg:block">{profile?.full_name?.split(' ')[0] || 'User'}</span>
                 </button>
 
                 {menuOpen && (
                   <div className="absolute right-0 mt-2 w-52 bg-[#1C1C1C] border border-white/10 shadow-2xl rounded-xl py-2 animate-in fade-in slide-in-from-top-2">
                     <div className="px-4 py-3 border-b border-white/10 mb-1">
-                      <p className="text-sm font-black text-white truncate leading-none mb-0.5">{profile?.full_name || 'Worker'}</p>
-                      <p className="text-[10px] uppercase tracking-wider text-white/40 font-bold">{profile?.role || 'worker'} · Indore</p>
+                      <p className="text-sm font-black text-white truncate leading-none mb-0.5">{profile?.full_name || 'User'}</p>
+                      <p className="text-[10px] uppercase tracking-wider text-white/40 font-bold">
+                        {isOrganizerView ? 'organizer' : 'worker'} mode · Indore
+                      </p>
                     </div>
                     <button
                       type="button"

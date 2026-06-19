@@ -52,8 +52,14 @@ export default function AuthModal({ isOpen, onClose, defaultIntent = 'worker' }:
           if (!profile.full_name) {
             navigate('/setup-profile');
           } else {
-            // If they signed in, redirect to correct home
-            navigate(profile.role === 'organizer' ? '/organizer/home' : '/worker/home');
+            const lastView = localStorage.getItem('activeView');
+            if (lastView === 'organizer') {
+              navigate('/organizer/home');
+            } else if (lastView === 'worker') {
+              navigate('/worker/home');
+            } else {
+              navigate(profile.role === 'organizer' ? '/organizer/home' : '/worker/home');
+            }
           }
           if (onClose) onClose();
         }

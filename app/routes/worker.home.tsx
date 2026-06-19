@@ -143,6 +143,11 @@ export default function HomeScreen() {
         <div className="absolute top-20 right-[15%] w-[300px] h-[600px] floating-glass-rect rotate-12 z-0 hidden lg:block opacity-60"></div>
 
         <div className="relative z-10 max-w-4xl mx-auto w-full">
+          {user && (
+            <div className="flex items-center gap-2 bg-[#1C1C1C] px-3.5 py-1.5 rounded-full border border-white/10 shadow-sm mb-6">
+              <span className="text-white font-bold text-xs">Welcome, {profile?.full_name || 'Worker'}</span>
+            </div>
+          )}
           <h1 className="text-5xl lg:text-[80px] font-black text-white leading-tight mb-4 tracking-tighter drop-shadow-md">
             Earn <span className="text-[#00e5ff]">₹{stats.sumToday.toLocaleString('en-IN')}</span> today
           </h1>
