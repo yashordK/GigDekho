@@ -40,18 +40,12 @@ type Pages = {
   "/organizer/home": {
     params: {};
   };
-  "/sitemap.xml": {
-    params: {};
-  };
-  "/robots.txt": {
-    params: {};
-  };
 };
 
 type RouteFiles = {
   "root.tsx": {
     id: "root";
-    page: "/" | "/auth" | "/setup-profile" | "/gigs/:id" | "/worker/home" | "/worker/dashboard" | "/worker/earnings" | "/worker/profile" | "/organizer/home" | "/sitemap.xml" | "/robots.txt";
+    page: "/" | "/auth" | "/setup-profile" | "/gigs/:id" | "/worker/home" | "/worker/dashboard" | "/worker/earnings" | "/worker/profile" | "/organizer/home";
   };
   "routes/home.tsx": {
     id: "routes/home";
@@ -97,14 +91,6 @@ type RouteFiles = {
     id: "routes/organizer.home";
     page: "/organizer/home";
   };
-  "routes/sitemap[.]xml.tsx": {
-    id: "routes/sitemap[.]xml";
-    page: "/sitemap.xml";
-  };
-  "routes/robots[.]txt.tsx": {
-    id: "routes/robots[.]txt";
-    page: "/robots.txt";
-  };
 };
 
 type RouteModules = {
@@ -120,6 +106,4 @@ type RouteModules = {
   "routes/worker.earnings": typeof import("./app/routes/worker.earnings.tsx");
   "routes/worker.profile": typeof import("./app/routes/worker.profile.tsx");
   "routes/organizer.home": typeof import("./app/routes/organizer.home.tsx");
-  "routes/sitemap[.]xml": typeof import("./app/routes/sitemap[.]xml.tsx");
-  "routes/robots[.]txt": typeof import("./app/routes/robots[.]txt.tsx");
 };

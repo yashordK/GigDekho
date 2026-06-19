@@ -5,6 +5,7 @@ import { useAuth } from '~/context/AuthContext';
 import { MapPin, Clock, Calendar, Info, CheckCircle2, AlertCircle, ShieldCheck, ChevronRight, Users } from 'lucide-react';
 import { formatRelativeDate } from '~/lib/utils';
 import { createSupabaseServerClient } from '~/lib/supabase.server';
+import { getMapsLoader } from "~/lib/maps";
 
 export async function loader({ params, request }) {
   const supabaseServer = createSupabaseServerClient(request);
@@ -20,6 +21,8 @@ export async function loader({ params, request }) {
       duration_hrs,
       event_date,
       location_text,
+      lat,
+      lng,
       is_urgent,
       slots_total,
       slots_filled,
@@ -102,6 +105,45 @@ export default function GigDetailScreen() {
       fetchData();
     }
   }, [id, user]);
+
+  useEffect(() => {
+    if (!gig?.lat || !gig?.lng || gig?.location_text === "Remote") return;
+    
+    const darkMapStyles = [
+      { elementType: "geometry", stylers: [{ color: "#1C1C1C" }] },
+      { elementType: "labels.text.fill", stylers: [{ color: "#746855" }] },
+      { elementType: "labels.text.stroke", stylers: [{ color: "#242f3e" }] },
+      { featureType: "road", elementType: "geometry", stylers: [{ color: "#2c2c2c" }] },
+      { featureType: "road", elementType: "geometry.stroke", stylers: [{ color: "#212a37" }] },
+      { featureType: "water", elementType: "geometry", stylers: [{ color: "#111111" }] },
+    ];
+
+    getMapsLoader().load().then((google) => {
+      const map = new google.maps.Map(
+        document.getElementById("gig-map") as HTMLElement,
+        {
+          center: { lat: gig.lat!, lng: gig.lng! },
+          zoom: 15,
+          styles: darkMapStyles,
+          disableDefaultUI: true,
+          zoomControl: true,
+        }
+      );
+      new google.maps.Marker({
+        position: { lat: gig.lat!, lng: gig.lng! },
+        map,
+        icon: {
+          path: google.maps.SymbolPath.CIRCLE,
+          fillColor: "#F4511E",
+          fillOpacity: 1,
+          strokeWeight: 0,
+          scale: 10,
+        },
+      });
+    }).catch(err => {
+      console.error("Error loading map on detail page", err);
+    });
+  }, [gig?.lat, gig?.lng, gig?.location_text]);
 
   const fetchData = async () => {
     try {
@@ -310,13 +352,17 @@ export default function GigDetailScreen() {
               {/* Map Placeholder */}
               <div className="mb-10">
                   <h3 className="font-black text-white text-lg mb-4">Location Details</h3>
-                  <div className="w-full bg-[#1C1C1C] rounded-[24px] h-[200px] lg:h-[280px] border border-white/5 shadow-sm flex flex-col items-center justify-center relative overflow-hidden group">
-                     <div className="absolute inset-0 bg-[#111111] opacity-50"></div>
-                     <div className="bg-[#111111]/90 backdrop-blur-sm px-6 py-3 rounded-full flex items-center shadow-lg transform group-hover:scale-105 transition-transform z-10 border border-white/10">
-                        <MapPin size={20} className="text-[#F4511E] mr-2" />
-                        <span className="text-white font-bold text-sm tracking-wide">{gig.location_text}</span>
-                     </div>
-                  </div>
+                  {gig?.location_text === "Remote" ? (
+                    <div className="glass-panel p-4 rounded-xl flex items-center gap-3">
+                      <span className="text-2xl">🏠</span>
+                      <div>
+                        <p className="font-semibold text-white">Remote / Work from Home</p>
+                        <p className="text-sm text-gray-400">No physical location required</p>
+                      </div>
+                    </div>
+                  ) : (
+                    <div id="gig-map" style={{ height: "200px", borderRadius: "12px" }} />
+                  )}
               </div>
 
            </div>
