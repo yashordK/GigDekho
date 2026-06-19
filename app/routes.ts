@@ -4,6 +4,7 @@ export default [
   // Public routes — no auth required, SSR enabled
   index("routes/home.tsx"),
   route("auth", "routes/auth.tsx"),
+  route("auth/callback", "routes/auth.callback.tsx"),
   route("setup-profile", "routes/setup-profile.tsx"),
 
   // Public gig pages — SSR for SEO
