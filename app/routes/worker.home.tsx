@@ -3,7 +3,7 @@ import { supabase } from '~/lib/supabase.client';
 import { useAuth } from '~/context/AuthContext';
 import { useNavigate } from 'react-router';
 import GigCard from '~/components/GigCard';
-import { Briefcase, RefreshCw, Zap, Calendar, Users, SlidersHorizontal, ArrowDownAZ, Star } from 'lucide-react';
+import { Briefcase, RefreshCw, Zap, Calendar, Users, SlidersHorizontal, ArrowDownAZ, Star, ArrowLeftRight } from 'lucide-react';
 
 export default function HomeScreen() {
   const [gigs, setGigs] = useState<any[]>([]);
@@ -144,8 +144,18 @@ export default function HomeScreen() {
 
         <div className="relative z-10 max-w-4xl mx-auto w-full">
           {user && (
-            <div className="flex items-center gap-2 bg-[#1C1C1C] px-3.5 py-1.5 rounded-full border border-white/10 shadow-sm mb-6">
-              <span className="text-white font-bold text-xs">Welcome, {profile?.full_name || 'Worker'}</span>
+            <div className="flex flex-col items-center gap-3 mb-6">
+              <div className="flex items-center gap-2 bg-[#1C1C1C] px-3.5 py-1.5 rounded-full border border-white/10 shadow-sm">
+                <span className="text-white font-bold text-xs">Welcome, {profile?.full_name || 'Worker'}</span>
+              </div>
+              <button
+                type="button"
+                onClick={() => { localStorage.setItem('activeView', 'organizer'); navigate('/organizer/home'); }}
+                className="flex items-center gap-2 btn-tap px-4 py-2 rounded-full border border-[#F4511E] text-[#F4511E] hover:bg-[#F4511E]/10 font-bold text-xs cursor-pointer transition-all"
+              >
+                <ArrowLeftRight size={14} />
+                Switch to Organizer Mode
+              </button>
             </div>
           )}
           <h1 className="text-5xl lg:text-[80px] font-black text-white leading-tight mb-4 tracking-tighter drop-shadow-md">

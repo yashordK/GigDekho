@@ -92,16 +92,14 @@ export default function TopNav() {
         <div className="flex items-center space-x-3">
           {user ? (
             <>
-              {/* Switch Mode — visible on all screen sizes */}
+              {/* Switch Mode — always visible */}
               <button
                 type="button"
                 onClick={handleSwitchView}
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-[#F4511E]/50 text-[#F4511E] hover:bg-[#F4511E]/10 font-bold text-xs transition-all btn-tap"
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-[#F4511E] text-[#F4511E] hover:bg-[#F4511E]/10 font-bold text-xs transition-all btn-tap"
               >
                 <ArrowLeftRight size={13} />
-                <span className="hidden sm:inline">
-                  {isOrganizerView ? 'Worker Mode' : 'Organizer Mode'}
-                </span>
+                {isOrganizerView ? 'Worker Mode' : 'Organizer Mode'}
               </button>
 
               {/* Notifications */}
