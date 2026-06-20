@@ -328,7 +328,7 @@ export default function GigDetailScreen() {
                  <div className="bg-[#1C1C1C] rounded-2xl p-4 shadow-sm border border-white/5 flex flex-col items-start justify-center">
                     <MapPin size={18} className="text-[#F4511E] mb-2 bg-[#F4511E]/10 p-1.5 rounded-lg box-content" />
                     <p className="text-[10px] font-bold text-white/30 uppercase tracking-widest leading-none mb-1">Location</p>
-                    <p className="font-bold text-white text-sm leading-tight truncate max-w-full">{gig.location_text.split(',')[0]}</p>
+                    <p className="font-bold text-white text-sm leading-tight truncate max-w-full" title={gig.location_text}>{gig.location_text.split(',')[0]}</p>
                  </div>
                  <div className="bg-[#1C1C1C] rounded-2xl p-4 shadow-sm border border-white/5 flex flex-col items-start justify-center">
                     <Users size={18} className="text-blue-400 mb-2 bg-blue-500/10 p-1.5 rounded-lg box-content" />
@@ -349,19 +349,29 @@ export default function GigDetailScreen() {
                 </div>
               </div>
 
-              {/* Map Placeholder */}
+              {/* Location Details */}
               <div className="mb-10">
                   <h3 className="font-black text-white text-lg mb-4">Location Details</h3>
                   {gig?.location_text === "Remote" ? (
-                    <div className="glass-panel p-4 rounded-xl flex items-center gap-3">
+                    <div className="bg-[#1C1C1C] border border-white/5 p-4 rounded-2xl flex items-center gap-3">
                       <span className="text-2xl">🏠</span>
                       <div>
-                        <p className="font-semibold text-white">Remote / Work from Home</p>
-                        <p className="text-sm text-gray-400">No physical location required</p>
+                        <p className="font-bold text-white">Remote / Work from Home</p>
+                        <p className="text-sm text-white/50 font-medium">No physical location required</p>
                       </div>
                     </div>
-                  ) : (
+                  ) : gig?.lat && gig?.lng ? (
                     <div id="gig-map" style={{ height: "200px", borderRadius: "12px" }} />
+                  ) : (
+                    <div className="bg-[#1C1C1C] border border-white/5 p-4 rounded-2xl flex items-start gap-3">
+                      <div className="w-9 h-9 rounded-xl bg-[#F4511E]/10 flex items-center justify-center shrink-0 mt-0.5">
+                        <MapPin size={18} className="text-[#F4511E]" />
+                      </div>
+                      <div>
+                        <p className="font-black text-white text-sm leading-snug">{gig.location_text}</p>
+                        <p className="text-[11px] text-white/40 font-medium mt-1">Indore, Madhya Pradesh</p>
+                      </div>
+                    </div>
                   )}
               </div>
 

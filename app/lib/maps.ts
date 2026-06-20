@@ -1,33 +1,26 @@
-let mapsLoadPromise: Promise<void> | null = null;
+let mapsLoadPromise: Promise<any> | null = null;
 
 export function getMapsLoader() {
   return {
-    load: (): Promise<void> => {
-      if (typeof window === "undefined") return Promise.resolve();
+    load: (): Promise<any> => {
+      if (typeof window === "undefined") return Promise.resolve(null);
 
-      // Already loaded
-      if ((window as any).google?.maps?.Map) {
-        return Promise.resolve();
-      }
+      const g = (window as any).google;
+      if (g?.maps?.Map) return Promise.resolve(g);
 
       if (mapsLoadPromise) return mapsLoadPromise;
 
-      mapsLoadPromise = new Promise<void>((resolve, reject) => {
+      mapsLoadPromise = new Promise<any>((resolve, reject) => {
         const callbackName = "__gmInit__";
 
-        // Called by Maps JS API when auth fails (invalid key, API not enabled, etc.)
         (window as any).gm_authFailure = () => {
           mapsLoadPromise = null;
-          reject(
-            new Error(
-              "Google Maps auth failed — check that Maps JavaScript API and Places API are enabled in Google Cloud Console, and that the API key restrictions allow this domain."
-            )
-          );
+          reject(new Error("Maps auth failed — Maps JavaScript API or Places API not enabled, or domain not authorized in Google Cloud Console."));
         };
 
         (window as any)[callbackName] = () => {
           delete (window as any)[callbackName];
-          resolve();
+          resolve((window as any).google);
         };
 
         const key = import.meta.env.VITE_GOOGLE_MAPS_API_KEY;
@@ -38,11 +31,7 @@ export function getMapsLoader() {
         script.onerror = () => {
           delete (window as any)[callbackName];
           mapsLoadPromise = null;
-          reject(
-            new Error(
-              `Maps script failed to load — check that Maps JavaScript API is enabled in Google Cloud Console for this key.`
-            )
-          );
+          reject(new Error("Maps script failed to load — Maps JavaScript API may not be enabled for this key."));
         };
         document.head.appendChild(script);
       });
