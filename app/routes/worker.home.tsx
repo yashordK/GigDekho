@@ -144,7 +144,7 @@ export default function HomeScreen() {
 
         <div className="relative z-10 max-w-4xl mx-auto w-full">
           {user && (
-            <div className="flex items-center gap-2 bg-[#1C1C1C] px-3.5 py-1.5 rounded-full border border-white/10 shadow-sm mb-6">
+            <div className="relative z-10 flex items-center gap-2 mb-2 bg-[#1C1C1C] px-3.5 py-1.5 rounded-full border border-white/10 shadow-sm">
               <span className="text-white font-bold text-xs">Welcome, {profile?.full_name || 'Worker'}</span>
             </div>
           )}
