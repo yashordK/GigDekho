@@ -15,8 +15,6 @@ export default function ProtectedRoute({ children }) {
 
   console.log("ProtectedRoute Render:", { user: user?.id, profile: !!profile, loading, path: location.pathname });
 
-  const isWorkerRoute = location.pathname.startsWith('/worker/');
-  const isOrganizerRoute = location.pathname.startsWith('/organizer/');
   const isPublicRoute = location.pathname === '/worker/home';
 
   useEffect(() => {
@@ -29,26 +27,13 @@ export default function ProtectedRoute({ children }) {
 
     if (!profile?.full_name && location.pathname !== '/setup-profile') {
       navigate('/setup-profile', { replace: true });
-      return;
     }
+  }, [loading, user, profile, location, navigate, isPublicRoute]);
 
-    if (profile?.role === 'organizer' && isWorkerRoute) {
-      navigate('/organizer/home', { replace: true });
-      return;
-    }
-
-    if (profile?.role === 'worker' && isOrganizerRoute) {
-      navigate('/worker/home', { replace: true });
-    }
-  }, [loading, user, profile, location, navigate, isWorkerRoute, isOrganizerRoute, isPublicRoute]);
-
-  // Always render a spinner — never null — while a redirect is pending or auth is loading.
   if (loading) return <Spinner />;
   if (isPublicRoute) return children;
   if (!user) return <Spinner />;
   if (!profile?.full_name && location.pathname !== '/setup-profile') return <Spinner />;
-  if (profile?.role === 'organizer' && isWorkerRoute) return <Spinner />;
-  if (profile?.role === 'worker' && isOrganizerRoute) return <Spinner />;
 
   return children;
 }

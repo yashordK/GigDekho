@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { supabase } from '~/lib/supabase.client';
 import { useAuth } from '~/context/AuthContext';
 import { useNavigate } from 'react-router';
-import { Calendar, ChevronRight, Briefcase, ArrowLeftRight } from 'lucide-react';
+import { Calendar, ChevronRight, Briefcase } from 'lucide-react';
 import { formatRelativeDate } from '~/lib/utils';
 
 const getImageUrl = (role) => {
@@ -69,15 +69,6 @@ export default function DashboardScreen() {
       {/* Edge to Edge Faded Header */}
       <div className="relative w-full pt-12 pb-24 hero-gradient-overlay flex flex-col items-center justify-center text-center px-4 overflow-hidden mb-6">
         <div className="absolute top-0 right-[20%] w-[250px] h-[250px] floating-glass-rect rotate-12 z-0 hidden lg:block opacity-40"></div>
-
-        <button
-          type="button"
-          onClick={() => { localStorage.setItem('activeView', 'organizer'); navigate('/organizer/home'); }}
-          className="relative z-10 flex items-center gap-2 btn-tap px-4 py-2 rounded-full border border-[#F4511E] text-[#F4511E] hover:bg-[#F4511E]/10 font-bold text-xs cursor-pointer transition-all mb-5"
-        >
-          <ArrowLeftRight size={14} />
-          Switch to Organizer Mode
-        </button>
 
         <h1 className="text-4xl lg:text-5xl font-black text-white mb-3 tracking-tight relative z-10 drop-shadow-md">My Gigs</h1>
         <p className="text-white/60 font-medium text-base lg:text-lg mb-8 max-w-md relative z-10 leading-relaxed">
