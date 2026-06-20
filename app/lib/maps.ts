@@ -1,27 +1,53 @@
-import { setOptions, importLibrary } from "@googlemaps/js-api-loader";
-
-let optionsSet = false;
-
-function initMaps() {
-  if (!optionsSet) {
-    setOptions({
-      key: import.meta.env.VITE_GOOGLE_MAPS_API_KEY || "AIzaSyDlmoFFSk55O9xy0SODFEHLMX8mqKPYTLc",
-      // No `v` — defaults to the stable quarterly release, which keeps
-      // legacy google.maps.places.Autocomplete working correctly.
-    });
-    optionsSet = true;
-  }
-}
+let mapsLoadPromise: Promise<void> | null = null;
 
 export function getMapsLoader() {
   return {
-    load: async () => {
-      initMaps();
-      await Promise.all([
-        importLibrary("maps"),
-        importLibrary("places"),
-      ]);
-      return (window as any).google;
-    }
+    load: (): Promise<void> => {
+      if (typeof window === "undefined") return Promise.resolve();
+
+      // Already loaded
+      if ((window as any).google?.maps?.Map) {
+        return Promise.resolve();
+      }
+
+      if (mapsLoadPromise) return mapsLoadPromise;
+
+      mapsLoadPromise = new Promise<void>((resolve, reject) => {
+        const callbackName = "__gmInit__";
+
+        // Called by Maps JS API when auth fails (invalid key, API not enabled, etc.)
+        (window as any).gm_authFailure = () => {
+          mapsLoadPromise = null;
+          reject(
+            new Error(
+              "Google Maps auth failed — check that Maps JavaScript API and Places API are enabled in Google Cloud Console, and that the API key restrictions allow this domain."
+            )
+          );
+        };
+
+        (window as any)[callbackName] = () => {
+          delete (window as any)[callbackName];
+          resolve();
+        };
+
+        const key = import.meta.env.VITE_GOOGLE_MAPS_API_KEY;
+        const script = document.createElement("script");
+        script.src = `https://maps.googleapis.com/maps/api/js?key=${key}&libraries=places&callback=${callbackName}&loading=async`;
+        script.async = true;
+        script.defer = true;
+        script.onerror = () => {
+          delete (window as any)[callbackName];
+          mapsLoadPromise = null;
+          reject(
+            new Error(
+              `Maps script failed to load — check that Maps JavaScript API is enabled in Google Cloud Console for this key.`
+            )
+          );
+        };
+        document.head.appendChild(script);
+      });
+
+      return mapsLoadPromise;
+    },
   };
 }

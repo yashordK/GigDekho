@@ -40,7 +40,7 @@ export default function LocationPicker({ value, onChange }: LocationPickerProps)
         setMapsLoaded(true);
       })
       .catch((err) => {
-        console.error("Error loading Google Maps API", err);
+        console.error("[LocationPicker] Maps load error:", err?.message ?? err);
         setLoadingError(true);
       });
   }, []);
@@ -178,8 +178,11 @@ export default function LocationPicker({ value, onChange }: LocationPickerProps)
 
   if (loadingError) {
     return (
-      <div className="bg-[#1C1C1C] border border-red-500/20 text-red-400 p-4 rounded-2xl text-center text-sm font-semibold">
-        Failed to load map services. Please check your connection.
+      <div className="bg-[#1C1C1C] border border-red-500/20 text-red-400 p-4 rounded-2xl text-sm font-semibold space-y-1">
+        <p>Failed to load map services.</p>
+        <p className="text-red-400/60 text-xs font-medium">
+          Check browser console for details. Ensure Maps JavaScript API and Places API are enabled in Google Cloud Console and the API key allows this domain.
+        </p>
       </div>
     );
   }
