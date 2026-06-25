@@ -5,6 +5,7 @@ import {
   Scripts,
   ScrollRestoration,
 } from "react-router";
+import { Analytics } from "@vercel/analytics/react";
 import { AuthProvider } from "./context/AuthContext";
 import "./index.css";
 
@@ -43,6 +44,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
         </AuthProvider>
         <ScrollRestoration />
         <Scripts />
+        <Analytics />
       </body>
     </html>
   );
