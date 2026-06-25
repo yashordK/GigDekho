@@ -1,0 +1,68 @@
+import { type ActionFunctionArgs } from "react-router";
+import { createClient } from "@supabase/supabase-js";
+import { createSupabaseServerClient } from "~/lib/supabase.server";
+
+function adminClient() {
+  return createClient(
+    process.env.VITE_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!,
+    { auth: { autoRefreshToken: false, persistSession: false } }
+  );
+}
+
+export async function action({ request }: ActionFunctionArgs) {
+  const supabase = createSupabaseServerClient(request);
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return Response.json({ error: "Unauthorized" }, { status: 401 });
+
+  const formData = await request.formData();
+  const applicationId = formData.get("application_id") as string;
+  if (!applicationId) return Response.json({ error: "Missing application_id" }, { status: 400 });
+
+  const admin = adminClient();
+
+  // Verify the caller is the organizer of this gig
+  const { data: app } = await admin
+    .from("applications")
+    .select("id, status, worker_id, gigs(organizer_id)")
+    .eq("id", applicationId)
+    .single();
+
+  if (!app) return Response.json({ error: "not_found" }, { status: 404 });
+
+  const gig = app.gigs as any;
+  if (gig?.organizer_id !== user.id) {
+    return Response.json({ error: "Unauthorized" }, { status: 403 });
+  }
+  if (app.status !== "accepted") {
+    return Response.json({ error: "Application is not in accepted state" }, { status: 400 });
+  }
+
+  // Mark as completed
+  const { error: updateErr } = await admin
+    .from("applications")
+    .update({ status: "completed" })
+    .eq("id", applicationId);
+
+  if (updateErr) return Response.json({ error: updateErr.message }, { status: 500 });
+
+  // +5 reliability score (capped at 100)
+  const { data: prof } = await admin
+    .from("profiles")
+    .select("reliability_score")
+    .eq("id", app.worker_id)
+    .single();
+
+  const newScore = Math.min(100, (prof?.reliability_score ?? 100) + 5);
+  await admin.from("profiles").update({ reliability_score: newScore }).eq("id", app.worker_id);
+
+  // Audit trail
+  await admin.from("reliability_events").insert({
+    worker_id: app.worker_id,
+    event_type: "good_attendance",
+    score_delta: 5,
+    application_id: applicationId,
+  });
+
+  return Response.json({ ok: true });
+}

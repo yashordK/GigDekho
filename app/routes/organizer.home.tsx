@@ -93,6 +93,17 @@ export default function OrganizerHomeScreen() {
     }
   }, [user]);
 
+  // Real-time: refresh when applications or gigs update
+  useEffect(() => {
+    if (!user) return;
+    const channel = supabase
+      .channel(`organizer-dashboard-${user.id}`)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'applications' }, () => fetchData())
+      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'gigs', filter: `organizer_id=eq.${user.id}` }, () => fetchData())
+      .subscribe();
+    return () => { supabase.removeChannel(channel); };
+  }, [user]);
+
   const handleSwitchToWorker = () => {
     localStorage.setItem('activeView', 'worker');
     navigate("/worker/home");

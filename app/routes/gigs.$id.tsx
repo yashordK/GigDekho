@@ -95,7 +95,11 @@ export default function GigDetailScreen() {
   const [gig, setGig] = useState(ssrGig);
   const [loading, setLoading] = useState(false);
   const [applying, setApplying] = useState(false);
-  const [applicationStatus, setApplicationStatus] = useState<string | null>(null); 
+  const [applicationStatus, setApplicationStatus] = useState<string | null>(null);
+  const [waitlistPosition, setWaitlistPosition] = useState<number | null>(null);
+  const [applicationId, setApplicationId] = useState<string | null>(null);
+  const [showCancelConfirm, setShowCancelConfirm] = useState(false);
+  const [cancelling, setCancelling] = useState(false);
   const [toastMessage, setToastMessage] = useState('');
   const [isErrorToast, setIsErrorToast] = useState(false);
   const [showTerms, setShowTerms] = useState(false);
@@ -161,13 +165,17 @@ export default function GigDetailScreen() {
       if (user) {
         const { data: appData, error: appError } = await supabase
           .from('applications')
-          .select('status')
+          .select('id, status, waitlist_position')
           .eq('gig_id', id)
           .eq('worker_id', user.id)
           .maybeSingle();
 
-        if (appError && appError.code !== 'PGRST116') throw appError; // PGRST116 is no rows
-        if (appData) setApplicationStatus(appData.status);
+        if (appError && appError.code !== 'PGRST116') throw appError;
+        if (appData) {
+          setApplicationStatus(appData.status);
+          setWaitlistPosition(appData.waitlist_position ?? null);
+          setApplicationId(appData.id);
+        }
       }
     } catch (err) {
       console.error(err);
@@ -196,33 +204,61 @@ export default function GigDetailScreen() {
     setShowTerms(false);
     setApplying(true);
     try {
-      // 1. Insert application
-      const { error: appError } = await supabase
-        .from('applications')
-        .insert({
-          gig_id: id,
-          worker_id: user.id,
-          status: 'pending'
-        });
+      const form = new FormData();
+      form.append("gig_id", id!);
+      const res = await fetch("/api/apply", { method: "POST", body: form });
+      const result = await res.json();
 
-      if (appError) throw appError;
+      if (!res.ok || result.error) {
+        if (result.error === "already_applied") {
+          showToast("You've already applied to this gig.", true);
+          await fetchData();
+          return;
+        }
+        throw new Error(result.error || "Failed to apply");
+      }
 
-      // 2. Increment slots safely using RPC
-      const { error: rpcError } = await supabase.rpc('increment_slots_filled', { gig_id: id });
-      
-      if (rpcError) throw rpcError;
-      
-      setApplicationStatus('pending');
-      
-      // Update local gig slot mapping to instantly reflect without refresh
-      setGig(prev => ({ ...prev, slots_filled: (prev.slots_filled || 0) + 1 }));
-      showToast("Applied! We'll notify you when confirmed.");
-      
+      if (result.status === "accepted") {
+        setApplicationStatus("accepted");
+        setGig((prev: any) => ({ ...prev, slots_filled: (prev.slots_filled || 0) + 1 }));
+        // Refresh to get application ID
+        await fetchData();
+        showToast("You're confirmed! Check your email for details. 🎉");
+      } else if (result.status === "waitlisted") {
+        // Stored as 'pending' with waitlist_position in DB (trigger convention)
+        setApplicationStatus("pending");
+        setWaitlistPosition(result.waitlist_position);
+        await fetchData();
+        showToast(`You're #${result.waitlist_position} on the waitlist! We'll notify you if a spot opens.`);
+      }
     } catch (err) {
-      console.error('Failed to apply:', err);
-      showToast('Something went wrong. Try again.', true);
+      console.error("Failed to apply:", err);
+      showToast("Something went wrong. Try again.", true);
     } finally {
       setApplying(false);
+    }
+  };
+
+  const handleCancelApplication = async () => {
+    if (!applicationId) return;
+    setCancelling(true);
+    try {
+      const form = new FormData();
+      form.append("app_id", applicationId);
+      const res = await fetch("/api/cancel", { method: "POST", body: form });
+      const result = await res.json();
+      if (!res.ok) {
+        showToast(result.error || "Could not cancel. Try again.", true);
+        return;
+      }
+      setApplicationStatus("cancelled");
+      setShowCancelConfirm(false);
+      setGig((prev: any) => ({ ...prev, slots_filled: Math.max(0, (prev.slots_filled || 1) - 1) }));
+      showToast("Spot cancelled. Check your email for confirmation.");
+    } catch {
+      showToast("Network error. Try again.", true);
+    } finally {
+      setCancelling(false);
     }
   };
 
@@ -240,6 +276,37 @@ export default function GigDetailScreen() {
   return (
     <main id="main-content" className="bg-[#111111] min-h-screen pb-24 font-sans relative pt-16">
       
+      {/* Cancel Confirmation Modal */}
+      {showCancelConfirm && gig && (
+        <div className="fixed inset-0 bg-black/80 z-[100] flex items-end sm:items-center justify-center p-4 animate-in fade-in">
+          <div className="bg-[#1C1C1C] border border-white/10 w-full max-w-sm rounded-3xl p-6 shadow-2xl">
+            <h3 className="font-black text-white text-lg mb-3">Cancel your spot?</h3>
+            {(() => {
+              const hoursUntil = (new Date(gig.event_date).getTime() - Date.now()) / 3600000;
+              const penalty = hoursUntil < 6 ? 15 : hoursUntil < 24 ? 5 : 0;
+              return penalty > 0 ? (
+                <div className="bg-red-500/10 border border-red-500/30 rounded-xl p-3 mb-4 text-sm text-red-400 font-medium">
+                  Cancelling now will reduce your reliability score by {penalty} points.
+                </div>
+              ) : (
+                <div className="bg-green-500/10 border border-green-500/30 rounded-xl p-3 mb-4 text-sm text-green-400 font-medium">
+                  No penalty — you're cancelling with enough notice.
+                </div>
+              );
+            })()}
+            <p className="text-white/50 text-sm font-medium mb-5">Your spot will be given to the next person on the waitlist.</p>
+            <div className="flex gap-3">
+              <button type="button" onClick={() => setShowCancelConfirm(false)} className="flex-1 py-3 rounded-xl border border-white/20 text-white font-bold text-sm btn-tap">
+                Keep my spot
+              </button>
+              <button type="button" onClick={handleCancelApplication} disabled={cancelling} className="flex-1 py-3 rounded-xl bg-red-500 text-white font-bold text-sm disabled:opacity-50 btn-tap">
+                {cancelling ? "Cancelling..." : "Yes, cancel"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Terms and Conditions Modal */}
       {showTerms && (
         <div className="fixed inset-0 bg-black/80 z-[100] flex items-center justify-center p-4 animate-in fade-in">
@@ -395,7 +462,25 @@ export default function GigDetailScreen() {
                        </div>
                      </div>
 
-                     {applicationStatus === 'pending' || applicationStatus === 'accepted' ? (
+                     {applicationStatus === 'accepted' ? (
+                        <div className="space-y-3">
+                          <div className="w-full h-14 rounded-full font-black text-[15px] flex justify-center items-center bg-green-500/10 text-green-400 border border-green-500/20 uppercase tracking-wide">
+                            <CheckCircle2 size={18} className="mr-2" /> Confirmed
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => setShowCancelConfirm(true)}
+                            className="w-full py-3 rounded-xl border border-red-500/30 text-red-400 text-sm font-bold hover:border-red-500 hover:bg-red-500/10 transition-all btn-tap"
+                          >
+                            Cancel my spot
+                          </button>
+                        </div>
+                     ) : applicationStatus === 'pending' && waitlistPosition ? (
+                        // 'pending' + waitlist_position = on waitlist (trigger convention)
+                        <button type="button" disabled className="w-full h-14 rounded-full font-black text-[15px] flex justify-center items-center bg-yellow-500/10 text-yellow-400 border border-yellow-500/20 cursor-not-allowed uppercase tracking-wide">
+                           <Info size={18} className="mr-2" /> Waitlisted #{waitlistPosition}
+                        </button>
+                     ) : applicationStatus === 'pending' ? (
                         <button type="button" disabled className="w-full h-14 rounded-full font-black text-[15px] flex justify-center items-center bg-white/5 text-white/40 border border-white/10 cursor-not-allowed uppercase tracking-wide">
                            <Info size={18} className="mr-2" /> Pending
                         </button>
@@ -404,13 +489,13 @@ export default function GigDetailScreen() {
                            Completed
                         </button>
                      ) : (
-                        <button 
+                        <button
                           type="button"
                           onClick={handleApplyClick}
-                          disabled={applying || (gig.slots_total - (gig.slots_filled||0) <= 0)}
+                          disabled={applying || (gig.slots_total - (gig.slots_filled||0) <= 0 && gig.slots_total > 0)}
                           className="w-full h-14 rounded-full font-black text-[15px] flex justify-center items-center text-white bg-[#F4511E] hover:bg-[#D84315] transition-all shadow-lg btn-tap disabled:opacity-50 disabled:shadow-none uppercase tracking-wide"
                         >
-                           {applying ? 'Applying...' : 'Apply Now'}
+                           {applying ? 'Applying...' : gig.slots_total - (gig.slots_filled||0) <= 0 ? 'Join Waitlist' : 'Apply Now'}
                         </button>
                      )}
                      

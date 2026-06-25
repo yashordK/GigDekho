@@ -68,6 +68,7 @@ export default function GigManagementCard({
     amount: number;
   } | null>(null);
   const [loading, setLoading] = useState(false);
+  const [attendedIds, setAttendedIds] = useState<Set<string>>(new Set());
 
   const menuRef = useRef<HTMLDivElement>(null);
 
@@ -126,6 +127,22 @@ export default function GigManagementCard({
   const acceptedWorkers = applications.filter(
     (app) => app.gig_id === gig.id && app.status === "accepted"
   );
+
+  const handleMarkAttended = async (applicationId: string) => {
+    setLoading(true);
+    try {
+      const form = new FormData();
+      form.append("application_id", applicationId);
+      const res = await fetch("/api/mark-attendance", { method: "POST", body: form });
+      if (!res.ok) throw new Error("Failed");
+      setAttendedIds((prev) => new Set(prev).add(applicationId));
+      showToast("Attendance marked! Worker reliability +5pts.", "success");
+    } catch {
+      showToast("Failed to mark attendance", "error");
+    } finally {
+      setLoading(false);
+    }
+  };
 
   // Update gig status (Completed / Cancelled)
   const handleUpdateStatus = async (newStatus: "completed" | "cancelled") => {
@@ -412,14 +429,31 @@ export default function GigManagementCard({
                       </div>
                     </div>
 
-                    {p?.phone && (
-                      <a
-                        href={`tel:${p.phone}`}
-                        className="w-8 h-8 rounded-full bg-[#F4511E]/10 text-[#F4511E] flex items-center justify-center hover:bg-[#F4511E]/20 transition-colors btn-tap"
-                      >
-                        <Phone size={14} />
-                      </a>
-                    )}
+                    <div className="flex items-center gap-2">
+                      {p?.phone && (
+                        <a
+                          href={`tel:${p.phone}`}
+                          className="w-8 h-8 rounded-full bg-[#F4511E]/10 text-[#F4511E] flex items-center justify-center hover:bg-[#F4511E]/20 transition-colors btn-tap"
+                        >
+                          <Phone size={14} />
+                        </a>
+                      )}
+                      {gig.status === "completed" && (
+                        attendedIds.has(app.id) || app.status === "completed" ? (
+                          <span className="text-[10px] bg-green-500/20 text-green-400 px-2.5 py-1 rounded-full font-bold">
+                            Attended
+                          </span>
+                        ) : (
+                          <button
+                            type="button"
+                            onClick={() => handleMarkAttended(app.id)}
+                            className="text-[10px] bg-white/5 border border-white/10 text-white/60 px-2.5 py-1 rounded-full font-bold hover:bg-green-500/20 hover:text-green-400 hover:border-green-500/30 transition-all btn-tap"
+                          >
+                            Mark Attended
+                          </button>
+                        )
+                      )}
+                    </div>
                   </div>
                 );
               })

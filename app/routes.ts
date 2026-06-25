@@ -11,6 +11,12 @@ export default [
   // Public gig pages — SSR for SEO
   route("gigs/:id", "routes/gigs.$id.tsx"),
 
+  // Server-only API routes (no component)
+  route("api/apply", "routes/api.apply.ts"),
+  route("api/cancel", "routes/api.cancel.ts"),
+  route("api/mark-attendance", "routes/api.mark-attendance.ts"),
+  route("api/cron/reminders", "routes/api.cron.reminders.ts"),
+
   // Public app pages — nav chrome, no auth wall
   layout("routes/public-layout.tsx", [
     route("worker/home", "routes/worker.home.tsx"),
