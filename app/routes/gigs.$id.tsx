@@ -31,7 +31,9 @@ export async function loader({ params, request }) {
       organizer_id,
       profiles!gigs_organizer_id_fkey (
         full_name,
-        avg_rating
+        company_name,
+        avg_rating,
+        is_verified
       )
     `)
     .eq("id", params.id)
@@ -41,7 +43,30 @@ export async function loader({ params, request }) {
     throw new Response("Gig not found", { status: 404 });
   }
 
-  return { gig };
+  // Count of completed gigs by this organizer
+  const { count: gigsHosted } = await supabaseServer
+    .from('gigs')
+    .select('id', { count: 'exact', head: true })
+    .eq('organizer_id', gig.organizer_id)
+    .eq('status', 'completed');
+
+  // Count of gig_payments where final_paid = true vs total
+  const { count: totalPayments } = await supabaseServer
+    .from('gig_payments')
+    .select('id', { count: 'exact', head: true })
+    .eq('organizer_id', gig.organizer_id);
+
+  const { count: paidPayments } = await supabaseServer
+    .from('gig_payments')
+    .select('id', { count: 'exact', head: true })
+    .eq('organizer_id', gig.organizer_id)
+    .eq('final_paid', true);
+
+  const paymentRate = totalPayments && totalPayments > 0 
+    ? Math.round(((paidPayments || 0) / totalPayments) * 100) 
+    : null;
+
+  return { gig, gigsHosted: gigsHosted || 0, paymentRate };
 }
 
 export const meta = ({ data }) => {
@@ -90,7 +115,7 @@ export default function GigDetailScreen() {
   const location = useLocation();
   const { user } = useAuth();
   
-  const { gig: ssrGig } = useLoaderData();
+  const { gig: ssrGig, gigsHosted, paymentRate } = useLoaderData();
 
   const [gig, setGig] = useState(ssrGig);
   const [loading, setLoading] = useState(false);
@@ -366,18 +391,29 @@ export default function GigDetailScreen() {
                  )}
                  <h1 className="text-3xl lg:text-5xl font-black text-white tracking-tight leading-[1.05] mb-5">{gig.title}</h1>
                  
-                 {/* Organizer Row */}
-                 <div className="flex items-center space-x-3 mb-6 bg-[#1C1C1C] p-3.5 rounded-2xl border border-white/5 shadow-sm self-start max-w-max">
-                   <div className="w-10 h-10 bg-white/10 text-white rounded-full flex items-center justify-center font-bold shadow-inner">
-                     P
-                   </div>
-                   <div className="flex flex-col pr-4">
-                     <span className="font-bold text-white text-[13px] flex items-center">
-                       Platform Planners <ShieldCheck size={14} className="text-[#F4511E] ml-1" />
-                     </span>
-                     <span className="text-[11px] font-semibold text-white/50">Verified Organizer · 4.9 Rating</span>
-                   </div>
-                 </div>
+                 {(() => {
+                    const profile = Array.isArray(gig.profiles) ? gig.profiles[0] : gig.profiles;
+                    const profileName = profile ? (profile.company_name ?? profile.full_name) : "Hirer";
+                    const initials = profileName.charAt(0).toUpperCase();
+                    const ratingVal = profile?.avg_rating;
+                    const ratingText = (!ratingVal || ratingVal === 0) ? "New Hirer" : `${Number(ratingVal).toFixed(1)} Rating`;
+                    const isVerified = profile?.is_verified === true;
+                    return (
+                      <div className="flex items-center space-x-3 mb-6 bg-[#1C1C1C] p-3.5 rounded-2xl border border-white/5 shadow-sm self-start max-w-max">
+                        <div className="w-10 h-10 bg-white/10 text-white rounded-full flex items-center justify-center font-bold shadow-inner uppercase">
+                          {initials}
+                        </div>
+                        <div className="flex flex-col pr-4">
+                          <span className="font-bold text-white text-[13px] flex items-center">
+                            {profileName} {isVerified && <ShieldCheck size={14} className="text-[#F4511E] ml-1" />}
+                          </span>
+                          <span className="text-[11px] font-semibold text-white/50">
+                            {isVerified ? "Verified Hirer" : "Hirer"} · {ratingText}
+                          </span>
+                        </div>
+                      </div>
+                    );
+                  })()}
               </div>
 
               {/* 4-Column Info Cards */}
@@ -500,37 +536,47 @@ export default function GigDetailScreen() {
                      )}
                      
                      <div className="mt-8 space-y-3.5 pt-6 border-t border-white/5 -mx-2 px-2">
-                       <div className="flex items-center text-[11px] font-bold text-white/60 uppercase tracking-wide">
-                         <CheckCircle2 size={16} className="text-[#F4511E] mr-2.5" /> Instant confirmation
-                       </div>
-                       <div className="flex items-center text-[11px] font-bold text-white/60 uppercase tracking-wide">
-                         <CheckCircle2 size={16} className="text-[#F4511E] mr-2.5" /> 1hr payout after completion
-                       </div>
-                       <div className="flex items-center text-[11px] font-bold text-white/60 uppercase tracking-wide">
-                         <ShieldCheck size={16} className="text-[#F4511E] mr-2.5" /> Verified Gig Guarantee
-                       </div>
-                     </div>
-
-                   </div>
-                </div>
-
-                {/* Organizer Reputation */}
-                <div className="mt-5 bg-[#1C1C1C] border border-white/5 rounded-2xl p-5">
-                   <p className="text-[10px] font-black text-white/40 uppercase tracking-widest mb-3">Organizer Reputation</p>
-                   <div className="grid grid-cols-2 gap-4 mb-4">
-                      <div>
-                        <p className="text-xl font-black text-white mb-0.5">142</p>
-                        <p className="text-[9px] font-bold text-white/50 tracking-wider uppercase">Gigs Hosted</p>
+                        <div className="flex items-center text-[11px] font-bold text-white/60 uppercase tracking-wide">
+                          <CheckCircle2 size={16} className="text-[#F4511E] mr-2.5" /> Instant confirmation
+                        </div>
+                        <div className="flex items-center text-[11px] font-bold text-white/60 uppercase tracking-wide">
+                          <CheckCircle2 size={16} className="text-[#F4511E] mr-2.5" /> EARNINGS TO YOUR WALLET
+                        </div>
+                        <div className="flex items-center text-[11px] font-bold text-white/60 uppercase tracking-wide">
+                          <ShieldCheck size={16} className="text-[#F4511E] mr-2.5" /> Verified Gig Guarantee
+                        </div>
                       </div>
-                      <div>
-                        <p className="text-xl font-black text-white mb-0.5">100%</p>
-                        <p className="text-[9px] font-bold text-white/50 tracking-wider uppercase">Payment Rate</p>
-                      </div>
-                   </div>
-                   <button type="button" className="text-[#F4511E] text-[11px] font-bold hover:underline flex items-center transition-all btn-tap min-h-[44px]">
-                     View Organizer Profile <ChevronRight size={14} className="ml-1" />
-                   </button>
-                </div>
+
+                    </div>
+                 </div>
+
+                 {/* Hirer Reputation */}
+                 <div className="mt-5 bg-[#1C1C1C] border border-white/5 rounded-2xl p-5">
+                    <p className="text-[10px] font-black text-white/40 uppercase tracking-widest mb-3">Hirer Reputation</p>
+                    <div className={`grid ${paymentRate !== null ? 'grid-cols-2' : 'grid-cols-1'} gap-4 mb-4`}>
+                       <div>
+                         <p className="text-xl font-black text-white mb-0.5">
+                           {gigsHosted === 0 ? "New Hirer" : gigsHosted}
+                         </p>
+                         <p className="text-[9px] font-bold text-white/50 tracking-wider uppercase">
+                           {gigsHosted === 0 ? "Just started" : "Gigs Hosted"}
+                         </p>
+                       </div>
+                       {paymentRate !== null && (
+                         <div>
+                           <p className="text-xl font-black text-white mb-0.5">{paymentRate}%</p>
+                           <p className="text-[9px] font-bold text-white/50 tracking-wider uppercase">Payment Rate</p>
+                         </div>
+                       )}
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => navigate(`/hirer/${gig.organizer_id}`)}
+                      className="text-[#F4511E] text-[11px] font-bold hover:underline flex items-center transition-all btn-tap min-h-[44px]"
+                    >
+                      View Hirer Profile <ChevronRight size={14} className="ml-1" />
+                    </button>
+                 </div>
 
              </div>
            </div>

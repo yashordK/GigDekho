@@ -8,20 +8,20 @@ export const meta: MetaFunction = () => [
   {
     name: "description",
     content:
-      "GigDekho connects event organizers and local businesses in Indore with students and part-timers for short-term roles — waitstaff, event helpers, DJs, security, and more. Post a gig or start earning today.",
+      "GigDekho connects people who need short-term help with people who want to earn — for any kind of work, Indore's hyperlocal staffing platform.",
   },
   { property: "og:title", content: "GigDekho — Local Gigs, Real Earnings" },
   {
     property: "og:description",
     content:
-      "Post a gig or find local work in Indore. Waiters, volunteers, event coordinators, singers, DJs and more — get hired same day.",
+      "GigDekho connects people who need short-term help with people who want to earn — for any kind of work, anywhere in the city.",
   },
   { property: "og:type", content: "website" },
   { property: "og:url", content: "https://gigdekho.com" },
   {
     name: "keywords",
     content:
-      "local gig work Indore, event helpers Indore, part time work Indore, waiter job, event coordinator, DJ booking Indore, singer booking, short term work Madhya Pradesh, gig dekho",
+      "local gig work Indore, staffing Indore, part time work Indore, waiter job, helper, DJ booking Indore, short term work Madhya Pradesh, gig dekho",
   },
 ];
 
@@ -80,25 +80,17 @@ export default function LandingScreen() {
           💼
         </div>
         <h2 className="text-4xl lg:text-6xl font-black text-white tracking-tight leading-tight mb-4">
-          Want to earn?
+          I want to earn
         </h2>
         <p className="text-white/60 font-medium text-lg lg:text-xl lg:max-w-md mb-8 leading-relaxed">
-          Find gigs at events near you. Get paid the same day.
+          Browse local gigs and get hired today
         </p>
-
-        <div className="flex flex-wrap items-center justify-center gap-2 lg:gap-3 mb-10 text-[11px] lg:text-xs font-black tracking-widest text-[#F4511E] uppercase">
-          <span className="bg-[#F4511E]/10 px-3 py-1.5 rounded-full border border-[#F4511E]/20">500+ workers</span>
-          <span className="hidden lg:inline text-white/20">•</span>
-          <span className="bg-[#F4511E]/10 px-3 py-1.5 rounded-full border border-[#F4511E]/20">₹3,000 avg earning</span>
-          <span className="hidden lg:inline text-white/20">•</span>
-          <span className="bg-[#F4511E]/10 px-3 py-1.5 rounded-full border border-[#F4511E]/20">1hr payout</span>
-        </div>
 
         <button
           onClick={handleWorkerFlow}
-          className="w-full max-w-[320px] lg:max-w-[380px] min-h-[56px] bg-[#F4511E] hover:bg-[#D84315] text-white font-black text-base lg:text-lg rounded-full shadow-lg hover:shadow-xl hover:shadow-[#F4511E]/30 transition-all btn-tap mb-4"
+          className="w-full max-w-[320px] lg:max-w-[380px] min-h-[56px] bg-[#F4511E] hover:bg-[#D84315] text-white font-black text-base lg:text-lg rounded-full shadow-lg hover:shadow-xl hover:shadow-[#F4511E]/30 transition-all btn-tap mb-4 mt-8"
         >
-          Start Earning →
+          Find Work →
         </button>
         <p className="text-white/30 font-bold text-[11px] lg:text-xs">
           Students, freelancers, artists welcome
@@ -116,25 +108,17 @@ export default function LandingScreen() {
           🎪
         </div>
         <h2 className="text-4xl lg:text-6xl font-black text-white tracking-tight leading-tight mb-4 relative z-10">
-          Hosting an event?
+          I need people
         </h2>
         <p className="text-white/50 font-medium text-lg lg:text-xl lg:max-w-md mb-8 leading-relaxed relative z-10 text-center">
-          Find verified staff and performers instantly. Any role, any scale.
+          Post any role, get workers in no time
         </p>
-
-        <div className="flex flex-wrap items-center justify-center gap-2 lg:gap-3 mb-10 text-[11px] lg:text-xs font-black tracking-widest text-white/40 uppercase relative z-10">
-          <span className="bg-white/5 px-3 py-1.5 rounded-full border border-white/10">200+ organizers</span>
-          <span className="hidden lg:inline">•</span>
-          <span className="bg-white/5 px-3 py-1.5 rounded-full border border-white/10">Verified workers</span>
-          <span className="hidden lg:inline">•</span>
-          <span className="bg-white/5 px-3 py-1.5 rounded-full border border-white/10">Instant matching</span>
-        </div>
 
         <button
           onClick={handleOrganizerFlow}
-          className="w-full max-w-[320px] lg:max-w-[380px] min-h-[56px] bg-transparent border-2 border-white/30 hover:border-white hover:bg-white hover:text-[#111111] text-white font-black text-base lg:text-lg rounded-full transition-all btn-tap mb-4 relative z-10"
+          className="w-full max-w-[320px] lg:max-w-[380px] min-h-[56px] bg-transparent border-2 border-white/30 hover:border-white hover:bg-white hover:text-[#111111] text-white font-black text-base lg:text-lg rounded-full transition-all btn-tap mb-4 relative z-10 mt-8"
         >
-          Post a Gig →
+          Hire Now →
         </button>
         <p className="text-white/20 font-bold text-[11px] lg:text-xs relative z-10">
           Weddings, clubs, colleges, corporates

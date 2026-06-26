@@ -121,7 +121,7 @@ export default function ProfileScreen() {
         fetchedRatings = ratingData.map(r => ({
           score: r.score,
           comment: r.comment,
-          reviewer_name: (Array.isArray(r.rater) ? r.rater[0]?.full_name : (r.rater as any)?.full_name) || 'Verified Organizer'
+          reviewer_name: (Array.isArray(r.rater) ? r.rater[0]?.full_name : (r.rater as any)?.full_name) || 'Verified Hirer'
         }));
         
         if (fetchedRatings.length > 0) {
@@ -220,7 +220,7 @@ export default function ProfileScreen() {
     levelColor = 'text-primary';
   }
 
-  const reliability = 97; // Mock
+  const reliability = profile?.reliability_score ?? 100;
   const relColorClass = reliability > 80 ? 'bg-green-100 text-green-700' : 'bg-orange-100 text-orange-700';
 
   if (loading) {
@@ -527,11 +527,11 @@ export default function ProfileScreen() {
             </>
           ) : (
             <div className="bg-[#1C1C1C] rounded-2xl shadow-sm border border-white/5 p-5 lg:p-8 space-y-4 mb-8">
-              <h3 className="font-bold text-white lg:text-xl">Organizer Profile Info</h3>
+              <h3 className="font-bold text-white lg:text-xl">Hirer Profile Info</h3>
               <div className="space-y-3 text-sm text-left">
                 <div>
                   <span className="text-white/40 font-bold block uppercase text-[10px] tracking-wider mb-0.5">Company / Agency</span>
-                  <span className="text-white font-semibold">{profile?.company_name || 'Individual Organizer'}</span>
+                  <span className="text-white font-semibold">{profile?.company_name || 'Individual Hirer'}</span>
                 </div>
                 {profile?.website && (
                   <div>
@@ -541,7 +541,7 @@ export default function ProfileScreen() {
                 )}
                 <div>
                   <span className="text-white/40 font-bold block uppercase text-[10px] tracking-wider mb-0.5">Bio / Description</span>
-                  <p className="text-white/70 font-medium leading-relaxed">{profile?.bio || 'This organizer has not added a bio yet.'}</p>
+                  <p className="text-white/70 font-medium leading-relaxed">{profile?.bio || 'This hirer has not added a bio yet.'}</p>
                 </div>
               </div>
             </div>
@@ -550,12 +550,12 @@ export default function ProfileScreen() {
           {/* Switch Role Section */}
           <div className="glass-panel p-5 rounded-2xl border border-white/5 space-y-3 mb-8 text-left">
             <h3 className="font-semibold text-white">
-              {profile?.role === 'organizer' ? 'Want to earn?' : 'Want to post gigs?'}
+              {profile?.role === 'organizer' ? 'Want to earn?' : 'Need to hire someone?'}
             </h3>
             <p className="text-white/50 text-xs font-semibold leading-relaxed">
               {profile?.role === 'organizer' 
-                ? 'Switch to Worker mode to browse live gigs and start earning.' 
-                : 'Switch to Organizer mode to post gigs and hire workers.'}
+                ? 'Switch to Worker Mode to browse live gigs and start earning.' 
+                : 'Need to hire people for your work? Switch to Hirer Mode to post gigs and find workers.'}
               {" "}You can switch back anytime.
             </p>
             <button
@@ -563,7 +563,7 @@ export default function ProfileScreen() {
               className="btn-tap w-full py-3 rounded-xl border border-[#F4511E] 
                          text-[#F4511E] font-semibold hover:bg-[#F4511E]/10 transition-all cursor-pointer text-sm"
             >
-              {profile?.role === 'organizer' ? 'Switch to Worker Mode' : 'Switch to Organizer Mode'}
+              {profile?.role === 'organizer' ? 'Switch to Worker Mode' : 'Switch to Hirer Mode'}
             </button>
           </div>
 

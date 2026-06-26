@@ -59,7 +59,7 @@ export function applicationAcceptedEmail(
           <div style="color:#F4511E;font-size:18px;font-weight:bold;margin-top:12px;">₹${totalPay} total</div>
         </div>
         <p style="color:#9ca3af;font-size:13px;">Please arrive on time. Your reliability score increases by +5 for every successful attendance.</p>
-        <p style="color:#9ca3af;font-size:13px;">Need to cancel? You can do so from your GigDekho dashboard. Cancelling within 24 hours of the event will affect your reliability score.</p>
+        <p style="color:#9ca3af;font-size:13px;">Need to cancel? You can do so from your GigDekho dashboard. Cancelling within 24 hours of the scheduled date will affect your reliability score.</p>
         <a href="https://gigdekho.com/worker/dashboard" style="display:inline-block;background:#F4511E;color:#fff;padding:12px 24px;border-radius:8px;text-decoration:none;font-weight:bold;margin-top:8px;">View on Dashboard →</a>
       </div>`,
   };

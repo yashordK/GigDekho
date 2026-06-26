@@ -99,7 +99,7 @@ export default function TopNav() {
                 className="flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-[#F4511E] text-[#F4511E] hover:bg-[#F4511E]/10 font-bold text-xs transition-all btn-tap"
               >
                 <ArrowLeftRight size={13} />
-                {isOrganizerView ? 'Worker Mode' : 'Organizer Mode'}
+                {isOrganizerView ? 'Worker Mode' : 'Hirer Mode'}
               </button>
 
               {/* Notifications */}
@@ -124,7 +124,7 @@ export default function TopNav() {
                     <div className="px-4 py-3 border-b border-white/10 mb-1">
                       <p className="text-sm font-black text-white truncate leading-none mb-0.5">{profile?.full_name || 'User'}</p>
                       <p className="text-[10px] uppercase tracking-wider text-white/40 font-bold">
-                        {isOrganizerView ? 'organizer' : 'worker'} mode · Indore
+                        {isOrganizerView ? 'hirer' : 'worker'} mode · Indore
                       </p>
                     </div>
                     <button

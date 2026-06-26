@@ -126,11 +126,11 @@ export default function SetupProfileScreen() {
         <div className="w-full max-w-[480px] bg-white p-8 lg:p-10 lg:rounded-3xl rounded-2xl border border-slate-100 shadow-sm lg:shadow-xl my-auto">
           <div className="text-center mb-8">
             <div className="inline-block px-3 py-1 bg-slate-100 text-slate-600 rounded-full text-[10px] sm:text-xs font-bold uppercase tracking-widest mb-4 border border-slate-200 shadow-sm">
-               Setting up your {intent} profile
+               Setting up your {intent === 'organizer' ? 'Hirer' : 'Worker'} profile
             </div>
             <h1 className="text-3xl font-black text-slate-800 mb-2">Create Profile</h1>
             <p className="text-sm font-medium text-slate-500">
-               {intent === 'worker' ? "Let's get you set up to start earning." : "Let's get you set up to host events."}
+               {intent === 'worker' ? "Worker — I want to earn" : "Hirer — I need people"}
             </p>
           </div>
 

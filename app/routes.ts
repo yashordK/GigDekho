@@ -10,6 +10,7 @@ export default [
 
   // Public gig pages — SSR for SEO
   route("gigs/:id", "routes/gigs.$id.tsx"),
+  route("hirer/:id", "routes/hirer.$id.tsx"),
 
   // Server-only API routes (no component)
   route("api/apply", "routes/api.apply.ts"),

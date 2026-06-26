@@ -195,7 +195,7 @@ export default function AuthModal({ isOpen, onClose, defaultIntent = 'worker' }:
             {authMethod === 'waiting' 
               ? 'Check your email' 
               : intent === 'organizer' 
-                ? 'Ready to hire local staff?' 
+                ? 'Ready to find people for your work?' 
                 : 'Ready to start earning?'}
           </h2>
           <p className="text-white/50 text-xs font-semibold leading-relaxed">
@@ -222,9 +222,9 @@ export default function AuthModal({ isOpen, onClose, defaultIntent = 'worker' }:
             <div className="space-y-2.5 bg-[#111111]/45 p-4 rounded-2xl border border-white/5 text-left">
               {(intent === 'organizer'
                 ? [
-                    "Post any role — waiters, DJs, coordinators",
+                    "Post any role — waiters, DJs, promoters, helpers",
                     "Workers apply within minutes",
-                    "Pay securely after the event",
+                    "Pay securely, earnings go to worker wallets",
                   ]
                 : [
                     "Dozens of gigs posted daily in Indore",
@@ -269,7 +269,7 @@ export default function AuthModal({ isOpen, onClose, defaultIntent = 'worker' }:
               >
                 {intent === 'organizer' 
                   ? 'Looking for work? Sign up as a Worker →' 
-                  : 'Need to hire staff? Sign up as an Organizer →'}
+                  : 'Need to hire someone? Sign up as a Hirer →'}
               </button>
             </div>
           </div>

@@ -31,6 +31,11 @@ type Pages = {
       "id": string;
     };
   };
+  "/hirer/:id": {
+    params: {
+      "id": string;
+    };
+  };
   "/api/apply": {
     params: {};
   };
@@ -63,7 +68,7 @@ type Pages = {
 type RouteFiles = {
   "root.tsx": {
     id: "root";
-    page: "/" | "/auth" | "/auth/callback" | "/setup-profile" | "/organizer/preview" | "/gigs/:id" | "/api/apply" | "/api/cancel" | "/api/mark-attendance" | "/api/cron/reminders" | "/worker/home" | "/worker/dashboard" | "/worker/earnings" | "/worker/profile" | "/organizer/home";
+    page: "/" | "/auth" | "/auth/callback" | "/setup-profile" | "/organizer/preview" | "/gigs/:id" | "/hirer/:id" | "/api/apply" | "/api/cancel" | "/api/mark-attendance" | "/api/cron/reminders" | "/worker/home" | "/worker/dashboard" | "/worker/earnings" | "/worker/profile" | "/organizer/home";
   };
   "routes/home.tsx": {
     id: "routes/home";
@@ -88,6 +93,10 @@ type RouteFiles = {
   "routes/gigs.$id.tsx": {
     id: "routes/gigs.$id";
     page: "/gigs/:id";
+  };
+  "routes/hirer.$id.tsx": {
+    id: "routes/hirer.$id";
+    page: "/hirer/:id";
   };
   "routes/api.apply.ts": {
     id: "routes/api.apply";
@@ -143,6 +152,7 @@ type RouteModules = {
   "routes/setup-profile": typeof import("./app/routes/setup-profile.tsx");
   "routes/organizer.preview": typeof import("./app/routes/organizer.preview.tsx");
   "routes/gigs.$id": typeof import("./app/routes/gigs.$id.tsx");
+  "routes/hirer.$id": typeof import("./app/routes/hirer.$id.tsx");
   "routes/api.apply": typeof import("./app/routes/api.apply.ts");
   "routes/api.cancel": typeof import("./app/routes/api.cancel.ts");
   "routes/api.mark-attendance": typeof import("./app/routes/api.mark-attendance.ts");

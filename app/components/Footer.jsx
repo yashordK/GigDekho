@@ -12,7 +12,7 @@ export default function Footer() {
           <div className="space-y-6">
             <h2 className="text-2xl font-black text-white tracking-tight">GigDekho<span className="text-[#F4511E]">.</span></h2>
             <p className="text-sm font-medium leading-relaxed max-w-sm">
-              Connecting local businesses with verified, high-quality event professionals in Indore. Flexible work, instant payouts, zero hassle.
+              GigDekho is Indore's hyperlocal staffing platform. Whether you need a waiter, a promoter, a DJ, or just an extra pair of hands — find the right person in minutes.
             </p>
             <div className="flex space-x-4">
               <a href="#" className="text-sm font-bold text-white/60 hover:text-[#F4511E] transition-colors">

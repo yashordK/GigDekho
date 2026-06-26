@@ -76,10 +76,10 @@ export default function OrganizerPreviewScreen() {
         {/* Welcome Header */}
         <div className="max-w-md mx-auto text-center space-y-2 mt-4">
           <div className="inline-block bg-[#1C1C1C] px-3.5 py-1.5 rounded-full border border-white/10">
-            <span className="text-white font-bold text-xs">Welcome back, Event Planners</span>
+            <span className="text-white font-bold text-xs">Welcome back, Hirers</span>
           </div>
-          <h1 className="text-3xl font-black text-white">Indore Organizer Center</h1>
-          <p className="text-white/60 text-sm">Post and manage your hyperlocal event staffing instantly.</p>
+          <h1 className="text-3xl font-black text-white">Ready to find people for your work?</h1>
+          <p className="text-white/60 text-sm">Post and manage your gigs instantly.</p>
         </div>
 
         {/* Stats Grid */}

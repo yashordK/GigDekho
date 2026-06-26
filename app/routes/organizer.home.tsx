@@ -137,7 +137,7 @@ export default function OrganizerHomeScreen() {
     );
   }
 
-  const displayName = profile?.company_name || profile?.full_name || "Organizer";
+  const displayName = profile?.company_name || profile?.full_name || "Hirer";
 
   return (
     <div className="pb-24 lg:pb-12 bg-[#111111] min-h-screen pt-4">
@@ -159,10 +159,10 @@ export default function OrganizerHomeScreen() {
           {profile?.is_verified && <ShieldCheck size={16} className="text-[#F4511E]" />}
         </div>
         <h1 className="text-3xl lg:text-4xl font-black text-white mb-2 tracking-tight relative z-10 drop-shadow-md">
-          Indore Organizer Center
+          Hirer Dashboard
         </h1>
         <p className="text-white/60 font-medium text-sm lg:text-base max-w-md relative z-10 mb-4">
-          Post and manage your hyperlocal event staffing instantly.
+          Post and manage your gigs instantly.
         </p>
         <button
           onClick={handleSwitchToWorker}
@@ -237,7 +237,7 @@ export default function OrganizerHomeScreen() {
               </div>
               <p className="text-white font-black mb-1 text-lg">No active gigs listed</p>
               <p className="text-sm font-medium text-white/50 max-w-sm mb-6">
-                Post your event staff requirements and start accepting applications.
+                Post your gig requirements and start accepting applications.
               </p>
               <button
                 onClick={() => setShowPostModal(true)}
