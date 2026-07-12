@@ -14,17 +14,6 @@ export default function Footer() {
             <p className="text-sm font-medium leading-relaxed max-w-sm">
               GigDekho is Indore's hyperlocal staffing platform. Whether you need a waiter, a promoter, a DJ, or just an extra pair of hands — find the right person in minutes.
             </p>
-            <div className="flex space-x-4">
-              <a href="#" className="text-sm font-bold text-white/60 hover:text-[#F4511E] transition-colors">
-                Instagram
-              </a>
-              <a href="#" className="text-sm font-bold text-white/60 hover:text-[#F4511E] transition-colors">
-                LinkedIn
-              </a>
-              <a href="#" className="text-sm font-bold text-white/60 hover:text-[#F4511E] transition-colors">
-                Twitter
-              </a>
-            </div>
           </div>
 
           {/* Quick Links */}
@@ -32,9 +21,9 @@ export default function Footer() {
             <h3 className="text-white font-bold mb-6">Quick Links</h3>
             <ul className="space-y-4 text-sm font-medium">
               <li><Link to="/worker/home" className="hover:text-[#F4511E] transition-colors">Browse Gigs</Link></li>
-              <li><Link to="/auth" className="hover:text-[#F4511E] transition-colors">Join as Worker</Link></li>
-              <li><Link to="/auth" className="hover:text-[#F4511E] transition-colors">Hire Professionals</Link></li>
-              <li><a href="#" className="hover:text-[#F4511E] transition-colors">About Us</a></li>
+              <li><Link to="/auth?mode=worker" className="hover:text-[#F4511E] transition-colors">Join as Worker</Link></li>
+              <li><Link to="/auth?mode=organizer" className="hover:text-[#F4511E] transition-colors">Hire People</Link></li>
+              <li><Link to="/about" className="hover:text-[#F4511E] transition-colors">About Us</Link></li>
             </ul>
           </div>
 
@@ -42,10 +31,10 @@ export default function Footer() {
           <div>
             <h3 className="text-white font-bold mb-6">Support</h3>
             <ul className="space-y-4 text-sm font-medium">
-              <li><a href="#" className="hover:text-[#F4511E] transition-colors">FAQ</a></li>
-              <li><a href="#" className="hover:text-[#F4511E] transition-colors">Trust & Safety</a></li>
-              <li><a href="#" className="hover:text-[#F4511E] transition-colors">Terms of Service</a></li>
-              <li><a href="#" className="hover:text-[#F4511E] transition-colors">Privacy Policy</a></li>
+              <li><Link to="/about#faq" className="hover:text-[#F4511E] transition-colors">FAQ</Link></li>
+              <li><Link to="/about#trust" className="hover:text-[#F4511E] transition-colors">Trust & Safety</Link></li>
+              <li><Link to="/about#terms" className="hover:text-[#F4511E] transition-colors">Terms of Service</Link></li>
+              <li><Link to="/about#privacy" className="hover:text-[#F4511E] transition-colors">Privacy Policy</Link></li>
             </ul>
           </div>
 

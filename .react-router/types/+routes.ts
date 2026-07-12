@@ -36,6 +36,9 @@ type Pages = {
       "id": string;
     };
   };
+  "/admin": {
+    params: {};
+  };
   "/api/apply": {
     params: {};
   };
@@ -45,10 +48,28 @@ type Pages = {
   "/api/mark-attendance": {
     params: {};
   };
+  "/api/pay": {
+    params: {};
+  };
+  "/api/announce": {
+    params: {};
+  };
+  "/api/qa": {
+    params: {};
+  };
+  "/api/bank": {
+    params: {};
+  };
+  "/api/withdraw": {
+    params: {};
+  };
   "/api/cron/reminders": {
     params: {};
   };
   "/worker/home": {
+    params: {};
+  };
+  "/about": {
     params: {};
   };
   "/worker/dashboard": {
@@ -68,7 +89,7 @@ type Pages = {
 type RouteFiles = {
   "root.tsx": {
     id: "root";
-    page: "/" | "/auth" | "/auth/callback" | "/setup-profile" | "/organizer/preview" | "/gigs/:id" | "/hirer/:id" | "/api/apply" | "/api/cancel" | "/api/mark-attendance" | "/api/cron/reminders" | "/worker/home" | "/worker/dashboard" | "/worker/earnings" | "/worker/profile" | "/organizer/home";
+    page: "/" | "/auth" | "/auth/callback" | "/setup-profile" | "/organizer/preview" | "/gigs/:id" | "/hirer/:id" | "/admin" | "/api/apply" | "/api/cancel" | "/api/mark-attendance" | "/api/pay" | "/api/announce" | "/api/qa" | "/api/bank" | "/api/withdraw" | "/api/cron/reminders" | "/worker/home" | "/about" | "/worker/dashboard" | "/worker/earnings" | "/worker/profile" | "/organizer/home";
   };
   "routes/home.tsx": {
     id: "routes/home";
@@ -98,6 +119,10 @@ type RouteFiles = {
     id: "routes/hirer.$id";
     page: "/hirer/:id";
   };
+  "routes/admin.tsx": {
+    id: "routes/admin";
+    page: "/admin";
+  };
   "routes/api.apply.ts": {
     id: "routes/api.apply";
     page: "/api/apply";
@@ -110,17 +135,41 @@ type RouteFiles = {
     id: "routes/api.mark-attendance";
     page: "/api/mark-attendance";
   };
+  "routes/api.pay.ts": {
+    id: "routes/api.pay";
+    page: "/api/pay";
+  };
+  "routes/api.announce.ts": {
+    id: "routes/api.announce";
+    page: "/api/announce";
+  };
+  "routes/api.qa.ts": {
+    id: "routes/api.qa";
+    page: "/api/qa";
+  };
+  "routes/api.bank.ts": {
+    id: "routes/api.bank";
+    page: "/api/bank";
+  };
+  "routes/api.withdraw.ts": {
+    id: "routes/api.withdraw";
+    page: "/api/withdraw";
+  };
   "routes/api.cron.reminders.ts": {
     id: "routes/api.cron.reminders";
     page: "/api/cron/reminders";
   };
   "routes/public-layout.tsx": {
     id: "routes/public-layout";
-    page: "/worker/home";
+    page: "/worker/home" | "/about";
   };
   "routes/worker.home.tsx": {
     id: "routes/worker.home";
     page: "/worker/home";
+  };
+  "routes/about.tsx": {
+    id: "routes/about";
+    page: "/about";
   };
   "routes/app-layout.tsx": {
     id: "routes/app-layout";
@@ -153,12 +202,19 @@ type RouteModules = {
   "routes/organizer.preview": typeof import("./app/routes/organizer.preview.tsx");
   "routes/gigs.$id": typeof import("./app/routes/gigs.$id.tsx");
   "routes/hirer.$id": typeof import("./app/routes/hirer.$id.tsx");
+  "routes/admin": typeof import("./app/routes/admin.tsx");
   "routes/api.apply": typeof import("./app/routes/api.apply.ts");
   "routes/api.cancel": typeof import("./app/routes/api.cancel.ts");
   "routes/api.mark-attendance": typeof import("./app/routes/api.mark-attendance.ts");
+  "routes/api.pay": typeof import("./app/routes/api.pay.ts");
+  "routes/api.announce": typeof import("./app/routes/api.announce.ts");
+  "routes/api.qa": typeof import("./app/routes/api.qa.ts");
+  "routes/api.bank": typeof import("./app/routes/api.bank.ts");
+  "routes/api.withdraw": typeof import("./app/routes/api.withdraw.ts");
   "routes/api.cron.reminders": typeof import("./app/routes/api.cron.reminders.ts");
   "routes/public-layout": typeof import("./app/routes/public-layout.tsx");
   "routes/worker.home": typeof import("./app/routes/worker.home.tsx");
+  "routes/about": typeof import("./app/routes/about.tsx");
   "routes/app-layout": typeof import("./app/routes/app-layout.tsx");
   "routes/worker.dashboard": typeof import("./app/routes/worker.dashboard.tsx");
   "routes/worker.earnings": typeof import("./app/routes/worker.earnings.tsx");

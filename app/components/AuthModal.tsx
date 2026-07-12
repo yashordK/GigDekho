@@ -76,11 +76,6 @@ export default function AuthModal({ isOpen, onClose, defaultIntent = 'worker' }:
       setError('');
       // Check intent to set in user metadata or local storage if needed
       localStorage.setItem('userIntent', intent);
-      
-      // Store starting origin to restore it in callback if Supabase redirects to a different domain/protocol
-      if (typeof window !== 'undefined') {
-        localStorage.setItem('authOrigin', window.location.origin);
-      }
 
       let redirectTo = `${window.location.origin}/auth/callback`;
       if (typeof window !== 'undefined' && !window.location.hostname.includes('localhost') && !window.location.hostname.includes('127.0.0.1')) {
@@ -156,6 +151,7 @@ export default function AuthModal({ isOpen, onClose, defaultIntent = 'worker' }:
         {onClose && (
           <button
             onClick={onClose}
+            aria-label="Close"
             className="absolute top-4 right-4 p-2 rounded-full text-white/40 hover:text-white hover:bg-white/10 transition-colors btn-tap"
           >
             <X size={18} />
@@ -173,6 +169,7 @@ export default function AuthModal({ isOpen, onClose, defaultIntent = 'worker' }:
               }
               setError('');
             }}
+            aria-label="Go back"
             className="absolute top-4 left-4 p-2 rounded-full text-white/40 hover:text-white hover:bg-white/10 transition-colors btn-tap"
           >
             <ChevronLeft size={18} />
@@ -279,9 +276,10 @@ export default function AuthModal({ isOpen, onClose, defaultIntent = 'worker' }:
         {authMethod === 'email' && (
           <form onSubmit={handleSendLink} className="space-y-4 text-left">
             <div className="flex flex-col space-y-1.5">
-              <label className="text-[11px] font-black text-white/60 uppercase tracking-wider">Email Address</label>
+              <label htmlFor="auth-email" className="text-[11px] font-black text-white/60 uppercase tracking-wider">Email Address</label>
               <div className="relative">
                 <input
+                  id="auth-email"
                   type="email"
                   placeholder="you@gmail.com"
                   value={email}

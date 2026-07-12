@@ -12,8 +12,9 @@ function adminClient() {
 
 export async function loader({ request }: LoaderFunctionArgs) {
   // Vercel cron sends Authorization: Bearer <CRON_SECRET>
+  // Fail closed: if CRON_SECRET isn't configured, nobody can trigger this endpoint.
   const auth = request.headers.get("authorization");
-  if (process.env.CRON_SECRET && auth !== `Bearer ${process.env.CRON_SECRET}`) {
+  if (!process.env.CRON_SECRET || auth !== `Bearer ${process.env.CRON_SECRET}`) {
     return Response.json({ error: "Unauthorized" }, { status: 401 });
   }
 

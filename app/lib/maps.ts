@@ -1,42 +1,55 @@
-let mapsLoadPromise: Promise<any> | null = null;
+// Google Maps is loaded eagerly via <script> in root.tsx.
+// This module just waits for window.google to become available
+// and surfaces a clean error if auth fails.
 
 export function getMapsLoader() {
   return {
     load: (): Promise<any> => {
       if (typeof window === "undefined") return Promise.resolve(null);
 
-      const g = (window as any).google;
-      if (g?.maps?.Map) return Promise.resolve(g);
+      // Already ready
+      if ((window as any).google?.maps?.Map) {
+        return Promise.resolve((window as any).google);
+      }
 
-      if (mapsLoadPromise) return mapsLoadPromise;
+      // Already failed
+      if ((window as any).__MAPS_AUTH_FAILED__) {
+        return Promise.reject(new Error("Maps auth failed"));
+      }
 
-      mapsLoadPromise = new Promise<any>((resolve, reject) => {
-        const callbackName = "__gmInit__";
+      // No key configured — skip silently so fallback shows immediately
+      if (!import.meta.env.VITE_GOOGLE_MAPS_API_KEY) {
+        return Promise.reject(new Error("VITE_GOOGLE_MAPS_API_KEY not set"));
+      }
 
-        (window as any).gm_authFailure = () => {
-          mapsLoadPromise = null;
-          reject(new Error("Maps auth failed — Maps JavaScript API or Places API not enabled, or domain not authorized in Google Cloud Console."));
-        };
+      // Poll until window.google is ready (max 15 s)
+      return new Promise<any>((resolve, reject) => {
+        let ticks = 0;
+        const INTERVAL = 200;
+        const MAX_TICKS = 75; // 15 seconds
 
-        (window as any)[callbackName] = () => {
-          delete (window as any)[callbackName];
-          resolve((window as any).google);
-        };
+        const timer = setInterval(() => {
+          if ((window as any).__MAPS_AUTH_FAILED__) {
+            clearInterval(timer);
+            reject(new Error(
+              "Maps auth failed — make sure billing is enabled on your Google Cloud project and the API key is valid."
+            ));
+            return;
+          }
 
-        const key = import.meta.env.VITE_GOOGLE_MAPS_API_KEY;
-        const script = document.createElement("script");
-        script.src = `https://maps.googleapis.com/maps/api/js?key=${key}&libraries=places&callback=${callbackName}&loading=async`;
-        script.async = true;
-        script.defer = true;
-        script.onerror = () => {
-          delete (window as any)[callbackName];
-          mapsLoadPromise = null;
-          reject(new Error("Maps script failed to load — Maps JavaScript API may not be enabled for this key."));
-        };
-        document.head.appendChild(script);
+          if ((window as any).google?.maps?.Map) {
+            clearInterval(timer);
+            resolve((window as any).google);
+            return;
+          }
+
+          ticks++;
+          if (ticks >= MAX_TICKS) {
+            clearInterval(timer);
+            reject(new Error("Maps timed out — script may have been blocked or the key is invalid."));
+          }
+        }, INTERVAL);
       });
-
-      return mapsLoadPromise;
     },
   };
 }

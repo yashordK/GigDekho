@@ -6,6 +6,7 @@ import { MapPin, Clock, Calendar, Info, CheckCircle2, AlertCircle, ShieldCheck, 
 import { formatRelativeDate } from '~/lib/utils';
 import { createSupabaseServerClient } from '~/lib/supabase.server';
 import { getMapsLoader } from "~/lib/maps";
+import GigThread from "~/components/GigThread";
 
 export async function loader({ params, request }) {
   const supabaseServer = createSupabaseServerClient(request);
@@ -184,7 +185,8 @@ export default function GigDetailScreen() {
         .single();
         
       if (gigError) throw gigError;
-      setGig(gigData);
+      // Merge over the SSR gig so the joined `profiles` (hirer info) isn't lost
+      setGig((prev: any) => ({ ...prev, ...gigData }));
 
       // 2. Check application status
       if (user) {
@@ -219,7 +221,8 @@ export default function GigDetailScreen() {
   const handleApplyClick = () => {
     if (!user) {
       localStorage.setItem('redirectAfterLogin', location.pathname);
-      navigate('/auth');
+      localStorage.setItem('userIntent', 'worker');
+      navigate('/auth?mode=worker');
       return;
     }
     setShowTerms(true);
@@ -238,6 +241,15 @@ export default function GigDetailScreen() {
         if (result.error === "already_applied") {
           showToast("You've already applied to this gig.", true);
           await fetchData();
+          return;
+        }
+        if (result.error === "id_verification_required") {
+          showToast("Verify your ID first — it takes 2 minutes on your profile.", true);
+          setTimeout(() => navigate('/worker/profile'), 1800);
+          return;
+        }
+        if (result.error === "account_suspended") {
+          showToast("Your account is suspended. Contact support for help.", true);
           return;
         }
         throw new Error(result.error || "Failed to apply");
@@ -288,11 +300,11 @@ export default function GigDetailScreen() {
   };
 
   if (loading) {
-     return <div className="min-h-screen flex items-center justify-center bg-[#111111]"><div className="w-8 h-8 border-4 border-slate-200 border-t-primary rounded-full animate-spin"></div></div>;
+     return <div className="min-h-screen flex items-center justify-center bg-[#111111]"><div className="w-8 h-8 border-4 border-white/10 border-t-[#F4511E] rounded-full animate-spin"></div></div>;
   }
 
   if (!gig) {
-     return <div className="p-6 text-center text-slate-500 font-bold">Gig not found.</div>;
+     return <div className="p-6 text-center text-white/50 font-bold bg-[#111111] min-h-screen pt-32">Gig not found.</div>;
   }
 
   const payTotal = gig.pay_rate * gig.duration_hrs; 
@@ -451,6 +463,15 @@ export default function GigDetailScreen() {
                   )}
                 </div>
               </div>
+
+              {/* Announcements + Q&A (participants only — RLS enforced) */}
+              <GigThread
+                gigId={gig.id}
+                eventDate={gig.event_date}
+                isOrganizer={!!user && user.id === gig.organizer_id}
+                hasApplied={applicationStatus !== null && applicationStatus !== 'cancelled'}
+                userId={user?.id ?? null}
+              />
 
               {/* Location Details */}
               <div className="mb-10">

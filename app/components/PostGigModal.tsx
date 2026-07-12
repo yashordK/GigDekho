@@ -4,14 +4,6 @@ import { fetchSkillCategories } from "~/lib/categories";
 import LocationPicker from "./LocationPicker";
 import { X, Plus, Trash2, Calendar, MapPin, AlertCircle, ChevronLeft, ChevronRight, Check } from "lucide-react";
 
-interface PostGigModalProps {
-  isOpen: boolean;
-  onClose: () => void;
-  onSuccess: () => void;
-  user: any;
-  showToast: (msg: string, type: "success" | "error" | "info") => void;
-}
-
 interface RoleForm {
   role_type: string;
   custom_role: string;
@@ -21,13 +13,29 @@ interface RoleForm {
   isCustom: boolean;
 }
 
+export interface GigTemplate {
+  eventTitle: string;
+  description?: string;
+  roles: Partial<RoleForm>[];
+}
+
+interface PostGigModalProps {
+  isOpen: boolean;
+  onClose: () => void;
+  onSuccess: () => void;
+  user: any;
+  showToast: (msg: string, type: "success" | "error" | "info") => void;
+  /** Optional quick template — prefills the form so repeat posting is one tap + date/headcount */
+  template?: GigTemplate | null;
+}
+
 interface Step1Errors {
   title?: string;
   eventDate?: string;
   location?: string;
 }
 
-export default function PostGigModal({ isOpen, onClose, onSuccess, user, showToast }: PostGigModalProps) {
+export default function PostGigModal({ isOpen, onClose, onSuccess, user, showToast, template }: PostGigModalProps) {
   const [step, setStep] = useState(1);
   const [categories, setCategories] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
@@ -63,18 +71,23 @@ export default function PostGigModal({ isOpen, onClose, onSuccess, user, showToa
       fetchSkillCategories().then((data) => {
         setCategories(data);
       });
-      // Reset state on open
+      // Reset state on open (prefilled from template when provided)
+      const emptyRole: RoleForm = { role_type: "", custom_role: "", pay_rate: "", duration_hrs: "", slots_total: "", isCustom: false };
       setStep(1);
-      setEventTitle("");
+      setEventTitle(template?.eventTitle ?? "");
       setEventDate("");
-      setEventDescription("");
+      setEventDescription(template?.description ?? "");
       setIsUrgent(false);
       setLocation({ location_text: "", lat: null, lng: null, is_remote: false });
-      setRoles([{ role_type: "", custom_role: "", pay_rate: "", duration_hrs: "", slots_total: "", isCustom: false }]);
+      setRoles(
+        template?.roles?.length
+          ? template.roles.map((r) => ({ ...emptyRole, ...r }))
+          : [emptyRole]
+      );
       setStep1Errors({});
       setRoleErrors([]);
     }
-  }, [isOpen]);
+  }, [isOpen, template]);
 
   // Click outside searchable dropdown to close it
   useEffect(() => {
@@ -289,6 +302,7 @@ export default function PostGigModal({ isOpen, onClose, onSuccess, user, showToa
           </div>
           <button
             onClick={onClose}
+            aria-label="Close"
             className="p-2 rounded-full text-white/40 hover:text-white hover:bg-white/10 transition-colors btn-tap"
           >
             <X size={20} />
@@ -307,8 +321,9 @@ export default function PostGigModal({ isOpen, onClose, onSuccess, user, showToa
             <div className="space-y-5 animate-in fade-in duration-200">
               {/* Event Name */}
               <div className="flex flex-col space-y-1.5">
-                <label className="text-xs font-black text-white/60 uppercase tracking-wider">Event Title / Prefix</label>
+                <label htmlFor="gig-event-title" className="text-xs font-black text-white/60 uppercase tracking-wider">Event Title / Prefix</label>
                 <input
+                  id="gig-event-title"
                   type="text"
                   placeholder="e.g. Indore Tech Summit, Sunburn Arena"
                   value={eventTitle}
@@ -326,9 +341,10 @@ export default function PostGigModal({ isOpen, onClose, onSuccess, user, showToa
 
               {/* Event Date & Time */}
               <div className="flex flex-col space-y-1.5">
-                <label className="text-xs font-black text-white/60 uppercase tracking-wider">Event Date & Time</label>
+                <label htmlFor="gig-event-date" className="text-xs font-black text-white/60 uppercase tracking-wider">Event Date & Time</label>
                 <div className="relative">
                   <input
+                    id="gig-event-date"
                     type="datetime-local"
                     value={eventDate}
                     onChange={(e) => setEventDate(e.target.value)}
@@ -346,8 +362,9 @@ export default function PostGigModal({ isOpen, onClose, onSuccess, user, showToa
 
               {/* Description */}
               <div className="flex flex-col space-y-1.5">
-                <label className="text-xs font-black text-white/60 uppercase tracking-wider">Event Description</label>
+                <label htmlFor="gig-event-desc" className="text-xs font-black text-white/60 uppercase tracking-wider">Event Description</label>
                 <textarea
+                  id="gig-event-desc"
                   rows={3}
                   placeholder="Tell workers about your event, code of conduct, dress code details..."
                   value={eventDescription}
@@ -413,6 +430,7 @@ export default function PostGigModal({ isOpen, onClose, onSuccess, user, showToa
                     {roles.length > 1 && (
                       <button
                         onClick={() => removeRoleCard(index)}
+                        aria-label={`Remove role ${index + 1}`}
                         className="absolute top-4 right-4 p-1.5 rounded-lg text-white/40 hover:text-red-400 hover:bg-red-500/10 transition-colors btn-tap"
                       >
                         <Trash2 size={16} />

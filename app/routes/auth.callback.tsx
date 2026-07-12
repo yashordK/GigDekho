@@ -9,20 +9,6 @@ export default function AuthCallback() {
   useEffect(() => {
     const handleCallback = async () => {
       try {
-        // Detect if protocol or domain needs restoration to the origin where sign-in started
-        if (typeof window !== 'undefined') {
-          const authOrigin = localStorage.getItem('authOrigin');
-          const currentOrigin = window.location.origin;
-          
-          if (authOrigin && authOrigin !== currentOrigin) {
-            console.log(`Restoring origin: redirecting from ${currentOrigin} to ${authOrigin}`);
-            // Clean up to prevent redirect loops
-            localStorage.removeItem('authOrigin');
-            window.location.href = window.location.href.replace(currentOrigin, authOrigin);
-            return;
-          }
-        }
-
         const code = new URL(window.location.href).searchParams.get("code");
         
         if (!code) {

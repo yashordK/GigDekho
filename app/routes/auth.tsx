@@ -14,10 +14,14 @@ export default function AuthScreen() {
     const mode = params.get("mode");
     if (mode === "organizer") {
       setIntent("organizer");
+    } else if (mode === "worker") {
+      setIntent("worker");
     } else {
       const savedIntent = localStorage.getItem("userIntent");
       if (savedIntent === "organizer") {
         setIntent("organizer");
+      } else {
+        setIntent("worker");
       }
     }
   }, []);

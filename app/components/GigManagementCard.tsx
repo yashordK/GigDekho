@@ -1,7 +1,8 @@
 import { useState, useRef, useEffect } from "react";
 import { supabase } from "~/lib/supabase.client";
-import { Calendar, MapPin, MoreVertical, Phone, Star, CheckCircle2, XCircle, Info, Loader2 } from "lucide-react";
+import { Calendar, MapPin, MoreVertical, Phone, Star, CheckCircle2, XCircle, Info, Loader2, Megaphone } from "lucide-react";
 import { useAuth } from "~/context/AuthContext";
+import AnnounceModal from "./AnnounceModal";
 
 interface WorkerApplication {
   id: string;
@@ -69,6 +70,7 @@ export default function GigManagementCard({
   } | null>(null);
   const [loading, setLoading] = useState(false);
   const [attendedIds, setAttendedIds] = useState<Set<string>>(new Set());
+  const [showAnnounce, setShowAnnounce] = useState(false);
 
   const menuRef = useRef<HTMLDivElement>(null);
 
@@ -165,43 +167,26 @@ export default function GigManagementCard({
     }
   };
 
-  // Process payments
+  // Process payments — amounts are computed and verified server-side
   const handleConfirmPayment = async () => {
     if (!confirmModal || !user) return;
     setLoading(true);
     try {
-      if (confirmModal.type === "advance") {
-        const { error } = await supabase.from("gig_payments").insert({
-          gig_id: gig.id,
-          organizer_id: user.id,
-          advance_paid: true,
-          advance_paid_at: new Date().toISOString(),
-          advance_amount: confirmModal.amount,
-          final_paid: false,
-          organizer_total: totalCost,
-          final_amount: finalAmount,
-          payout_released: false,
-        });
-        if (error) throw error;
-        showToast("Advance payment successfully simulated!", "success");
-      } else {
-        const { error } = await supabase
-          .from("gig_payments")
-          .update({
-            final_paid: true,
-            final_paid_at: new Date().toISOString(),
-            final_amount: confirmModal.amount,
-            payout_released: true, // Auto-release on final payment for mock purposes
-          })
-          .eq("gig_id", gig.id);
-        if (error) throw error;
-        showToast("Final payment successfully simulated!", "success");
-      }
+      const form = new FormData();
+      form.append("gig_id", gig.id);
+      form.append("type", confirmModal.type);
+      const res = await fetch("/api/pay", { method: "POST", body: form });
+      const result = await res.json();
+      if (!res.ok || result.error) throw new Error(result.error || "Payment failed");
+      showToast(
+        confirmModal.type === "advance" ? "Advance payment recorded!" : "Final payment recorded!",
+        "success"
+      );
       setConfirmModal(null);
       onActionSuccess();
     } catch (err: any) {
       console.error(err);
-      showToast(err.message || "Payment simulation failed", "error");
+      showToast(err.message || "Payment failed. Try again.", "error");
     } finally {
       setLoading(false);
     }
@@ -247,13 +232,22 @@ export default function GigManagementCard({
         <div className="relative" ref={menuRef}>
           <button
             onClick={() => setMenuOpen(!menuOpen)}
+            aria-label="Gig actions"
+            aria-expanded={menuOpen}
             className="p-1.5 rounded-lg text-white/40 hover:text-white hover:bg-white/5 transition-colors btn-tap"
           >
             <MoreVertical size={18} />
           </button>
 
           {menuOpen && (
-            <div className="absolute right-0 mt-1.5 w-40 bg-[#111111] border border-white/10 shadow-2xl rounded-xl py-1.5 z-40 animate-in fade-in slide-in-from-top-1">
+            <div className="absolute right-0 mt-1.5 w-44 bg-[#111111] border border-white/10 shadow-2xl rounded-xl py-1.5 z-40 animate-in fade-in slide-in-from-top-1">
+              <button
+                type="button"
+                onClick={() => { setMenuOpen(false); setShowAnnounce(true); }}
+                className="w-full text-left px-4 py-2 text-xs font-bold text-[#F4511E] hover:bg-white/5 flex items-center gap-1.5"
+              >
+                <Megaphone size={14} /> Announce
+              </button>
               <button
                 type="button"
                 onClick={() => handleUpdateStatus("completed")}
@@ -461,6 +455,15 @@ export default function GigManagementCard({
           </div>
         )}
       </div>
+
+      {/* Announcement composer */}
+      <AnnounceModal
+        isOpen={showAnnounce}
+        onClose={() => setShowAnnounce(false)}
+        gigId={gig.id}
+        gigTitle={gig.title}
+        onSent={(n) => showToast(`Announcement sent to ${n} worker${n !== 1 ? 's' : ''}!`, "success")}
+      />
 
       {/* Confirmation Bottom Sheet Modal */}
       {confirmModal?.isOpen && (

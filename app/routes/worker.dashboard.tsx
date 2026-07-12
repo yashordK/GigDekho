@@ -260,7 +260,10 @@ export default function DashboardScreen() {
                         <p className="text-white/50 font-medium text-sm truncate">{app.gig.location_text}</p>
                       </div>
                     </div>
-                    <div className={`px-3 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest border whitespace-nowrap shadow-sm shrink-0 ${sParams.color}`}>
+                    <div className={`px-3 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest border whitespace-nowrap shadow-sm shrink-0 flex items-center gap-1.5 ${sParams.color}`}>
+                      {app.status === 'pending' && (
+                        <span className="w-1.5 h-1.5 rounded-full bg-current animate-pulse" aria-hidden="true" />
+                      )}
                       {sParams.label}
                     </div>
                   </div>

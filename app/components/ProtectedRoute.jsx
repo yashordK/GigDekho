@@ -4,7 +4,7 @@ import { useAuth } from '~/context/AuthContext';
 
 const Spinner = () => (
   <div className="min-h-screen flex items-center justify-center bg-[#111111]">
-    <div className="w-8 h-8 border-4 border-slate-200 border-t-primary rounded-full animate-spin"></div>
+    <div className="w-8 h-8 border-4 border-white/10 border-t-[#F4511E] rounded-full animate-spin"></div>
   </div>
 );
 
@@ -12,8 +12,6 @@ export default function ProtectedRoute({ children }) {
   const { user, profile, loading } = useAuth();
   const location = useLocation();
   const navigate = useNavigate();
-
-  console.log("ProtectedRoute Render:", { user: user?.id, profile: !!profile, loading, path: location.pathname });
 
   const isPublicRoute = location.pathname === '/worker/home';
 

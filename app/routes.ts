@@ -12,15 +12,24 @@ export default [
   route("gigs/:id", "routes/gigs.$id.tsx"),
   route("hirer/:id", "routes/hirer.$id.tsx"),
 
+  // Internal admin panel — gated by is_admin (client check + RLS on every query)
+  route("admin", "routes/admin.tsx"),
+
   // Server-only API routes (no component)
   route("api/apply", "routes/api.apply.ts"),
   route("api/cancel", "routes/api.cancel.ts"),
   route("api/mark-attendance", "routes/api.mark-attendance.ts"),
+  route("api/pay", "routes/api.pay.ts"),
+  route("api/announce", "routes/api.announce.ts"),
+  route("api/qa", "routes/api.qa.ts"),
+  route("api/bank", "routes/api.bank.ts"),
+  route("api/withdraw", "routes/api.withdraw.ts"),
   route("api/cron/reminders", "routes/api.cron.reminders.ts"),
 
   // Public app pages — nav chrome, no auth wall
   layout("routes/public-layout.tsx", [
     route("worker/home", "routes/worker.home.tsx"),
+    route("about", "routes/about.tsx"),
   ]),
 
   // Protected routes — nav chrome + auth check

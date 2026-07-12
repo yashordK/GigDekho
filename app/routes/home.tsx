@@ -29,12 +29,8 @@ export default function LandingScreen() {
   const navigate = useNavigate();
   const { user, profile } = useAuth();
 
-  console.log("LandingScreen Render:", { user: user?.id, profile: !!profile });
-
   useEffect(() => {
-    console.log("LandingScreen redirect useEffect triggered:", { user: !!user, profile: !!profile });
     if (user && profile?.full_name) {
-      console.log("LandingScreen redirecting to worker/organizer home");
       navigate(profile.role === 'organizer' ? '/organizer/home' : '/worker/home');
     }
   }, [user, profile, navigate]);
@@ -79,8 +75,8 @@ export default function LandingScreen() {
         <div className="w-24 h-24 lg:w-32 lg:h-32 bg-[#2A1000] rounded-full shadow-inner flex items-center justify-center text-5xl lg:text-6xl mb-8 border border-[#F4511E]/20 transform -rotate-6">
           💼
         </div>
-        <h2 className="text-4xl lg:text-6xl font-black text-white tracking-tight leading-tight mb-4">
-          I want to earn
+        <h2 className="text-5xl lg:text-6xl font-black text-white tracking-tight leading-tight mb-4">
+          Want to earn?
         </h2>
         <p className="text-white/60 font-medium text-lg lg:text-xl lg:max-w-md mb-8 leading-relaxed">
           Browse local gigs and get hired today
@@ -107,8 +103,8 @@ export default function LandingScreen() {
         <div className="w-24 h-24 lg:w-32 lg:h-32 bg-[#1C1C1C] rounded-full shadow-inner flex items-center justify-center text-5xl lg:text-6xl mb-8 border border-white/10 transform rotate-6 relative z-10">
           🎪
         </div>
-        <h2 className="text-4xl lg:text-6xl font-black text-white tracking-tight leading-tight mb-4 relative z-10">
-          I need people
+        <h2 className="text-5xl lg:text-6xl font-black text-white tracking-tight leading-tight mb-4 relative z-10">
+          Need people?
         </h2>
         <p className="text-white/50 font-medium text-lg lg:text-xl lg:max-w-md mb-8 leading-relaxed relative z-10 text-center">
           Post any role, get workers in no time

@@ -40,14 +40,14 @@ export default function GigCard({ gig, onClick }) {
          <div className="absolute inset-0 bg-gradient-to-t from-[#111111]/90 via-black/20 to-transparent"></div>
          
          <div className="absolute top-4 left-4 flex gap-2">
-            {is_urgent ? (
+            {is_urgent && (
               <span className="bg-[#F4511E] text-white text-[10px] font-black uppercase tracking-widest px-3 py-1.5 rounded-full shadow-lg flex items-center">
                  <Zap size={10} className="mr-1" fill="currentColor"/> URGENT
               </span>
-            ) : null}
-            {!is_urgent && (
+            )}
+            {!is_urgent && role_type && (
                <span className="bg-white/10 backdrop-blur-md text-white text-[10px] font-black uppercase tracking-widest px-3 py-1.5 rounded-full shadow-sm border border-white/20">
-                 FEATURED
+                 {role_type}
                </span>
             )}
          </div>

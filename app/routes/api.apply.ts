@@ -22,6 +22,34 @@ export async function action({ request }: ActionFunctionArgs) {
 
   const admin = adminClient();
 
+  // ID verification is required before a worker's first (and every) application
+  const { data: workerProfile } = await admin
+    .from("profiles")
+    .select("id_verified, is_suspended")
+    .eq("id", user.id)
+    .single();
+  if (workerProfile?.is_suspended) {
+    return Response.json({ error: "account_suspended" }, { status: 403 });
+  }
+  if (!workerProfile?.id_verified) {
+    return Response.json({ error: "id_verification_required" }, { status: 403 });
+  }
+
+  // Validate the gig is still joinable ('open' or 'filled' — filled gigs go to waitlist)
+  const { data: gigCheck } = await admin
+    .from("gigs")
+    .select("id, status, event_date")
+    .eq("id", gigId)
+    .single();
+
+  if (!gigCheck) return Response.json({ error: "Gig not found" }, { status: 404 });
+  if (!["open", "filled"].includes(gigCheck.status)) {
+    return Response.json({ error: "This gig is no longer accepting applications" }, { status: 400 });
+  }
+  if (new Date(gigCheck.event_date) <= new Date()) {
+    return Response.json({ error: "This gig has already started" }, { status: 400 });
+  }
+
   // Check for existing active application
   const { data: existing } = await admin
     .from("applications")

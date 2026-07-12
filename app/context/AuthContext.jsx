@@ -9,13 +9,9 @@ export const AuthProvider = ({ children }) => {
   const [profile, setProfile] = useState(null);
   const [loading, setLoading] = useState(true);
 
-  console.log("AuthProvider Render:", { user: user?.id, profile: !!profile, loading });
-
   useEffect(() => {
     // Restore session on app load
-    console.log("AuthProvider mount: fetching session");
     supabase.auth.getSession().then(({ data: { session } }) => {
-      console.log("getSession resolved:", { hasSession: !!session });
       setUser(session?.user ?? null);
       if (session?.user) fetchProfile(session.user.id);
       else setLoading(false);
@@ -23,7 +19,6 @@ export const AuthProvider = ({ children }) => {
 
     // Listen for auth state changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      console.log("onAuthStateChange fired:", _event, { hasSession: !!session });
       setUser(session?.user ?? null);
       if (session?.user) {
         fetchProfile(session.user.id);
@@ -34,21 +29,18 @@ export const AuthProvider = ({ children }) => {
     });
 
     return () => {
-      console.log("AuthProvider unmount: unsubscribing");
       subscription.unsubscribe();
     };
   }, []);
 
   const fetchProfile = async (userId) => {
-    console.log("fetchProfile called for:", userId);
     try {
       const { data, error } = await supabase
         .from('profiles')
         .select('*')
         .eq('id', userId)
         .maybeSingle();
-      
-      console.log("fetchProfile DB result:", { data, error });
+
       if (!error && data) {
         setProfile(data);
       } else {

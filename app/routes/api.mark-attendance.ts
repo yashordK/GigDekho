@@ -24,7 +24,7 @@ export async function action({ request }: ActionFunctionArgs) {
   // Verify the caller is the organizer of this gig
   const { data: app } = await admin
     .from("applications")
-    .select("id, status, worker_id, gigs(organizer_id)")
+    .select("id, status, worker_id, gigs(organizer_id, title, pay_rate, duration_hrs)")
     .eq("id", applicationId)
     .single();
 
@@ -63,6 +63,29 @@ export async function action({ request }: ActionFunctionArgs) {
     score_delta: 5,
     application_id: applicationId,
   });
+
+  // Credit earnings to the worker's wallet (idempotent per application)
+  const earning = Math.round((gig.pay_rate || 0) * (gig.duration_hrs || 0));
+  if (earning > 0) {
+    const { data: existingCredit } = await admin
+      .from("wallet_transactions")
+      .select("id")
+      .eq("reference_id", applicationId)
+      .eq("type", "gig_earning")
+      .maybeSingle();
+    if (!existingCredit) {
+      await admin.from("wallet_transactions").insert({
+        worker_id: app.worker_id,
+        amount: earning,
+        type: "gig_earning",
+        status: "completed",
+        reference_id: applicationId,
+        description: `Earnings — ${gig.title}`,
+      });
+      const { data: p } = await admin.from("profiles").select("total_earned").eq("id", app.worker_id).single();
+      await admin.from("profiles").update({ total_earned: (p?.total_earned || 0) + earning }).eq("id", app.worker_id);
+    }
+  }
 
   return Response.json({ ok: true });
 }
