@@ -21,7 +21,7 @@ export default function AuthLeftPanel() {
               <MapPin size={18} className="mr-3 text-[#F4511E]" /> Hyperlocal — gigs across Indore
             </div>
             <div className="flex items-center text-lg font-bold glass-panel w-fit px-5 py-2.5 rounded-full">
-              <Wallet size={18} className="mr-3 text-[#F4511E]" /> Payouts within 1 hour of completion
+              <Wallet size={18} className="mr-3 text-[#F4511E]" /> Payouts within 24 hours of completion
             </div>
             <div className="flex items-center text-lg font-bold glass-panel w-fit px-5 py-2.5 rounded-full">
               <ShieldCheck size={18} className="mr-3 text-[#F4511E]" /> Verified hirers, rated both ways

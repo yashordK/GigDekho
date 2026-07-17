@@ -5,6 +5,7 @@ export default [
   index("routes/home.tsx"),
   route("auth", "routes/auth.tsx"),
   route("auth/callback", "routes/auth.callback.tsx"),
+  route("auth/reset", "routes/auth.reset.tsx"),
   route("setup-profile", "routes/setup-profile.tsx"),
   route("organizer/preview", "routes/organizer.preview.tsx"),
 

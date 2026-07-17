@@ -96,7 +96,7 @@ export default function VerificationPanel({
     <div className="bg-[#1C1C1C] rounded-2xl shadow-sm border border-white/5 p-5 lg:p-8">
       <h3 className="font-bold text-white lg:text-xl mb-1">Verification</h3>
       <p className="text-xs font-medium text-white/40 mb-5">
-        Documents are reviewed manually by the GigDekho team — usually within 24 hours.
+        Documents are reviewed manually by the GigDekho team — usually within a few days.
       </p>
 
       <input

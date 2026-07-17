@@ -4,6 +4,7 @@ import { useAuth } from '~/context/AuthContext';
 import { useNavigate } from 'react-router';
 import { Calendar, ChevronRight, Briefcase, Shield, XCircle, AlertTriangle } from 'lucide-react';
 import { formatRelativeDate } from '~/lib/utils';
+import SpotlightCategories from '~/components/SpotlightCategories';
 
 const getImageUrl = (role) => {
   const r = (role || '').toLowerCase();
@@ -179,6 +180,7 @@ export default function DashboardScreen() {
 
       {/* Hero */}
       <div className="relative w-full pt-12 pb-24 hero-gradient-overlay flex flex-col items-center justify-center text-center px-4 overflow-hidden mb-6">
+        <SpotlightCategories />
         <div className="absolute top-0 right-[20%] w-[250px] h-[250px] floating-glass-rect rotate-12 z-0 hidden lg:block opacity-40" />
 
         <h1 className="text-4xl lg:text-5xl font-black text-white mb-3 tracking-tight relative z-10 drop-shadow-md">My Gigs</h1>

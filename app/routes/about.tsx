@@ -11,26 +11,102 @@ export const meta: MetaFunction = () => [
   },
 ];
 
-const FAQS = [
+const FAQ_CATEGORIES: { category: string; faqs: { q: string; a: string }[] }[] = [
   {
-    q: "How do I get paid?",
-    a: "Once the hirer marks the gig complete and your attendance is confirmed, your earnings are credited to your GigDekho wallet — typically within 1 hour of gig completion.",
+    category: "General / Getting Started",
+    faqs: [
+      { q: "What is GigDekho?", a: "GigDekho is Indore's platform for flexible local work. Post a gig if you need people — for an event, a task, or a project — and get matched with verified local workers. Or apply to gigs if you're looking to earn on your own schedule." },
+      { q: "Is GigDekho only for events and weddings?", a: "No. GigDekho covers staffing for any short-term work — events, retail and hospitality shifts, promotions, deliveries, household tasks, tutoring, and more. It also has a marketplace for skilled freelance work (GigDekho Projects) and one for booking local artists." },
+      { q: "Which cities is GigDekho available in?", a: "GigDekho currently operates in Indore. We're expanding to other cities soon." },
+      { q: "Do I need to pay to create an account?", a: "No, creating an account is free for both workers and hirers." },
+      { q: "Is there a mobile app?", a: "GigDekho is currently fully available via the website, and we'll be launching the app soon." },
+    ],
   },
   {
-    q: "What happens if I cancel a gig?",
-    a: "Cancelling with more than 24 hours' notice carries no penalty. Cancelling within 24 hours reduces your reliability score by 5 points, and within 6 hours by 15 points plus a ₹100 deduction from your next payout.",
+    category: "For Workers",
+    faqs: [
+      { q: "Who can work on GigDekho?", a: "Anyone above 18 who completes our ID verification. You don't need a vehicle, a degree, or prior experience for most gigs." },
+      { q: "How do I start applying to gigs?", a: "Sign up, complete the GigDekho Basics onboarding, verify your ID, and you can start applying immediately." },
+      { q: "What is GigDekho Basics?", a: "A short, mandatory orientation every worker completes before their first gig — covering punctuality, presentation, and how to handle common on-site situations. Completing it gives you a \"GigDekho Basics Certified\" badge that hirers see on your profile." },
+      { q: "How do I get paid?", a: "Your earnings go into your GigDekho Wallet after a gig is marked complete. You can withdraw to your bank account anytime once your bank details are verified." },
+      { q: "How long does it take to receive payment after a gig?", a: "You receive your payment in around 24 hours once the gig is completed." },
+      { q: "What is the GigDekho Wallet?", a: "A running balance of everything you've earned on the platform. Add your bank account once, and withdraw whenever you like." },
+      { q: "Is there a minimum amount I need to earn before withdrawing?", a: "You need at least ₹200 in your wallet to make a withdrawal." },
+      { q: "What happens if I accept a gig and can't make it?", a: "Let the hirer know as early as possible through the gig thread. Repeated last-minute cancellations affect your reliability score, which hirers can see on your profile." },
+      { q: "What is the reliability score / no-show rate?", a: "A visible score on your profile showing how consistently you show up for confirmed gigs. It's one of the first things hirers check before confirming a worker." },
+      { q: "How does my rating work?", a: "After each completed gig, the hirer rates you. Your average rating and total completed gigs are shown on your profile and directly affect how often you get picked for future gigs." },
+      { q: "What are worker levels/tiers?", a: "As you complete more gigs, earn badges, and maintain a strong rating, you move up levels — Bronze, Silver, Gold, Platinum — unlocking priority visibility on gig listings and other benefits." },
+      { q: "Can I apply to gigs outside my registered skill category?", a: "Yes, absolutely! Your skill categories reflect what you're good at, but they don't stop you from applying to anything else." },
+      { q: "What is GigDekho Perks?", a: "Discounts and offers from local cafes, brands, and services, unlocked for verified GigDekho workers. It's our way of saying thanks beyond just the pay." },
+      { q: "I'm a student — do I get anything extra?", a: "Yes. Mark yourself as a student during profile setup and verify your college ID to unlock student-specific Perks and offers. Your student verification is valid for 1 year — after that you'll need to verify again." },
+      { q: "Can I ask the hirer questions about a gig before it starts?", a: "Yes, every gig has a Q&A thread where you can ask the hirer directly, and see answers to questions other applicants have already asked." },
+      { q: "Can I share my phone number with a hirer through the app?", a: "No — for your safety, sharing contact details through gig messages isn't allowed, and any attempt is automatically blocked. All communication and payment stays within GigDekho." },
+      { q: "What is GigDekho Projects?", a: "A separate marketplace for skilled freelance work — web development, design, content writing, video editing, and more — for workers who want to take on project-based gigs instead of, or alongside, general staffing work." },
+      { q: "How do I get accepted for GigDekho Projects gigs?", a: "Skilled categories require a short task or portfolio review before you're eligible to apply, to make sure the quality bar stays high for clients." },
+      { q: "Can I list myself as an artist (singer, DJ, performer, etc.)?", a: "Yes, through the Artist Booking section — create a profile with samples of your work, and organisers can discover and book you directly." },
+    ],
   },
   {
-    q: "How does the waitlist work?",
-    a: "Gigs are first-come-first-served. If all slots are filled, you can join the waitlist — if a confirmed worker cancels, the first person on the waitlist is automatically promoted and notified by email.",
+    category: "For Hirers / Organisers",
+    faqs: [
+      { q: "Who can post a gig on GigDekho?", a: "Anyone — individuals hosting a personal event, small business owners, event companies, corporates, or housing societies. You don't need to be a registered business to post most gigs." },
+      { q: "How quickly can I get workers for my gig?", a: "That depends on your posting timeline and gig details — we recommend posting at least a few days ahead for the best response. GigDekho isn't built as an emergency same-day service; it's built to give you confirmed, reliable people well ahead of time." },
+      { q: "How do I know the workers are trustworthy?", a: "Every worker completes ID verification and GigDekho Basics onboarding before their first gig. You can also see their rating, completed gig count, and reliability score before confirming them." },
+      { q: "What is \"My Regulars\"?", a: "A saved list of workers you've rated highly in the past. When you post a new gig, your regulars get notified before it goes out to the general feed — so you can rebuild your own trusted team inside GigDekho, the same way you would offline." },
+      { q: "Can I reuse a previous gig posting?", a: "Yes — quick templates let you repost similar roles in seconds instead of filling out the full form again." },
+      { q: "How does payment work?", a: "Payment happens digitally through the platform. You pay a 30% advance when your workers are confirmed, and the remaining 70% before the event starts (or you can pay the full amount upfront while posting). The money is held securely and released to workers only after the gig is completed — so workers know they'll be paid, and you only release payment for work that actually happened." },
+      { q: "What if a confirmed worker doesn't show up?", a: "Gigs have a waitlist — if a confirmed worker cancels, the first person on the waitlist is automatically promoted and notified, so your headcount stays covered." },
+      { q: "Can I message all my confirmed workers at once?", a: "Yes — use Announcements to send updates like dress code, meeting point, or event rules to confirmed workers, or to all applicants including those on the waitlist." },
+      { q: "Is there a way for workers to ask me questions before the event?", a: "Yes, every gig has a Q&A thread. Answer once and every applicant on that gig can see the response, so you're not answering the same question repeatedly." },
+      { q: "Can I rate workers after a gig?", a: "Yes, and we encourage it — your ratings are what build your Regulars list and help the whole worker community stay high quality." },
+      { q: "Do workers rate hirers too?", a: "Yes. Worker ratings of hirers contribute to your visible profile reputation, so being clear, fair, and prompt with workers helps you attract better applicants over time." },
+      { q: "What does \"Verified Business\" mean versus \"ID Verified\"?", a: "ID Verified means your personal identity has been confirmed — the baseline for anyone posting. Verified Business is an additional tier for registered businesses (via GST or a shop license) and signals a stronger trust level to workers." },
+      { q: "I'm an individual, not a business — can I still post gigs?", a: "Yes, absolutely. Most personal bookings — a birthday, a small get-together, a one-off task — come from individuals, not registered businesses." },
+    ],
   },
   {
-    q: "How do hirers pay?",
-    a: "Hirers pay a 30% advance when workers are confirmed and the remaining 70% after the event. Worker payouts are released once the final payment clears.",
+    category: "GigDekho Celebrations",
+    faqs: [
+      { q: "What is GigDekho Celebrations?", a: "A bundled package for personal events — birthdays, anniversaries, proposals, and small get-togethers — combining photography and reels, event setup, and optional gifting, all booked in one place." },
+      { q: "What's included in each Celebrations package tier?", a: "Three options: Moments (photos & reels only), Moments + Setup (adds a crew that sets up the surprise — decor, balloons, lights), and Moments + Setup + Gifting (adds a thoughtful curated gift for the person you're celebrating)." },
+      { q: "How far in advance should I book a Celebrations package?", a: "At least a day prior to your event." },
+      { q: "Can I customize a Celebrations package?", a: "Yes — pick whichever of the three tiers fits your celebration: Moments only, Moments + Setup, or Moments + Setup + Gifting." },
+    ],
   },
   {
-    q: "What is the reliability score?",
-    a: "Every worker starts at 100. Showing up on time earns points back; late cancellations and no-shows reduce it. Hirers see this score, so a high score means more gigs.",
+    category: "GigDekho Projects",
+    faqs: [
+      { q: "What kind of skilled work can I post on GigDekho Projects?", a: "Web development, graphic design, video editing, content writing, social media management, tutoring, and similar project-based work." },
+      { q: "How are Projects freelancers vetted?", a: "Through a short task or portfolio review specific to their skill category, so clients can trust the quality of who they're hiring." },
+      { q: "How is pricing set for a Projects gig?", a: "You post your budget with the project, and the final price is negotiated with the freelancer." },
+    ],
+  },
+  {
+    category: "Artist Booking",
+    faqs: [
+      { q: "How do I book an artist through GigDekho?", a: "Browse artist profiles by category — singers, DJs, anchors, dancers, and more — view their samples and ratings, and book directly through the platform." },
+      { q: "Do artists set their own rates?", a: "Yes — artists set their own rate expectations on their profiles." },
+      { q: "Can I message an artist before booking?", a: "Yes, you can reach them via the thread on the platform — they'll also get an email notification." },
+    ],
+  },
+  {
+    category: "GigDekho Perks",
+    faqs: [
+      { q: "What is GigDekho Perks?", a: "A set of discounts and deals from local cafes, brands, and services, available to verified GigDekho workers as a thank-you beyond their gig earnings." },
+      { q: "Who is eligible for Perks?", a: "Any ID-verified worker. Some perks are specifically for students who've verified their college ID." },
+      { q: "How do I redeem a Perk?", a: "We keep posting new perks — just redeem one whenever you spot something exciting!" },
+    ],
+  },
+  {
+    category: "Trust, Safety & Verification",
+    faqs: [
+      { q: "Why do I need to verify my ID?", a: "It keeps GigDekho safe for everyone — hirers know the person showing up is who they say they are, and workers know they're applying to legitimate opportunities." },
+      { q: "What documents do I need to verify?", a: "Aadhaar card for identity verification. Students can additionally verify a college ID for student Perks. Businesses can verify via GST or a shop license for the Verified Business badge." },
+      { q: "Is my personal information safe?", a: "Your documents are used only for verification and are never shared with other users. Only you and GigDekho's verification team can see them." },
+      { q: "How long does verification take?", a: "Less than a week — usually much faster." },
+      { q: "What if my verification is rejected?", a: "You'll see the reason on your profile and can resubmit corrected documents right away." },
+      { q: "Can I report a bad experience with a hirer or worker?", a: "Yes — reach out via the contact details in the footer and we'll review and take action." },
+    ],
   },
 ];
 
@@ -65,19 +141,34 @@ export default function AboutScreen() {
           </div>
         </section>
 
-        {/* FAQ */}
+        {/* FAQ — grouped into expandable categories */}
         <section id="faq" className="space-y-5">
           <h2 className="text-2xl font-black text-white tracking-tight flex items-center gap-2">
             <HelpCircle size={22} className="text-[#F4511E]" /> Frequently Asked Questions
           </h2>
-          <div className="space-y-3">
-            {FAQS.map((item) => (
-              <details key={item.q} className="bg-[#1C1C1C] border border-white/5 rounded-2xl group">
-                <summary className="font-bold text-white p-5 cursor-pointer flex justify-between items-center list-none">
-                  {item.q}
-                  <span className="text-white/40 transition group-open:rotate-180">▾</span>
+          <div className="space-y-4">
+            {FAQ_CATEGORIES.map((cat, i) => (
+              <details key={cat.category} open={i === 0} className="bg-[#1C1C1C] border border-white/5 rounded-2xl group/cat overflow-hidden">
+                <summary className="font-black text-white p-5 cursor-pointer flex justify-between items-center list-none text-base lg:text-lg">
+                  <span className="flex items-center gap-2.5">
+                    {cat.category}
+                    <span className="text-[10px] font-black text-[#F4511E] bg-[#F4511E]/10 border border-[#F4511E]/20 px-2 py-0.5 rounded-full">
+                      {cat.faqs.length}
+                    </span>
+                  </span>
+                  <span className="text-white/40 transition group-open/cat:rotate-180">▾</span>
                 </summary>
-                <p className="px-5 pb-5 text-sm font-medium text-white/60 leading-relaxed">{item.a}</p>
+                <div className="px-4 pb-4 space-y-2">
+                  {cat.faqs.map((item) => (
+                    <details key={item.q} className="bg-[#111111] border border-white/5 rounded-xl group/q">
+                      <summary className="font-bold text-white/85 text-sm px-4 py-3.5 cursor-pointer flex justify-between items-center gap-3 list-none">
+                        {item.q}
+                        <span className="text-white/30 text-xs transition group-open/q:rotate-180 shrink-0">▾</span>
+                      </summary>
+                      <p className="px-4 pb-4 text-sm font-medium text-white/55 leading-relaxed">{item.a}</p>
+                    </details>
+                  ))}
+                </div>
               </details>
             ))}
           </div>

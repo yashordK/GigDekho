@@ -198,7 +198,7 @@ export default function HomeScreen() {
           <p className="text-white/90 font-medium text-lg lg:text-xl mb-10 max-w-2xl mx-auto leading-relaxed">
             {stats.live > 0
               ? `${stats.live} gig${stats.live !== 1 ? 's' : ''} live right now. Participate, volunteer and earn through events in Indore!`
-              : 'New gigs are posted daily across Indore — set up your profile so you can apply in one tap.'}
+              : 'New gigs are posted daily across Indore. Set up your profile so you can apply in one tap.'}
           </p>
           <div className="flex flex-col sm:flex-row items-center justify-center space-y-4 sm:space-y-0 sm:space-x-4 mb-10">
              <button type="button" onClick={() => document.getElementById('available-jobs')?.scrollIntoView({ behavior: 'smooth' })} className="bg-[#F4511E] hover:bg-[#D84315] text-white font-bold px-8 py-3.5 rounded-full shadow-lg transition-all btn-tap w-full sm:w-auto">
@@ -225,7 +225,7 @@ export default function HomeScreen() {
              </div>
              <div className="glass-panel p-4 rounded-2xl flex flex-col items-center justify-center text-center">
                 <span className="text-white/60 text-[10px] uppercase font-black tracking-widest mb-1">Payout</span>
-                <span className="text-2xl font-black text-white tracking-tight">1hr</span>
+                <span className="text-2xl font-black text-white tracking-tight">24hr</span>
              </div>
           </div>
         </div>
@@ -248,7 +248,7 @@ export default function HomeScreen() {
               </div>
               <div className="flex items-start">
                  <div className="w-8 h-8 rounded-full bg-[#00BCD4]/10 text-[#00BCD4] font-black flex items-center justify-center shrink-0 mr-4 border border-[#00BCD4]/20">3</div>
-                 <div><p className="font-bold text-white">Show up and get paid</p><p className="text-xs text-white/50 font-medium">Earn within 1 hour after completion.</p></div>
+                 <div><p className="font-bold text-white">Show up and get paid</p><p className="text-xs text-white/50 font-medium">Earnings hit your wallet within 24 hours.</p></div>
               </div>
             </div>
           </div>

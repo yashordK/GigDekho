@@ -54,7 +54,7 @@ export default function AdminScreen() {
   const fetchQueue = async () => {
     const { data } = await supabase
       .from('verification_documents')
-      .select('id, user_id, doc_type, file_path, status, created_at, profiles(full_name, email, phone, role)')
+      .select('id, user_id, doc_type, file_path, status, created_at, profiles!verification_documents_user_id_fkey(full_name, email, phone, role)')
       .eq('status', 'pending')
       .order('created_at', { ascending: true });
     setQueue(data || []);

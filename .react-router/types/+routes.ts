@@ -20,6 +20,9 @@ type Pages = {
   "/auth/callback": {
     params: {};
   };
+  "/auth/reset": {
+    params: {};
+  };
   "/setup-profile": {
     params: {};
   };
@@ -89,7 +92,7 @@ type Pages = {
 type RouteFiles = {
   "root.tsx": {
     id: "root";
-    page: "/" | "/auth" | "/auth/callback" | "/setup-profile" | "/organizer/preview" | "/gigs/:id" | "/hirer/:id" | "/admin" | "/api/apply" | "/api/cancel" | "/api/mark-attendance" | "/api/pay" | "/api/announce" | "/api/qa" | "/api/bank" | "/api/withdraw" | "/api/cron/reminders" | "/worker/home" | "/about" | "/worker/dashboard" | "/worker/earnings" | "/worker/profile" | "/organizer/home";
+    page: "/" | "/auth" | "/auth/callback" | "/auth/reset" | "/setup-profile" | "/organizer/preview" | "/gigs/:id" | "/hirer/:id" | "/admin" | "/api/apply" | "/api/cancel" | "/api/mark-attendance" | "/api/pay" | "/api/announce" | "/api/qa" | "/api/bank" | "/api/withdraw" | "/api/cron/reminders" | "/worker/home" | "/about" | "/worker/dashboard" | "/worker/earnings" | "/worker/profile" | "/organizer/home";
   };
   "routes/home.tsx": {
     id: "routes/home";
@@ -102,6 +105,10 @@ type RouteFiles = {
   "routes/auth.callback.tsx": {
     id: "routes/auth.callback";
     page: "/auth/callback";
+  };
+  "routes/auth.reset.tsx": {
+    id: "routes/auth.reset";
+    page: "/auth/reset";
   };
   "routes/setup-profile.tsx": {
     id: "routes/setup-profile";
@@ -198,6 +205,7 @@ type RouteModules = {
   "routes/home": typeof import("./app/routes/home.tsx");
   "routes/auth": typeof import("./app/routes/auth.tsx");
   "routes/auth.callback": typeof import("./app/routes/auth.callback.tsx");
+  "routes/auth.reset": typeof import("./app/routes/auth.reset.tsx");
   "routes/setup-profile": typeof import("./app/routes/setup-profile.tsx");
   "routes/organizer.preview": typeof import("./app/routes/organizer.preview.tsx");
   "routes/gigs.$id": typeof import("./app/routes/gigs.$id.tsx");

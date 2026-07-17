@@ -1,53 +1,70 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useNavigate } from "react-router";
-import { Plus, Briefcase, Clock, Users, IndianRupee, Calendar, MapPin } from "lucide-react";
+import type { MetaFunction } from "react-router";
+import { Users, Camera, Briefcase, Music, ShieldCheck, Star, Megaphone, ArrowRight, Check, Sparkles } from "lucide-react";
 import AuthModal from "~/components/AuthModal";
+import SpotlightCategories from "~/components/SpotlightCategories";
+import Footer from "~/components/Footer";
+
+export const meta: MetaFunction = () => [
+  { title: "Hire on GigDekho — Staff, Celebrations, Projects & Artists in Indore" },
+  {
+    name: "description",
+    content:
+      "Post a gig and get verified local workers in Indore — event staff, celebration packages with photographers and reels, skilled freelancers, and bookable artists.",
+  },
+];
+
+const STAFF_ROLES = [
+  { emoji: '🙋', label: 'Helpers' },
+  { emoji: '📋', label: 'Coordinators' },
+  { emoji: '🧸', label: 'Babysitters' },
+  { emoji: '🎥', label: 'Reel Shooters' },
+  { emoji: '📸', label: 'Photographers' },
+  { emoji: '🛎️', label: 'Receptionists' },
+  { emoji: '🍽️', label: 'Waitstaff' },
+  { emoji: '🍸', label: 'Bartenders' },
+  { emoji: '🛡️', label: 'Security' },
+  { emoji: '📣', label: 'Promoters' },
+  { emoji: '🥘', label: 'Catering Staff' },
+  { emoji: '🧹', label: 'Cleanup Crew' },
+];
+
+const PROJECT_SKILLS = [
+  { emoji: '🌐', label: 'Website Builders', desc: 'Want a website for your business? Get one built in no time.' },
+  { emoji: '🎨', label: 'Graphic Designers', desc: 'Menus, posters, branding — designed locally.' },
+  { emoji: '📱', label: 'Social Media & Marketing', desc: 'Interns and managers to run your pages.' },
+  { emoji: '🤝', label: 'Sales Support', desc: 'Part-time sales people when you need a push.' },
+  { emoji: '🎬', label: 'Video Editors', desc: 'Reels, ads, and event edits turned around fast.' },
+  { emoji: '✍️', label: 'Content Writers', desc: 'Descriptions, captions, and copy that converts.' },
+];
+
+const ARTISTS = [
+  { emoji: '🎤', label: 'Singers' },
+  { emoji: '💃', label: 'Dancers' },
+  { emoji: '🎙️', label: 'Anchors & Emcees' },
+  { emoji: '🎧', label: 'DJs' },
+  { emoji: '🎸', label: 'Live Bands' },
+  { emoji: '🪄', label: 'Magicians' },
+  { emoji: '😂', label: 'Comedians' },
+];
 
 export default function OrganizerPreviewScreen() {
   const navigate = useNavigate();
   const [showAuthModal, setShowAuthModal] = useState(false);
 
-  // Auto show modal after 1 minute (60,000ms)
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      setShowAuthModal(true);
-    }, 60000);
-    return () => clearTimeout(timer);
-  }, []);
-
-  const handlePreviewClick = () => {
-    if (!showAuthModal) {
-      setShowAuthModal(true);
-    }
-  };
-
-
-
-  // Fake stats for the blurred background
-  const ghostStats = [
-    { label: "Total Gigs", value: "—" },
-    { label: "Active Now", value: "—" },
-    { label: "Workers Hired", value: "—" },
-    { label: "Total Spent", value: "—" },
-  ];
-
-  // Fake gigs for the blurred background
-  const ghostGigs = [
-    { title: "Annual Tech Conference", role: "📋 Coordinator", date: "Sat, 28 Jun · 9:00 AM", location: "Grand Hall, Indore", slots: "4/6", pay: "₹4,800" },
-    { title: "Wedding Reception", role: "🍽️ Waitstaff", date: "Sun, 29 Jun · 6:00 PM", location: "Sayaji Hotel, Indore", slots: "8/10", pay: "₹6,000" },
-    { title: "Product Launch Event", role: "🎤 Emcee", date: "Mon, 30 Jun · 5:00 PM", location: "C21 Mall, Indore", slots: "1/1", pay: "₹3,500" },
-  ];
+  const openSignup = () => setShowAuthModal(true);
 
   return (
-    <div className="relative min-h-screen bg-[#111111] overflow-hidden flex flex-col font-sans">
-      
-      {/* Simple Nav Bar */}
-      <nav className="relative w-full h-[64px] border-b border-white/10 flex items-center justify-between px-6 xl:px-12 z-20 bg-[#111111]/80 backdrop-blur-md">
-        <div className="text-[22px] tracking-tight flex items-center cursor-pointer">
+    <div className="relative min-h-screen bg-[#111111] flex flex-col font-sans">
+
+      {/* Nav */}
+      <nav className="sticky top-0 w-full h-[64px] border-b border-white/10 flex items-center justify-between px-6 xl:px-12 z-20 bg-[#111111]/80 backdrop-blur-md">
+        <button type="button" onClick={() => navigate('/')} className="text-[22px] tracking-tight flex items-center cursor-pointer bg-transparent border-0 p-0">
           <span className="text-white font-bold">
             Gig<span className="text-[#F4511E] italic font-black">Dekho</span>
           </span>
-        </div>
+        </button>
         <button
           onClick={() => navigate("/auth?mode=organizer")}
           className="bg-white/10 hover:bg-white/20 text-white font-bold px-5 py-1.5 rounded-full text-xs tracking-wider transition-colors btn-tap min-h-[38px] flex items-center"
@@ -56,112 +73,213 @@ export default function OrganizerPreviewScreen() {
         </button>
       </nav>
 
-      {/* Ghost Content Container */}
-      <div 
-        onClick={handlePreviewClick}
-        className={`flex-grow p-6 xl:p-12 space-y-8 z-0 transition-all duration-300 ${
-          showAuthModal 
-            ? "filter blur-sm pointer-events-none select-none opacity-20" 
-            : "opacity-95 cursor-pointer"
-        }`}
-      >
-        
-        {/* Preview Banner */}
-        {!showAuthModal && (
-          <div className="max-w-md mx-auto bg-[#F4511E]/10 border border-[#F4511E]/20 text-[#F4511E] px-4 py-2.5 rounded-2xl text-center text-xs font-black uppercase tracking-wider animate-in slide-in-from-top duration-300">
-             ⚡ Demo Preview Mode — Click anywhere to post a real gig
-          </div>
-        )}
+      <main id="main-content" className="flex-grow pb-24">
 
-        {/* Welcome Header */}
-        <div className="max-w-md mx-auto text-center space-y-2 mt-4">
-          <div className="inline-block bg-[#1C1C1C] px-3.5 py-1.5 rounded-full border border-white/10">
-            <span className="text-white font-bold text-xs">Welcome back, Hirers</span>
+        {/* ── Hero ── */}
+        <section className="relative hero-gradient-overlay overflow-hidden text-center px-6 pt-16 pb-20">
+          <SpotlightCategories />
+          <div className="absolute top-10 right-[10%] w-[280px] h-[280px] floating-glass-rect rotate-12 hidden lg:block opacity-40" />
+          <div className="relative z-10 max-w-3xl mx-auto">
+            <div className="inline-block bg-[#1C1C1C] px-4 py-1.5 rounded-full border border-white/10 mb-5">
+              <span className="text-white/80 font-bold text-xs">For events, businesses & celebrations in Indore</span>
+            </div>
+            <h1 className="text-4xl lg:text-6xl font-black text-white tracking-tight leading-[1.05] mb-5">
+              Whatever you need people for,<br className="hidden lg:block" /> <span className="text-[#F4511E]">GigDekho has them.</span>
+            </h1>
+            <p className="text-white/60 font-medium text-base lg:text-lg max-w-xl mx-auto mb-8">
+              Verified local workers, skilled freelancers, celebration crews, and bookable artists. Any kind of work, any kind of event. Post once and get applications in minutes.
+            </p>
+            <button
+              onClick={openSignup}
+              className="bg-[#F4511E] hover:bg-[#D84315] text-white font-black px-10 py-4 rounded-full shadow-xl shadow-orange-500/25 text-sm uppercase tracking-widest btn-tap hover:scale-105 transition-all"
+            >
+              Post Your First Gig, Free
+            </button>
           </div>
-          <h1 className="text-3xl font-black text-white">Ready to find people for your work?</h1>
-          <p className="text-white/60 text-sm">Post and manage your gigs instantly.</p>
-        </div>
+        </section>
 
-        {/* Stats Grid */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 max-w-7xl mx-auto">
-          {ghostStats.map((stat, idx) => (
-            <div key={idx} className="glass-panel p-5 rounded-2xl flex items-center space-x-4">
-              <div className="w-10 h-10 rounded-xl bg-[#F4511E]/10 flex items-center justify-center text-[#F4511E]">
-                {idx === 0 && <Briefcase size={20} />}
-                {idx === 1 && <Clock size={20} />}
-                {idx === 2 && <Users size={20} />}
-                {idx === 3 && <IndianRupee size={20} />}
-              </div>
-              <div className="flex flex-col text-left">
-                <span className="text-[10px] uppercase font-black tracking-wider text-white/40">{stat.label}</span>
-                <span className="text-xl font-black text-white">{stat.value}</span>
+        <div className="max-w-6xl mx-auto px-6 xl:px-0 space-y-20 mt-16">
+
+          {/* ── 1. Temporary Staff (first, per priority) ── */}
+          <section>
+            <div className="flex items-center gap-3 mb-2">
+              <div className="w-11 h-11 rounded-2xl bg-[#F4511E]/10 border border-[#F4511E]/20 text-[#F4511E] flex items-center justify-center"><Users size={20} /></div>
+              <div>
+                <h2 className="text-2xl lg:text-3xl font-black text-white tracking-tight">Temporary Staff</h2>
+                <p className="text-xs font-bold text-white/40 uppercase tracking-widest">Extra hands, exactly when you need them</p>
               </div>
             </div>
-          ))}
-        </div>
+            <p className="text-white/60 font-medium text-sm max-w-2xl mb-6">
+              Helpers, coordinators, babysitters, reel shooters, photographers, receptionists. Every worker is ID-verified, rated after every gig, and trained through GigDekho Basics before their first shift.
+            </p>
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
+              {STAFF_ROLES.map(r => (
+                <button
+                  key={r.label}
+                  type="button"
+                  onClick={openSignup}
+                  className="bg-[#1C1C1C] border border-white/5 hover:border-[#F4511E]/40 rounded-2xl p-4 flex items-center gap-3 text-left transition-all btn-tap group"
+                >
+                  <span className="text-2xl">{r.emoji}</span>
+                  <span className="text-sm font-bold text-white/80 group-hover:text-white">{r.label}</span>
+                </button>
+              ))}
+              {/* Not limited to listed categories */}
+              <button
+                type="button"
+                onClick={openSignup}
+                className="bg-transparent border border-dashed border-[#F4511E]/40 hover:border-[#F4511E] rounded-2xl p-4 flex items-center gap-3 text-left transition-all btn-tap group"
+              >
+                <span className="text-2xl">✨</span>
+                <span className="text-sm font-bold text-[#F4511E]">…or anything else you need. Post a custom role!</span>
+              </button>
+            </div>
+          </section>
 
-        {/* Gigs List */}
-        <div className="space-y-4 max-w-7xl mx-auto text-left">
-          <h2 className="text-base font-black text-white uppercase tracking-wider">Active & Upcoming Gigs</h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {ghostGigs.map((gig, idx) => (
-              <div key={idx} className="bg-[#1C1C1C] rounded-2xl p-5 border border-white/5 shadow-md flex flex-col space-y-4">
-                <div className="flex flex-col space-y-1">
-                  <div className="flex gap-2">
-                    <span className="text-xs font-black text-white/50 bg-[#111111] px-2.5 py-1 rounded-lg border border-white/5">
-                      {gig.role}
-                    </span>
-                  </div>
-                  <h3 className="font-black text-white text-base tracking-tight mt-1">{gig.title}</h3>
-                  <span className="text-[11px] font-semibold text-white/40 flex items-center gap-1">
-                    <Calendar size={12} className="text-[#F4511E]" /> {gig.date}
-                  </span>
-                  <span className="text-[11px] font-semibold text-white/40 flex items-center gap-1">
-                    <MapPin size={12} className="text-[#F4511E]" /> {gig.location}
-                  </span>
+          {/* ── 2. Celebrations ── */}
+          <section>
+            <div className="flex items-center gap-3 mb-2">
+              <div className="w-11 h-11 rounded-2xl bg-pink-500/10 border border-pink-500/20 text-pink-400 flex items-center justify-center"><Camera size={20} /></div>
+              <div>
+                <h2 className="text-2xl lg:text-3xl font-black text-white tracking-tight">GigDekho Celebrations</h2>
+                <p className="text-xs font-bold text-white/40 uppercase tracking-widest">Birthdays · Anniversaries · Proposals · Get-togethers</p>
+              </div>
+            </div>
+            <p className="text-white/60 font-medium text-sm max-w-2xl mb-6">
+              Packages like <span className="text-white font-bold">"Kheech Meri Photo"</span> and <span className="text-white font-bold">"Ek Reel Meri Bhi"</span> — your guests leave with great photos and reels, and you didn't lift a finger. One booking covers it all.
+            </p>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              {[
+                { name: 'Moments', tag: 'Photos & Reels', desc: 'A photographer + reel shooter capture the whole event — candids, group shots, and share-ready reels.', highlight: false },
+                { name: 'Moments + Setup', tag: 'Add surprise decor', desc: 'Everything in Moments, plus a crew that sets up the surprise — balloons, lights, the works — before your guest of honour walks in.', highlight: true },
+                { name: 'Moments + Setup + Gifting', tag: 'The full celebration', desc: 'The complete package: photos, reels, surprise setup, and a thoughtful curated gift for the person you\'re celebrating.', highlight: false },
+              ].map(p => (
+                <div key={p.name} className={`rounded-3xl p-6 border flex flex-col ${p.highlight ? 'bg-[#F4511E]/5 border-[#F4511E]/30 shadow-lg shadow-orange-500/5' : 'bg-[#1C1C1C] border-white/5'}`}>
+                  {p.highlight && (
+                    <span className="self-start text-[9px] font-black uppercase tracking-widest bg-[#F4511E] text-white px-2.5 py-1 rounded-full mb-3 flex items-center gap-1"><Sparkles size={10} /> Popular</span>
+                  )}
+                  <h3 className="font-black text-white text-lg mb-0.5">{p.name}</h3>
+                  <p className="text-[10px] font-black text-[#F4511E] uppercase tracking-widest mb-3">{p.tag}</p>
+                  <p className="text-white/55 text-sm font-medium leading-relaxed mb-5 flex-1">{p.desc}</p>
+                  <button type="button" onClick={openSignup} className="text-[#F4511E] text-xs font-black uppercase tracking-wider flex items-center gap-1 btn-tap hover:gap-2 transition-all">
+                    Book this <ArrowRight size={13} />
+                  </button>
                 </div>
+              ))}
+            </div>
+          </section>
 
-                <div className="bg-[#111111] p-3 rounded-xl border border-white/5">
-                  <div className="flex justify-between items-center mb-1">
-                    <span className="text-[10px] font-black text-white/40 uppercase tracking-wider">Workers Hired</span>
-                    <span className="text-[10px] font-black uppercase text-green-400">{gig.slots} Filled</span>
-                  </div>
-                  <div className="w-full h-1.5 bg-white/10 rounded-full overflow-hidden">
-                    <div className="h-full bg-green-500 w-[70%]" />
-                  </div>
-                </div>
+          {/* ── 3. Projects ── */}
+          <section>
+            <div className="flex items-center gap-3 mb-2">
+              <div className="w-11 h-11 rounded-2xl bg-blue-500/10 border border-blue-500/20 text-blue-400 flex items-center justify-center"><Briefcase size={20} /></div>
+              <div>
+                <h2 className="text-2xl lg:text-3xl font-black text-white tracking-tight">GigDekho Projects</h2>
+                <p className="text-xs font-bold text-white/40 uppercase tracking-widest">Skilled freelance work, from your own city</p>
+              </div>
+            </div>
+            <p className="text-white/60 font-medium text-sm max-w-2xl mb-6">
+              Portfolio-vetted local freelancers for project work — post your budget, review applicants' work, and hire without agencies.
+            </p>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+              {PROJECT_SKILLS.map(s => (
+                <button
+                  key={s.label}
+                  type="button"
+                  onClick={openSignup}
+                  className="bg-[#1C1C1C] border border-white/5 hover:border-blue-500/40 rounded-2xl p-5 text-left transition-all btn-tap"
+                >
+                  <span className="text-2xl block mb-2.5">{s.emoji}</span>
+                  <span className="text-sm font-black text-white block mb-1">{s.label}</span>
+                  <span className="text-xs font-medium text-white/45 leading-relaxed">{s.desc}</span>
+                </button>
+              ))}
+            </div>
+          </section>
 
-                <div className="border-t border-white/5 pt-4">
-                  <div className="w-full py-2 rounded-xl bg-green-500/10 border border-green-500/20 text-center text-xs text-green-400 font-bold uppercase tracking-wider">
-                    ✓ Paid {gig.pay}
-                  </div>
+          {/* ── 4. Artists ── */}
+          <section>
+            <div className="flex items-center gap-3 mb-2">
+              <div className="w-11 h-11 rounded-2xl bg-purple-500/10 border border-purple-500/20 text-purple-400 flex items-center justify-center"><Music size={20} /></div>
+              <div>
+                <h2 className="text-2xl lg:text-3xl font-black text-white tracking-tight">Artist Booking</h2>
+                <p className="text-xs font-bold text-white/40 uppercase tracking-widest">Skilled college talent, bookable directly</p>
+              </div>
+            </div>
+            <p className="text-white/60 font-medium text-sm max-w-2xl mb-6">
+              Indore's young performers — browse their samples and ratings, message them through the platform, and book at rates they set themselves.
+            </p>
+            <div className="flex flex-wrap gap-3">
+              {ARTISTS.map(a => (
+                <button
+                  key={a.label}
+                  type="button"
+                  onClick={openSignup}
+                  className="bg-[#1C1C1C] border border-white/5 hover:border-purple-500/40 rounded-full px-5 py-3 flex items-center gap-2 transition-all btn-tap"
+                >
+                  <span className="text-lg">{a.emoji}</span>
+                  <span className="text-sm font-bold text-white/80">{a.label}</span>
+                </button>
+              ))}
+            </div>
+          </section>
+
+          {/* ── Trust strip ── */}
+          <section className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            {[
+              { icon: <ShieldCheck size={18} />, title: 'Verified & trained', desc: 'Every worker is ID-verified and completes GigDekho Basics before their first gig.' },
+              { icon: <Star size={18} />, title: 'Ratings both ways', desc: 'See ratings, completed gigs, and reliability scores before you confirm anyone.' },
+              { icon: <Megaphone size={18} />, title: 'Coordinate in-app', desc: 'Announcements, Q&A threads, and secure payments — no chasing people on calls.' },
+            ].map(t => (
+              <div key={t.title} className="glass-panel rounded-2xl p-5 flex items-start gap-3">
+                <div className="w-9 h-9 rounded-xl bg-[#F4511E]/10 text-[#F4511E] flex items-center justify-center shrink-0">{t.icon}</div>
+                <div>
+                  <p className="font-black text-white text-sm mb-1">{t.title}</p>
+                  <p className="text-xs font-medium text-white/50 leading-relaxed">{t.desc}</p>
                 </div>
               </div>
             ))}
-          </div>
+          </section>
+
+          {/* ── How it works + CTA ── */}
+          <section className="bg-[#1C1C1C] border border-white/5 rounded-3xl p-8 lg:p-12 text-center">
+            <h2 className="text-2xl lg:text-3xl font-black text-white tracking-tight mb-8">Posting takes 2 minutes</h2>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 max-w-3xl mx-auto mb-10 text-left">
+              {[
+                { n: '1', t: 'Describe your gig', d: 'Role, date, headcount, pay — or start from a template.' },
+                { n: '2', t: 'Workers apply instantly', d: 'First come, first confirmed. Review profiles and ratings.' },
+                { n: '3', t: 'Pay securely', d: '30% advance, the rest before the event — released after completion.' },
+              ].map(s => (
+                <div key={s.n} className="flex items-start gap-3">
+                  <div className="w-8 h-8 rounded-full bg-[#F4511E]/10 border border-[#F4511E]/25 text-[#F4511E] font-black flex items-center justify-center shrink-0 text-sm">{s.n}</div>
+                  <div>
+                    <p className="font-bold text-white text-sm mb-0.5">{s.t}</p>
+                    <p className="text-xs font-medium text-white/45 leading-relaxed">{s.d}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+            <button
+              onClick={openSignup}
+              className="bg-[#F4511E] hover:bg-[#D84315] text-white font-black px-10 py-4 rounded-full shadow-xl shadow-orange-500/25 text-sm uppercase tracking-widest btn-tap hover:scale-105 transition-all"
+            >
+              Get Started — It's Free
+            </button>
+            <p className="text-white/30 text-[11px] font-bold mt-3 flex items-center justify-center gap-1">
+              <Check size={12} /> No subscription. Pay only when you hire.
+            </p>
+          </section>
+
         </div>
+      </main>
 
-      </div>
+      <Footer />
 
-      {/* Floating post gig trigger (dimmed if modal is open) */}
-      <button 
-        onClick={handlePreviewClick}
-        className={`fixed bottom-6 right-6 z-10 bg-[#F4511E] text-white px-6 py-3.5 rounded-full shadow-xl font-black tracking-widest text-xs uppercase transition-all duration-300 ${
-          showAuthModal 
-            ? "filter blur-[2px] opacity-35 pointer-events-none" 
-            : "hover:scale-105 hover:bg-[#D84315]"
-        }`}
-      >
-        <Plus size={18} className="mr-1.5 inline" /> Post a Gig
-      </button>
-
-      {/* Overlay Modal — Reusable Stateful Auth Card */}
-      <AuthModal 
-        isOpen={showAuthModal} 
-        onClose={() => setShowAuthModal(false)} 
-        defaultIntent="organizer" 
+      <AuthModal
+        isOpen={showAuthModal}
+        onClose={() => setShowAuthModal(false)}
+        defaultIntent="organizer"
       />
-      
     </div>
   );
 }

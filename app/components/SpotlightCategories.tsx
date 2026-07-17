@@ -1,67 +1,77 @@
 import { useEffect, useRef } from 'react';
+import { Flashlight } from 'lucide-react';
 
-// Category words hidden in the hero — the cursor's "torch" reveals them,
-// teaching users everything they can do on GigDekho.
-const WORDS = [
-  { text: 'Waitstaff', x: 6, y: 12, size: 22, rotate: -8 },
-  { text: 'DJ', x: 22, y: 6, size: 30, rotate: 5 },
-  { text: 'Photographer', x: 38, y: 14, size: 18, rotate: -4 },
-  { text: 'Bartender', x: 62, y: 8, size: 24, rotate: 7 },
-  { text: 'Singer', x: 82, y: 13, size: 26, rotate: -6 },
-  { text: 'Security', x: 8, y: 32, size: 20, rotate: 4 },
-  { text: 'Brand Promoter', x: 88, y: 30, size: 16, rotate: 8 },
-  { text: 'Reel Shooter', x: 4, y: 52, size: 18, rotate: -7 },
-  { text: 'Tutoring', x: 90, y: 50, size: 22, rotate: -5 },
-  { text: 'Delivery', x: 7, y: 72, size: 24, rotate: 6 },
-  { text: 'Web Development', x: 86, y: 68, size: 15, rotate: 4 },
-  { text: 'Setup Crew', x: 16, y: 88, size: 18, rotate: -5 },
-  { text: 'Catering', x: 34, y: 92, size: 20, rotate: 3 },
-  { text: 'Anchor/MC', x: 56, y: 90, size: 22, rotate: -4 },
-  { text: 'Babysitting', x: 76, y: 88, size: 17, rotate: 6 },
-  { text: 'Data Entry', x: 44, y: 4, size: 16, rotate: -3 },
-  { text: 'Magician', x: 68, y: 92, size: 18, rotate: -8 },
-  { text: 'Telecaller', x: 24, y: 70, size: 15, rotate: 5 },
-  { text: 'Video Editing', x: 74, y: 45, size: 16, rotate: -6 },
-  { text: 'Volunteer', x: 20, y: 45, size: 17, rotate: 7 },
+// Category cards hidden in the hero — the cursor's torch reveals them,
+// teaching users everything they can do on GigDekho. Mirrors the live
+// skill taxonomy (skill_categories).
+const CARDS = [
+  'Waitstaff', 'Event Helper', 'Usher/Host', 'Security', 'Bartender', 'Setup Crew',
+  'Cleanup Crew', 'Photographer', 'Reel Shooter', 'Surprise Setup', 'Gifting',
+  'Brand Promoter', 'Sales Person', 'Product Sampling', 'Leaflet Distributor',
+  'Field Verification', 'Data Collection', 'Telecaller', 'Kitchen Help',
+  'Catering Staff', 'Housekeeping', 'Customer Service', 'Retail/Cashier',
+  'Beauty Assistant', 'Laundry/Ironing', 'Food Service', 'Data Entry',
+  'Accounting Help', 'IT Support', 'Front Desk', 'Home Tutoring',
+  'Exam Invigilation', 'Bike Rider', 'Local Delivery', 'Auto Driver',
+  'Part-Time Driver', 'Packing/Loading', 'Babysitting', 'Personal Helper',
+  'Volunteer', 'Web Development', 'Graphic Design', 'Video Editing',
+  'Content Writing', 'Social Media', 'Singer', 'DJ', 'Live Band',
+  'Anchor/MC', 'Dancer', 'Magician', 'Comedian',
 ];
 
 /**
- * Drop inside a `relative overflow-hidden` hero. Renders a full-bleed layer of
- * category words masked by a circular spotlight that follows the cursor.
- * On touch devices (no hover) the spotlight slowly drifts on its own.
+ * Drop inside a `relative overflow-hidden` hero. Renders an evenly-spaced grid
+ * of small glowing category cards, masked by a torch-shaped spotlight that
+ * follows the cursor (the cursor itself becomes a torch over empty hero space).
+ * On touch devices the spotlight slowly drifts on its own.
  */
 export default function SpotlightCategories() {
   const layerRef = useRef<HTMLDivElement>(null);
+  const torchRef = useRef<HTMLDivElement>(null);
   const rafRef = useRef<number>(0);
 
   useEffect(() => {
     const layer = layerRef.current;
+    const torch = torchRef.current;
     const host = layer?.parentElement;
     if (!layer || !host) return;
 
     const setSpot = (x: number, y: number) => {
       layer.style.setProperty('--sx', `${x}px`);
       layer.style.setProperty('--sy', `${y}px`);
+      if (torch) {
+        torch.style.transform = `translate(${x}px, ${y}px)`;
+      }
     };
 
     const hasHover = window.matchMedia('(hover: hover)').matches;
 
     if (hasHover) {
+      host.classList.add('torch-host');
       const onMove = (e: MouseEvent) => {
         const rect = host.getBoundingClientRect();
         setSpot(e.clientX - rect.left, e.clientY - rect.top);
+        // Over buttons/links the normal pointer returns — hide the torch there
+        const interactive = (e.target as Element | null)?.closest?.('button, a, input, [role="button"]');
+        if (torch) torch.style.opacity = interactive ? '0' : '1';
       };
-      const onLeave = () => setSpot(-500, -500);
+      const onLeave = () => {
+        setSpot(-500, -500);
+        if (torch) torch.style.opacity = '0';
+      };
       host.addEventListener('mousemove', onMove);
       host.addEventListener('mouseleave', onLeave);
       setSpot(-500, -500);
+      if (torch) torch.style.opacity = '0';
       return () => {
+        host.classList.remove('torch-host');
         host.removeEventListener('mousemove', onMove);
         host.removeEventListener('mouseleave', onLeave);
       };
     }
 
-    // Touch / no-hover: auto-drifting spotlight on a slow lissajous path
+    // Touch / no-hover: auto-drifting spotlight on a slow lissajous path (no torch icon)
+    if (torch) torch.style.display = 'none';
     const start = performance.now();
     const drift = (now: number) => {
       const t = (now - start) / 1000;
@@ -75,31 +85,65 @@ export default function SpotlightCategories() {
     return () => cancelAnimationFrame(rafRef.current);
   }, []);
 
-  const mask = 'radial-gradient(circle 110px at var(--sx, -500px) var(--sy, -500px), black 0%, black 55%, transparent 100%)';
+  // Slightly tighter beam than v1 (was 110px)
+  const mask = 'radial-gradient(circle 88px at var(--sx, -500px) var(--sy, -500px), black 0%, black 55%, transparent 100%)';
 
   return (
-    <div
-      ref={layerRef}
-      aria-hidden="true"
-      className="absolute inset-0 z-[5] pointer-events-none select-none"
-      style={{ WebkitMaskImage: mask, maskImage: mask }}
-    >
-      {WORDS.map((w) => (
+    <>
+      {/* Masked card grid */}
+      <div
+        ref={layerRef}
+        aria-hidden="true"
+        className="absolute inset-0 z-[5] pointer-events-none select-none p-4 lg:p-6 overflow-hidden"
+        style={{ WebkitMaskImage: mask, maskImage: mask }}
+      >
+        <div className="w-full h-full flex flex-wrap items-center justify-center content-between gap-2 lg:gap-2.5">
+          {CARDS.map((label) => (
+            <span
+              key={label}
+              className="px-2.5 py-1.5 rounded-lg whitespace-nowrap font-bold uppercase tracking-wider"
+              style={{
+                fontSize: '9px',
+                color: 'rgba(255,255,255,0.8)',
+                background: 'rgba(255,255,255,0.045)',
+                border: '1px solid rgba(244,81,30,0.4)',
+                boxShadow: '0 0 8px rgba(244,81,30,0.2), inset 0 0 5px rgba(244,81,30,0.07)',
+                backdropFilter: 'blur(4px)',
+              }}
+            >
+              {label}
+            </span>
+          ))}
+        </div>
+      </div>
+
+      {/* Torch cursor — rendered at the cursor tip, outside the mask */}
+      <div
+        ref={torchRef}
+        aria-hidden="true"
+        className="absolute top-0 left-0 z-[6] pointer-events-none transition-opacity duration-150"
+        style={{ opacity: 0, willChange: 'transform' }}
+      >
+        {/* soft light bloom at the tip */}
         <span
-          key={w.text}
-          className="absolute font-black uppercase tracking-widest whitespace-nowrap"
+          className="absolute rounded-full"
           style={{
-            left: `${w.x}%`,
-            top: `${w.y}%`,
-            fontSize: `${w.size}px`,
-            transform: `rotate(${w.rotate}deg)`,
-            color: 'rgba(244, 81, 30, 0.55)',
-            textShadow: '0 0 24px rgba(244,81,30,0.35)',
+            width: '18px', height: '18px', left: '-9px', top: '-9px',
+            background: 'radial-gradient(circle, rgba(255,214,170,0.9) 0%, rgba(244,81,30,0.35) 45%, transparent 70%)',
           }}
-        >
-          {w.text}
-        </span>
-      ))}
-    </div>
+        />
+        {/* torch body, handle trailing down-right from the tip */}
+        <Flashlight
+          size={26}
+          strokeWidth={2.2}
+          style={{
+            color: '#F4511E',
+            transform: 'translate(2px, 2px) rotate(-45deg)',
+            transformOrigin: 'top left',
+            filter: 'drop-shadow(0 0 5px rgba(244,81,30,0.6))',
+          }}
+        />
+      </div>
+    </>
   );
 }

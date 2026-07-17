@@ -353,7 +353,7 @@ export default function GigDetailScreen() {
                  <p>1. By applying, you commit to arriving at the gig location on time.</p>
                  <p>2. Failure to show up without 24 hours prior notice will negatively impact your profile rating and may result in account suspension.</p>
                  <p>3. You agree to perform the duties required by the organizer professionally.</p>
-                 <p>4. Payments are processed within 1 hour of the organizer marking the gig as completed.</p>
+                 <p>4. Payments are credited to your wallet within around 24 hours of the organizer marking the gig as completed.</p>
               </div>
               <div className="flex space-x-3">
                  <button type="button" onClick={() => setShowTerms(false)} className="flex-1 py-3.5 rounded-full font-bold text-white/70 bg-white/10 hover:bg-white/20 transition-colors btn-tap">

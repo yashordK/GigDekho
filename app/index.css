@@ -79,6 +79,19 @@ body {
   transition: transform 0.1s;
 }
 
+/* ── Torch cursor (SpotlightCategories) ─────────────────────────── */
+/* The hero hides the native cursor so the torch element replaces it;
+   interactive children restore a normal pointer. */
+.torch-host {
+  cursor: none;
+}
+.torch-host button,
+.torch-host a,
+.torch-host input,
+.torch-host [role="button"] {
+  cursor: pointer;
+}
+
 /* ── Category / pill strip ──────────────────────────────────────── */
 .category-strip {
   display: flex;
@@ -90,6 +103,107 @@ body {
 .category-strip::-webkit-scrollbar {
   display: none;
 }
+
+/* ══════════════════════════════════════════════════════════════════
+   LIGHT THEME — activated by `html.light` (toggle on the profile page,
+   persisted in localStorage, independent of worker/hirer view).
+
+   The app's utilities are hardcoded dark hexes, so light mode is a
+   token-exact override layer ([class~=…] matches whole class tokens,
+   so hover:/focus: variants are untouched). Brand hero gradients stay
+   dark in both themes — exceptions restore white text inside them.
+   ══════════════════════════════════════════════════════════════════ */
+
+html.light body,
+html.light:root { background-color: #F5F5F7; color: #18181B; }
+html.light body { background-color: #F5F5F7; color: #18181B; }
+
+/* Page + card surfaces */
+html.light [class~="bg-[#111111]"],
+html.light [class~="md:bg-[#111111]"],
+html.light [class~="bg-background"],
+html.light [class~="bg-[#111111]/85"],
+html.light [class~="bg-[#111111]/80"],
+html.light [class~="bg-[#111111]/60"],
+html.light [class~="bg-[#111111]/45"],
+html.light [class~="bg-[#111111]/30"] { background-color: #F0F0F2 !important; }
+
+html.light [class~="bg-[#1C1C1C]"],
+html.light [class~="md:bg-[#1C1C1C]"],
+html.light [class~="bg-[#1C1C1C]/80"],
+html.light [class~="bg-[#1C1C1C]/50"] { background-color: #FFFFFF !important; }
+
+html.light [class~="bg-[#0A0A0A]"] { background-color: #E9E9EC !important; }
+
+html.light [class~="bg-white/5"],
+html.light [class~="bg-white/10"],
+html.light [class~="bg-white/15"],
+html.light [class~="bg-white/20"] { background-color: rgba(0, 0, 0, 0.05) !important; }
+
+/* Text */
+html.light [class~="text-white"] { color: #18181B !important; }
+html.light [class~="text-white/90"],
+html.light [class~="text-white/85"] { color: rgba(0,0,0,0.85) !important; }
+html.light [class~="text-white/80"],
+html.light [class~="text-white/75"] { color: rgba(0,0,0,0.78) !important; }
+html.light [class~="text-white/70"] { color: rgba(0,0,0,0.7) !important; }
+html.light [class~="text-white/60"],
+html.light [class~="text-white/55"] { color: rgba(0,0,0,0.62) !important; }
+html.light [class~="text-white/50"],
+html.light [class~="text-white/45"] { color: rgba(0,0,0,0.55) !important; }
+html.light [class~="text-white/40"] { color: rgba(0,0,0,0.48) !important; }
+html.light [class~="text-white/30"] { color: rgba(0,0,0,0.4) !important; }
+html.light [class~="text-white/20"] { color: rgba(0,0,0,0.28) !important; }
+
+/* Borders */
+html.light [class~="border-white/5"] { border-color: rgba(0,0,0,0.06) !important; }
+html.light [class~="border-white/10"],
+html.light [class~="border-white/15"] { border-color: rgba(0,0,0,0.1) !important; }
+html.light [class~="border-white/20"],
+html.light [class~="border-white/30"],
+html.light [class~="border-white/40"],
+html.light [class~="border-white"] { border-color: rgba(0,0,0,0.18) !important; }
+
+/* Glass panel */
+html.light .glass-panel {
+  background: rgba(255, 255, 255, 0.75);
+  border-color: rgba(0, 0, 0, 0.08);
+}
+
+/* ── Exceptions: brand gradients stay dark, keep their white text ── */
+html.light .hero-gradient-overlay [class~="text-white"] { color: #ffffff !important; }
+html.light .hero-gradient-overlay [class~="border-white"] { border-color: #ffffff !important; }
+html.light .hero-gradient-overlay [class~="text-white/90"] { color: rgba(255,255,255,0.9) !important; }
+html.light .hero-gradient-overlay [class~="text-white/80"] { color: rgba(255,255,255,0.8) !important; }
+html.light .hero-gradient-overlay [class~="text-white/70"] { color: rgba(255,255,255,0.7) !important; }
+html.light .hero-gradient-overlay [class~="text-white/60"] { color: rgba(255,255,255,0.6) !important; }
+html.light .hero-gradient-overlay [class~="text-white/50"] { color: rgba(255,255,255,0.5) !important; }
+html.light .hero-gradient-overlay [class~="text-white/40"] { color: rgba(255,255,255,0.4) !important; }
+html.light .hero-gradient-overlay [class~="text-white/30"] { color: rgba(255,255,255,0.3) !important; }
+html.light .hero-gradient-overlay .glass-panel {
+  background: rgba(255, 255, 255, 0.06);
+  border-color: rgba(255, 255, 255, 0.08);
+}
+html.light .hero-gradient-overlay [class~="bg-white/5"],
+html.light .hero-gradient-overlay [class~="bg-white/10"],
+html.light .hero-gradient-overlay [class~="bg-white/20"] { background-color: rgba(255,255,255,0.12) !important; }
+/* Dark chips/cards INSIDE the hero keep their dark look (the hero stays dark) */
+html.light .hero-gradient-overlay [class~="bg-[#1C1C1C]"],
+html.light .hero-gradient-overlay [class~="bg-[#1C1C1C]/80"],
+html.light .hero-gradient-overlay [class~="bg-[#1C1C1C]/90"] { background-color: rgba(28,28,28,0.85) !important; }
+html.light .hero-gradient-overlay [class~="bg-[#111111]"] { background-color: rgba(17,17,17,0.85) !important; }
+html.light .hero-gradient-overlay [class~="border-white/10"],
+html.light .hero-gradient-overlay [class~="border-white/5"] { border-color: rgba(255,255,255,0.1) !important; }
+html.light .hero-gradient-overlay [class~="border-white/20"],
+html.light .hero-gradient-overlay [class~="border-white/30"],
+html.light .hero-gradient-overlay [class~="border-white/40"] { border-color: rgba(255,255,255,0.3) !important; }
+
+/* Solid-color buttons & chips always keep white text (rules are last, so
+   equal-specificity !important resolves in their favor) */
+html.light [class~="bg-[#F4511E]"],
+html.light [class~="bg-red-500"],
+html.light [class~="bg-green-500"],
+html.light [class~="bg-[#F4511E]"] * { color: #ffffff !important; }
 
 /* ─── GigDekho Accessibility & Mobile Baseline ────────────── */
 

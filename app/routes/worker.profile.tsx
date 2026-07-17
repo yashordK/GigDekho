@@ -7,6 +7,8 @@ import BadgeRow, { levelRing } from '~/components/BadgeRow';
 import VerificationPanel from '~/components/VerificationPanel';
 import EditProfileModal from '~/components/EditProfileModal';
 import SkillSelector from '~/components/SkillSelector';
+import ThemeToggle from '~/components/ThemeToggle';
+import PortfolioPanel from '~/components/PortfolioPanel';
 
 // Badges tied to real milestones — computed from live stats, never faked
 function computeTrophies(completedGigs: number, hasFiveStar: boolean) {
@@ -482,6 +484,9 @@ export default function ProfileScreen() {
                 )}
               </div>
 
+              {/* Portfolio & resume — links + uploaded files, visible to hirers */}
+              {user && <PortfolioPanel userId={user.id} />}
+
               {(() => {
                 const { earned: trophies, locked: lockedTrophy } = computeTrophies(stats.completedGigs, hasFiveStar);
                 return (
@@ -583,6 +588,9 @@ export default function ProfileScreen() {
               </div>
             </div>
           )}
+
+          {/* Appearance — persists across reloads and role switches */}
+          <ThemeToggle />
 
           {/* Switch view — mirrors the TopNav toggle, no DB role mutation */}
           <div className="glass-panel p-5 rounded-2xl border border-white/5 space-y-3 mb-8 text-left">

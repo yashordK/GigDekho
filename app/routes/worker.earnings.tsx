@@ -5,6 +5,7 @@ import { useNavigate } from 'react-router';
 import { Banknote, Wallet, Calendar, AlertCircle, TrendingUp } from 'lucide-react';
 import { formatRelativeDate } from '~/lib/utils';
 import WalletCard from '~/components/WalletCard';
+import SpotlightCategories from '~/components/SpotlightCategories';
 
 const WEEKS_SHOWN = 8;
 
@@ -77,6 +78,7 @@ export default function EarningsScreen() {
 
       {/* Edge to Edge Earnings Header */}
       <div className="relative w-full pt-12 pb-20 hero-gradient-overlay flex flex-col items-center justify-center text-center px-4 overflow-hidden mb-8">
+        <SpotlightCategories />
         <div className="absolute top-10 right-[30%] w-[300px] h-[300px] floating-glass-rect -rotate-12 z-0 hidden lg:block opacity-40"></div>
         <div className="absolute bottom-0 left-[10%] w-[400px] h-[200px] floating-glass-rect rotate-6 z-0 hidden lg:block opacity-30"></div>
 

@@ -192,6 +192,9 @@ export default function TopNav() {
                 }>Earnings</NavLink>
               </>
             )}
+            <NavLink to="/about" className={({ isActive }) =>
+              `text-sm font-bold px-1 py-1 transition-all ${isActive ? activeLinkClass : defaultLinkClass}`
+            }>About Us</NavLink>
           </div>
         )}
 
@@ -302,6 +305,13 @@ export default function TopNav() {
             </>
           ) : (
             <>
+              <button
+                type="button"
+                onClick={() => navigate('/about')}
+                className="hidden lg:block text-white/60 hover:text-white font-bold px-4 py-2 text-[13px] tracking-wide transition-colors"
+              >
+                About Us
+              </button>
               <button
                 type="button"
                 onClick={() => navigate('/')}

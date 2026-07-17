@@ -9,40 +9,106 @@ import PostGigModal, { type GigTemplate } from "~/components/PostGigModal";
 import Toast from "~/components/Toast";
 import SpotlightCategories from "~/components/SpotlightCategories";
 
-// Quick templates — repeat posting becomes one tap + adjusting date/headcount
-const QUICK_TEMPLATES: { id: string; label: string; emoji: string; template: GigTemplate }[] = [
+// Quick Start discovery — shows the hirer everything they can get done here.
+// Details stay hidden until they tap a chip; one more tap prefills the post form.
+interface DiscoverItem {
+  id: string;
+  label: string;
+  emoji: string;
+  desc: string;
+  template: GigTemplate | null; // null = blank form (custom / anything else)
+}
+
+const DISCOVER_ITEMS: DiscoverItem[] = [
+  {
+    id: "staff",
+    label: "Temporary staff",
+    emoji: "🙋",
+    desc: "Helpers, coordinators, waitstaff, receptionists, babysitters, security. Verified extra hands for any shift or event.",
+    template: {
+      eventTitle: "Staffing Requirement",
+      description: "Reliable staff needed. Details of duties, dress code, and reporting time below.",
+      roles: [{ role_type: "Event Helper/Coordinator", pay_rate: 120, duration_hrs: 5, slots_total: 2 }],
+    },
+  },
   {
     id: "wedding",
     label: "Wedding waitstaff",
     emoji: "💒",
+    desc: "Trained waitstaff in formals for wedding functions. Most hirers book 6 to 10 for a full evening.",
     template: {
       eventTitle: "Wedding Event",
       description: "Waitstaff needed for a wedding function. Formal dress code (black & white). Food provided.",
-      roles: [{ role_type: "Waiter", pay_rate: 150, duration_hrs: 6, slots_total: 8 }],
+      roles: [{ role_type: "Waitstaff", pay_rate: 150, duration_hrs: 6, slots_total: 8 }],
     },
   },
   {
     id: "cafe",
     label: "Cafe weekend shift",
     emoji: "☕",
+    desc: "Extra hands for the weekend rush. Serving, clearing tables, and basic counter help.",
     template: {
       eventTitle: "Cafe Weekend Shift",
-      description: "Extra hands for the weekend rush — serving, clearing tables, basic counter help.",
-      roles: [{ role_type: "Waiter", pay_rate: 120, duration_hrs: 5, slots_total: 2 }],
+      description: "Extra hands for the weekend rush. Serving, clearing tables, basic counter help.",
+      roles: [{ role_type: "Waitstaff", pay_rate: 120, duration_hrs: 5, slots_total: 2 }],
     },
   },
   {
-    id: "celebration",
-    label: "Celebrations package",
-    emoji: "🎉",
+    id: "moments",
+    label: "Celebrations: Moments",
+    emoji: "📸",
+    desc: "\"Kheech Meri Photo\" + \"Ek Reel Meri Bhi\". A photographer and reel shooter cover your party so guests leave with great pics.",
     template: {
       eventTitle: "Celebration",
-      description: "Birthday/anniversary celebration — photographer to cover the event plus helpers for setup and serving.",
+      description: "Personal celebration. Photographer + reel shooter to capture candids, group shots, and share-ready reels.",
       roles: [
-        { role_type: "Photographer", pay_rate: 400, duration_hrs: 4, slots_total: 1 },
-        { role_type: "Event Helper", pay_rate: 120, duration_hrs: 4, slots_total: 2 },
+        { role_type: "Event Photographer", pay_rate: 400, duration_hrs: 4, slots_total: 1 },
+        { role_type: "Reel Shooter/Videographer", pay_rate: 350, duration_hrs: 4, slots_total: 1 },
       ],
     },
+  },
+  {
+    id: "setup",
+    label: "Celebrations: + Setup",
+    emoji: "🎈",
+    desc: "Everything in Moments plus a surprise-setup crew: decor, balloons, and lights ready before your guest of honour arrives.",
+    template: {
+      eventTitle: "Surprise Celebration",
+      description: "Surprise celebration. Photos + reels coverage, plus setup crew for decor before the guest of honour arrives.",
+      roles: [
+        { role_type: "Event Photographer", pay_rate: 400, duration_hrs: 4, slots_total: 1 },
+        { role_type: "Surprise Setup Specialist", pay_rate: 200, duration_hrs: 3, slots_total: 2 },
+      ],
+    },
+  },
+  {
+    id: "projects",
+    label: "GigDekho Projects",
+    emoji: "💼",
+    desc: "Skilled local freelancers: websites, graphic design, video editing, content, social media. Post your budget and review portfolios.",
+    template: {
+      eventTitle: "Project Work",
+      description: "Project brief: scope, deliverables, and timeline below. Share your portfolio when applying.",
+      roles: [{ role_type: "Web Development", pay_rate: 300, duration_hrs: 10, slots_total: 1 }],
+    },
+  },
+  {
+    id: "artists",
+    label: "Book an artist",
+    emoji: "🎤",
+    desc: "Singers, DJs, anchors, dancers, live bands, magicians. Skilled college talent with samples and ratings.",
+    template: {
+      eventTitle: "Artist Booking",
+      description: "Looking for a performer for our event. Share your samples/portfolio when applying.",
+      roles: [{ role_type: "Singer", pay_rate: 500, duration_hrs: 2, slots_total: 1 }],
+    },
+  },
+  {
+    id: "custom",
+    label: "…or anything else",
+    emoji: "✨",
+    desc: "Not limited to these! Post any custom role: pandal help, inventory counting, queue management, whatever you need people for.",
+    template: null,
   },
 ];
 
@@ -59,6 +125,7 @@ export default function OrganizerHomeScreen() {
   const [loading, setLoading] = useState(true);
   const [showPostModal, setShowPostModal] = useState(false);
   const [activeTemplate, setActiveTemplate] = useState<GigTemplate | null>(null);
+  const [discoverId, setDiscoverId] = useState<string | null>(null);
   const [showHistory, setShowHistory] = useState(false);
   const [toast, setToast] = useState<{ message: string; type: "success" | "error" | "info" } | null>(null);
 
@@ -228,7 +295,7 @@ export default function OrganizerHomeScreen() {
           Need people? Post a gig.
         </h1>
         <p className="text-white/60 font-medium text-sm lg:text-base max-w-md relative z-10 mb-7">
-          Workers in Indore apply within minutes — first come, first confirmed.
+          Workers in Indore apply within minutes. First come, first confirmed.
         </p>
 
         <button
@@ -238,19 +305,44 @@ export default function OrganizerHomeScreen() {
           <Plus size={20} /> Post a Gig
         </button>
 
-        {/* Quick templates */}
-        <div className="relative z-10 flex flex-wrap items-center justify-center gap-2">
-          <span className="text-[10px] font-black text-white/40 uppercase tracking-widest w-full sm:w-auto mb-1 sm:mb-0">Quick start:</span>
-          {QUICK_TEMPLATES.map((t) => (
-            <button
-              key={t.id}
-              type="button"
-              onClick={() => openPostModal(t.template)}
-              className="btn-tap flex items-center gap-1.5 bg-[#1C1C1C]/80 backdrop-blur border border-white/10 hover:border-[#F4511E]/40 text-white/80 hover:text-white px-4 py-2 rounded-full text-xs font-bold transition-all"
-            >
-              <span>{t.emoji}</span> {t.label}
-            </button>
-          ))}
+        {/* Quick Start discovery — tap a chip to see what it covers, tap again to post */}
+        <div className="relative z-10 w-full max-w-2xl">
+          <p className="text-[10px] font-black text-white/40 uppercase tracking-widest mb-2">Quick start · everything you can get done here</p>
+          <div className="flex flex-wrap items-center justify-center gap-2">
+            {DISCOVER_ITEMS.map((t) => (
+              <button
+                key={t.id}
+                type="button"
+                aria-expanded={discoverId === t.id}
+                onClick={() => setDiscoverId(discoverId === t.id ? null : t.id)}
+                className={`btn-tap flex items-center gap-1.5 backdrop-blur border px-4 py-2 rounded-full text-xs font-bold transition-all ${
+                  discoverId === t.id
+                    ? 'bg-[#F4511E]/20 border-[#F4511E]/60 text-white'
+                    : 'bg-[#1C1C1C]/80 border-white/10 hover:border-[#F4511E]/40 text-white/80 hover:text-white'
+                }`}
+              >
+                <span>{t.emoji}</span> {t.label}
+              </button>
+            ))}
+          </div>
+
+          {/* Detail card appears only when a chip is selected */}
+          {(() => {
+            const item = DISCOVER_ITEMS.find(d => d.id === discoverId);
+            if (!item) return null;
+            return (
+              <div className="mt-3 bg-[#1C1C1C]/90 backdrop-blur border border-[#F4511E]/25 rounded-2xl p-4 text-left flex flex-col sm:flex-row sm:items-center gap-3 animate-in fade-in slide-in-from-top-1 duration-200">
+                <p className="text-xs font-medium text-white/70 leading-relaxed flex-1">{item.desc}</p>
+                <button
+                  type="button"
+                  onClick={() => { setDiscoverId(null); openPostModal(item.template); }}
+                  className="shrink-0 btn-tap bg-[#F4511E] hover:bg-[#D84315] text-white px-5 py-2.5 rounded-full text-xs font-black uppercase tracking-wider transition-colors"
+                >
+                  {item.template ? 'Post this' : 'Post custom gig'}
+                </button>
+              </div>
+            );
+          })()}
         </div>
 
         <button

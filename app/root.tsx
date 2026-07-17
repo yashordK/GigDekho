@@ -19,6 +19,8 @@ export function Layout({ children }: { children: React.ReactNode }) {
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
         <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet" />
+        {/* Apply saved theme before first paint to avoid a flash of dark */}
+        <script dangerouslySetInnerHTML={{ __html: "try{if(localStorage.getItem('gd-theme')==='light')document.documentElement.classList.add('light')}catch(e){}" }} />
         {/* Global gm_authFailure handler — must exist before Maps script loads */}
         <script dangerouslySetInnerHTML={{ __html: "window.gm_authFailure=function(){window.__MAPS_AUTH_FAILED__=true;};" }} />
         {import.meta.env.VITE_GOOGLE_MAPS_API_KEY ? (
@@ -31,7 +33,8 @@ export function Layout({ children }: { children: React.ReactNode }) {
         <Meta />
         <Links />
       </head>
-      <body style={{ backgroundColor: "#111111", color: "#ffffff", margin: 0 }}>
+      {/* Colors come from index.css so the .light theme override can win */}
+      <body style={{ margin: 0 }}>
         {/* Accessibility skip link */}
         <a
           href="#main-content"
