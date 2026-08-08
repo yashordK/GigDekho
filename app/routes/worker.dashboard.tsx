@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { supabase } from '~/lib/supabase.client';
 import { useAuth } from '~/context/AuthContext';
 import { useNavigate } from 'react-router';
-import { Calendar, ChevronRight, Briefcase, Shield, XCircle, AlertTriangle } from 'lucide-react';
+import { Calendar, ChevronRight, Briefcase, Shield, XCircle, AlertTriangle, GraduationCap } from 'lucide-react';
 import { formatRelativeDate } from '~/lib/utils';
 import SpotlightCategories from '~/components/SpotlightCategories';
 
@@ -26,6 +26,14 @@ function reliabilityLabel(score: number) {
   return                 { label: 'Poor',       color: 'text-red-400',   bg: 'bg-red-500/10 border-red-500/20' };
 }
 
+const INTERN_STATUS: Record<string, { label: string; color: string }> = {
+  submitted:    { label: 'Submitted',    color: 'bg-orange-500/10 text-orange-400 border-orange-500/20' },
+  shortlisted:  { label: 'Shortlisted',  color: 'bg-blue-500/10 text-blue-400 border-blue-500/20' },
+  interviewing: { label: 'Interviewing', color: 'bg-yellow-500/10 text-yellow-400 border-yellow-500/20' },
+  hired:        { label: 'Hired 🎉',     color: 'bg-green-500/10 text-green-400 border-green-500/20' },
+  rejected:     { label: 'Not selected', color: 'bg-white/5 text-white/40 border-white/10' },
+};
+
 function getCancelPenalty(eventDate: string): number {
   const h = (new Date(eventDate).getTime() - Date.now()) / 3600000;
   if (h < 6) return 15;
@@ -36,6 +44,7 @@ function getCancelPenalty(eventDate: string): number {
 export default function DashboardScreen() {
   const [tab, setTab] = useState('active');
   const [apps, setApps] = useState<any[]>([]);
+  const [internApps, setInternApps] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [reliabilityScore, setReliabilityScore] = useState(100);
   const [cancelModal, setCancelModal] = useState<{
@@ -73,6 +82,13 @@ export default function DashboardScreen() {
         .order('applied_at', { ascending: false });
       if (error) throw error;
       setApps(data || []);
+
+      const { data: internData } = await supabase
+        .from('internship_applications')
+        .select('id, status, created_at, gig:gigs(id, title, location_text, event_date, work_mode, commitment, stipend_min, stipend_max, is_unpaid, duration_months)')
+        .eq('applicant_id', user.id)
+        .order('created_at', { ascending: false });
+      setInternApps((internData || []).filter((a: any) => a.gig));
     } catch (err) {
       console.error(err);
     } finally {
@@ -208,11 +224,57 @@ export default function DashboardScreen() {
           >
             Past Events
           </button>
+          {internApps.length > 0 && (
+            <button
+              onClick={() => setTab('internships')}
+              className={`flex-1 min-w-[130px] min-h-[44px] py-1.5 text-sm font-bold rounded-full transition-all btn-tap ${tab === 'internships' ? 'bg-[#F4511E] text-white shadow-md' : 'text-white/60 hover:text-white flex items-center justify-center'}`}
+            >
+              Applications ({internApps.length})
+            </button>
+          )}
         </div>
       </div>
 
       <div className="px-4 xl:px-12 w-full mx-auto">
-        <div className="w-full lg:grid lg:grid-cols-2 xl:grid-cols-3 lg:gap-6">
+        {/* Internship / job applications */}
+        {tab === 'internships' && (
+          <div className="w-full lg:grid lg:grid-cols-2 xl:grid-cols-3 lg:gap-6">
+            {internApps.map(app => {
+              const s = INTERN_STATUS[app.status] ?? INTERN_STATUS.submitted;
+              return (
+                <div
+                  key={app.id}
+                  onClick={() => navigate(`/gigs/${app.gig.id}`)}
+                  className="bg-[#1C1C1C] rounded-2xl p-5 shadow-sm border border-white/5 flex flex-col btn-tap cursor-pointer group hover:border-[#F4511E]/30 transition-all mt-4 lg:mt-0"
+                >
+                  <div className="flex justify-between items-start gap-3 mb-3">
+                    <div className="min-w-0">
+                      <span className="text-[9px] font-black uppercase tracking-widest bg-blue-500/10 text-blue-400 border border-blue-500/25 px-2 py-1 rounded-full inline-flex items-center gap-1 mb-2">
+                        <GraduationCap size={10} /> Internship
+                      </span>
+                      <h3 className="font-black text-white text-lg leading-tight truncate">{app.gig.title}</h3>
+                      <p className="text-white/50 font-medium text-sm truncate">{app.gig.location_text}</p>
+                    </div>
+                    <div className={`px-3 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest border whitespace-nowrap shrink-0 flex items-center gap-1.5 ${s.color}`}>
+                      {app.status === 'submitted' && <span className="w-1.5 h-1.5 rounded-full bg-current animate-pulse" aria-hidden="true" />}
+                      {s.label}
+                    </div>
+                  </div>
+                  <div className="flex justify-between items-end mt-auto pt-4 border-t border-white/5">
+                    <span className="text-xs font-bold text-white/40">
+                      Applied {new Date(app.created_at).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}
+                    </span>
+                    <span className="font-black text-[#F4511E] text-lg tracking-tight">
+                      {app.gig.is_unpaid ? 'Unpaid' : app.gig.stipend_min ? `₹${app.gig.stipend_min.toLocaleString('en-IN')}/mo` : '—'}
+                    </span>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+
+        <div className={`w-full lg:grid lg:grid-cols-2 xl:grid-cols-3 lg:gap-6 ${tab === 'internships' ? 'hidden' : ''}`}>
           {loading ? (
             <div className="flex justify-center p-10 col-span-full">
               <div className="w-8 h-8 border-4 border-white/10 border-t-[#F4511E] rounded-full animate-spin" />

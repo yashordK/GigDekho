@@ -2,11 +2,12 @@ import { useLoaderData, useParams, useNavigate, useLocation } from 'react-router
 import { useState, useEffect } from 'react';
 import { supabase } from '~/lib/supabase.client';
 import { useAuth } from '~/context/AuthContext';
-import { MapPin, Clock, Calendar, Info, CheckCircle2, AlertCircle, ShieldCheck, ChevronRight, Users } from 'lucide-react';
+import { MapPin, Clock, Calendar, Info, CheckCircle2, AlertCircle, ShieldCheck, ChevronRight, Users, IndianRupee, Briefcase, GraduationCap, Link2, Hourglass } from 'lucide-react';
 import { formatRelativeDate } from '~/lib/utils';
 import { createSupabaseServerClient } from '~/lib/supabase.server';
 import { getMapsLoader } from "~/lib/maps";
 import GigThread from "~/components/GigThread";
+import InternshipApplyModal from "~/components/InternshipApplyModal";
 
 export async function loader({ params, request }) {
   const supabaseServer = createSupabaseServerClient(request);
@@ -30,6 +31,17 @@ export async function loader({ params, request }) {
       status,
       created_at,
       organizer_id,
+      gig_type,
+      work_mode,
+      commitment,
+      duration_months,
+      stipend_min,
+      stipend_max,
+      is_unpaid,
+      jd_url,
+      preferences,
+      application_deadline,
+      custom_role,
       profiles!gigs_organizer_id_fkey (
         full_name,
         company_name,
@@ -70,11 +82,37 @@ export async function loader({ params, request }) {
   return { gig, gigsHosted: gigsHosted || 0, paymentRate };
 }
 
+// ── Internship display helpers ──────────────────────────────────────
+export function stipendText(gig: any) {
+  if (gig.is_unpaid) return "Unpaid";
+  if (gig.stipend_min == null) return "Not disclosed";
+  if (gig.stipend_max && gig.stipend_max > gig.stipend_min) {
+    return `₹${gig.stipend_min.toLocaleString("en-IN")} – ₹${gig.stipend_max.toLocaleString("en-IN")}/mo`;
+  }
+  return `₹${gig.stipend_min.toLocaleString("en-IN")}/mo`;
+}
+const WORK_MODE_LABEL: Record<string, string> = { onsite: "On-site", hybrid: "Hybrid", remote: "Remote" };
+const COMMITMENT_LABEL: Record<string, string> = { full_time: "Full-time", part_time: "Part-time" };
+
 export const meta = ({ data }) => {
   if (!data?.gig) {
     return [{ title: "Gig Not Found — GigDekho" }];
   }
   const { gig } = data;
+  if (gig.gig_type === "internship") {
+    const title = `${gig.title} · ${WORK_MODE_LABEL[gig.work_mode] ?? ""} · ${stipendText(gig)} — GigDekho`;
+    const description = gig.description?.slice(0, 155)
+      ?? `${gig.title} in ${gig.location_text}. ${stipendText(gig)}, ${gig.duration_months} month commitment.`;
+    return [
+      { title },
+      { name: "description", content: description },
+      { property: "og:title", content: title },
+      { property: "og:description", content: description },
+      { property: "og:type", content: "website" },
+      { property: "og:url", content: `https://gigdekho.com/gigs/${gig.id}` },
+      { name: "robots", content: gig.status === "open" ? "index, follow" : "noindex, nofollow" },
+    ];
+  }
   const totalPay = gig.pay_rate * gig.duration_hrs;
   const displayRole = gig.role_type;
   const slotsLeft = gig.slots_total - gig.slots_filled;
@@ -129,6 +167,9 @@ export default function GigDetailScreen() {
   const [toastMessage, setToastMessage] = useState('');
   const [isErrorToast, setIsErrorToast] = useState(false);
   const [showTerms, setShowTerms] = useState(false);
+  const [showApplyModal, setShowApplyModal] = useState(false);
+  const [internApplication, setInternApplication] = useState<any>(null);
+  const { profile } = useAuth();
 
   useEffect(() => {
     if (id) {
@@ -189,6 +230,16 @@ export default function GigDetailScreen() {
       setGig((prev: any) => ({ ...prev, ...gigData }));
 
       // 2. Check application status
+      if (user && gigData?.gig_type === 'internship') {
+        const { data: internApp } = await supabase
+          .from('internship_applications')
+          .select('id, status, created_at')
+          .eq('gig_id', id)
+          .eq('applicant_id', user.id)
+          .maybeSingle();
+        setInternApplication(internApp ?? null);
+        return;
+      }
       if (user) {
         const { data: appData, error: appError } = await supabase
           .from('applications')
@@ -307,9 +358,21 @@ export default function GigDetailScreen() {
      return <div className="p-6 text-center text-white/50 font-bold bg-[#111111] min-h-screen pt-32">Gig not found.</div>;
   }
 
-  const payTotal = gig.pay_rate * gig.duration_hrs; 
+  const payTotal = gig.pay_rate * gig.duration_hrs;
   const imageUrl = getImageUrl(gig.role_type);
-  
+  const isInternship = gig.gig_type === 'internship';
+  const deadlinePassed = gig.application_deadline && new Date(gig.application_deadline) < new Date();
+
+  const handleInternshipApplyClick = () => {
+    if (!user) {
+      localStorage.setItem('redirectAfterLogin', location.pathname);
+      localStorage.setItem('userIntent', 'worker');
+      navigate('/auth?mode=worker');
+      return;
+    }
+    setShowApplyModal(true);
+  };
+
   return (
     <main id="main-content" className="bg-[#111111] min-h-screen pb-24 font-sans relative pt-16">
       
@@ -343,6 +406,17 @@ export default function GigDetailScreen() {
           </div>
         </div>
       )}
+
+      {/* Internship application */}
+      <InternshipApplyModal
+        isOpen={showApplyModal}
+        onClose={() => setShowApplyModal(false)}
+        onSubmitted={async () => { showToast("Application submitted! The hirer has been notified. 🎉"); await fetchData(); }}
+        gigId={gig.id}
+        gigTitle={gig.title}
+        user={user}
+        profile={profile}
+      />
 
       {/* Terms and Conditions Modal */}
       {showTerms && (
@@ -428,41 +502,94 @@ export default function GigDetailScreen() {
                   })()}
               </div>
 
-              {/* 4-Column Info Cards */}
-              <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 lg:gap-4 mb-10">
-                 <div className="bg-[#1C1C1C] rounded-2xl p-4 shadow-sm border border-white/5 flex flex-col items-start justify-center">
-                    <Calendar size={18} className="text-white/40 mb-2 bg-white/5 p-1.5 rounded-lg box-content" />
-                    <p className="text-[10px] font-bold text-white/30 uppercase tracking-widest leading-none mb-1">Date</p>
-                    <p className="font-bold text-white text-sm leading-tight">{formatRelativeDate(gig.event_date)}</p>
-                 </div>
-                 <div className="bg-[#1C1C1C] rounded-2xl p-4 shadow-sm border border-white/5 flex flex-col items-start justify-center">
-                    <Clock size={18} className="text-[#00BCD4] mb-2 bg-[#00BCD4]/10 p-1.5 rounded-lg box-content" />
-                    <p className="text-[10px] font-bold text-white/30 uppercase tracking-widest leading-none mb-1">Duration</p>
-                    <p className="font-bold text-white text-sm leading-tight">{gig.duration_hrs} Hours</p>
-                 </div>
-                 <div className="bg-[#1C1C1C] rounded-2xl p-4 shadow-sm border border-white/5 flex flex-col items-start justify-center">
-                    <MapPin size={18} className="text-[#F4511E] mb-2 bg-[#F4511E]/10 p-1.5 rounded-lg box-content" />
-                    <p className="text-[10px] font-bold text-white/30 uppercase tracking-widest leading-none mb-1">Location</p>
-                    <p className="font-bold text-white text-sm leading-tight truncate max-w-full" title={gig.location_text}>{gig.location_text.split(',')[0]}</p>
-                 </div>
-                 <div className="bg-[#1C1C1C] rounded-2xl p-4 shadow-sm border border-white/5 flex flex-col items-start justify-center">
-                    <Users size={18} className="text-blue-400 mb-2 bg-blue-500/10 p-1.5 rounded-lg box-content" />
-                    <p className="text-[10px] font-bold text-white/30 uppercase tracking-widest leading-none mb-1">Spots</p>
-                    <p className="font-bold text-white text-sm leading-tight">{Math.max(0, gig.slots_total - (gig.slots_filled || 0))} Remaining</p>
-                 </div>
-              </div>
+              {/* Info Cards — internship vs event */}
+              {isInternship ? (
+                <div className="grid grid-cols-2 lg:grid-cols-3 gap-3 lg:gap-4 mb-10">
+                   <div className="bg-[#1C1C1C] rounded-2xl p-4 shadow-sm border border-white/5 flex flex-col items-start justify-center">
+                      <IndianRupee size={18} className="text-[#F4511E] mb-2 bg-[#F4511E]/10 p-1.5 rounded-lg box-content" />
+                      <p className="text-[10px] font-bold text-white/30 uppercase tracking-widest leading-none mb-1">Stipend</p>
+                      <p className="font-bold text-white text-sm leading-tight">{stipendText(gig)}</p>
+                   </div>
+                   <div className="bg-[#1C1C1C] rounded-2xl p-4 shadow-sm border border-white/5 flex flex-col items-start justify-center">
+                      <Hourglass size={18} className="text-[#00BCD4] mb-2 bg-[#00BCD4]/10 p-1.5 rounded-lg box-content" />
+                      <p className="text-[10px] font-bold text-white/30 uppercase tracking-widest leading-none mb-1">Duration</p>
+                      <p className="font-bold text-white text-sm leading-tight">{gig.duration_months} month{gig.duration_months !== 1 ? 's' : ''}</p>
+                   </div>
+                   <div className="bg-[#1C1C1C] rounded-2xl p-4 shadow-sm border border-white/5 flex flex-col items-start justify-center">
+                      <Briefcase size={18} className="text-purple-400 mb-2 bg-purple-500/10 p-1.5 rounded-lg box-content" />
+                      <p className="text-[10px] font-bold text-white/30 uppercase tracking-widest leading-none mb-1">Type</p>
+                      <p className="font-bold text-white text-sm leading-tight">{COMMITMENT_LABEL[gig.commitment] ?? '—'}</p>
+                   </div>
+                   <div className="bg-[#1C1C1C] rounded-2xl p-4 shadow-sm border border-white/5 flex flex-col items-start justify-center">
+                      <MapPin size={18} className="text-[#F4511E] mb-2 bg-[#F4511E]/10 p-1.5 rounded-lg box-content" />
+                      <p className="text-[10px] font-bold text-white/30 uppercase tracking-widest leading-none mb-1">{WORK_MODE_LABEL[gig.work_mode] ?? 'Location'}</p>
+                      <p className="font-bold text-white text-sm leading-tight truncate max-w-full" title={gig.location_text}>{gig.location_text.split(',')[0]}</p>
+                   </div>
+                   <div className="bg-[#1C1C1C] rounded-2xl p-4 shadow-sm border border-white/5 flex flex-col items-start justify-center">
+                      <Calendar size={18} className="text-white/40 mb-2 bg-white/5 p-1.5 rounded-lg box-content" />
+                      <p className="text-[10px] font-bold text-white/30 uppercase tracking-widest leading-none mb-1">Starts</p>
+                      <p className="font-bold text-white text-sm leading-tight">{new Date(gig.event_date).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}</p>
+                   </div>
+                   <div className="bg-[#1C1C1C] rounded-2xl p-4 shadow-sm border border-white/5 flex flex-col items-start justify-center">
+                      <Users size={18} className="text-blue-400 mb-2 bg-blue-500/10 p-1.5 rounded-lg box-content" />
+                      <p className="text-[10px] font-bold text-white/30 uppercase tracking-widest leading-none mb-1">Openings</p>
+                      <p className="font-bold text-white text-sm leading-tight">{gig.slots_total}</p>
+                   </div>
+                </div>
+              ) : (
+                <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 lg:gap-4 mb-10">
+                   <div className="bg-[#1C1C1C] rounded-2xl p-4 shadow-sm border border-white/5 flex flex-col items-start justify-center">
+                      <Calendar size={18} className="text-white/40 mb-2 bg-white/5 p-1.5 rounded-lg box-content" />
+                      <p className="text-[10px] font-bold text-white/30 uppercase tracking-widest leading-none mb-1">Date</p>
+                      <p className="font-bold text-white text-sm leading-tight">{formatRelativeDate(gig.event_date)}</p>
+                   </div>
+                   <div className="bg-[#1C1C1C] rounded-2xl p-4 shadow-sm border border-white/5 flex flex-col items-start justify-center">
+                      <Clock size={18} className="text-[#00BCD4] mb-2 bg-[#00BCD4]/10 p-1.5 rounded-lg box-content" />
+                      <p className="text-[10px] font-bold text-white/30 uppercase tracking-widest leading-none mb-1">Duration</p>
+                      <p className="font-bold text-white text-sm leading-tight">{gig.duration_hrs} Hours</p>
+                   </div>
+                   <div className="bg-[#1C1C1C] rounded-2xl p-4 shadow-sm border border-white/5 flex flex-col items-start justify-center">
+                      <MapPin size={18} className="text-[#F4511E] mb-2 bg-[#F4511E]/10 p-1.5 rounded-lg box-content" />
+                      <p className="text-[10px] font-bold text-white/30 uppercase tracking-widest leading-none mb-1">Location</p>
+                      <p className="font-bold text-white text-sm leading-tight truncate max-w-full" title={gig.location_text}>{gig.location_text.split(',')[0]}</p>
+                   </div>
+                   <div className="bg-[#1C1C1C] rounded-2xl p-4 shadow-sm border border-white/5 flex flex-col items-start justify-center">
+                      <Users size={18} className="text-blue-400 mb-2 bg-blue-500/10 p-1.5 rounded-lg box-content" />
+                      <p className="text-[10px] font-bold text-white/30 uppercase tracking-widest leading-none mb-1">Spots</p>
+                      <p className="font-bold text-white text-sm leading-tight">{Math.max(0, gig.slots_total - (gig.slots_filled || 0))} Remaining</p>
+                   </div>
+                </div>
+              )}
 
               {/* Description */}
               <div className="mb-10">
-                <h3 className="font-black text-white text-lg mb-4">Gig Description</h3>
+                <h3 className="font-black text-white text-lg mb-4">{isInternship ? 'About the role' : 'Gig Description'}</h3>
                 <div className="text-white/60 font-medium leading-relaxed space-y-4">
                   {gig.description ? (
-                    <p>{gig.description}</p>
+                    <p className="whitespace-pre-wrap">{gig.description}</p>
                   ) : (
-                    <p className="italic opacity-60">This organizer hasn't added a description yet.</p>
+                    <p className="italic opacity-60">
+                      {isInternship ? 'Full details are in the linked job description below.' : "This organizer hasn't added a description yet."}
+                    </p>
                   )}
                 </div>
+                {isInternship && gig.jd_url && (
+                  <a href={gig.jd_url} target="_blank" rel="noopener noreferrer"
+                     className="mt-4 inline-flex items-center gap-2 bg-[#1C1C1C] border border-white/10 hover:border-[#F4511E]/40 text-white px-4 py-2.5 rounded-xl text-sm font-bold transition-colors btn-tap">
+                    <Link2 size={14} className="text-[#F4511E]" /> Read the full job description
+                  </a>
+                )}
               </div>
+
+              {/* Who they're looking for */}
+              {isInternship && gig.preferences && (
+                <div className="mb-10">
+                  <h3 className="font-black text-white text-lg mb-4 flex items-center gap-2">
+                    <GraduationCap size={18} className="text-[#F4511E]" /> Who they're looking for
+                  </h3>
+                  <p className="text-white/60 font-medium leading-relaxed whitespace-pre-wrap">{gig.preferences}</p>
+                </div>
+              )}
 
               {/* Announcements + Q&A (participants only — RLS enforced) */}
               <GigThread
@@ -509,9 +636,73 @@ export default function GigDetailScreen() {
                    <div className="absolute top-0 left-0 right-0 h-1.5 bg-[#F4511E]"></div>
                    
                    <div className="p-6 lg:p-8">
+                     {isInternship ? (
+                       <>
+                         <p className="text-[10px] font-black text-white/40 uppercase tracking-widest mb-1">Monthly Stipend</p>
+                         <h2 className="text-[34px] font-black text-[#F4511E] tracking-tight mb-6 leading-none">{stipendText(gig)}</h2>
+
+                         <div className="space-y-3 mb-6 pb-5 border-b border-white/5">
+                           <div className="flex justify-between items-center">
+                             <span className="text-[13px] font-bold text-white/50">Commitment</span>
+                             <span className="text-[13px] font-bold text-white">{COMMITMENT_LABEL[gig.commitment] ?? '—'} · {WORK_MODE_LABEL[gig.work_mode] ?? '—'}</span>
+                           </div>
+                           <div className="flex justify-between items-center">
+                             <span className="text-[13px] font-bold text-white/50">Minimum duration</span>
+                             <span className="text-[13px] font-bold text-white">{gig.duration_months} month{gig.duration_months !== 1 ? 's' : ''}</span>
+                           </div>
+                           {gig.application_deadline && (
+                             <div className="flex justify-between items-center">
+                               <span className="text-[13px] font-bold text-white/50">Apply by</span>
+                               <span className={`text-[13px] font-black ${deadlinePassed ? 'text-red-400' : 'text-[#F4511E]'}`}>
+                                 {new Date(gig.application_deadline).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}
+                               </span>
+                             </div>
+                           )}
+                         </div>
+
+                         {internApplication ? (
+                           <div className="space-y-3">
+                             <div className="w-full min-h-14 py-3 rounded-2xl font-black text-[13px] flex flex-col justify-center items-center bg-green-500/10 text-green-400 border border-green-500/20 uppercase tracking-wide">
+                               <span className="flex items-center"><CheckCircle2 size={16} className="mr-2" /> Application {internApplication.status}</span>
+                               <span className="text-[10px] font-bold text-white/40 normal-case tracking-normal mt-1">
+                                 Submitted {new Date(internApplication.created_at).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}
+                               </span>
+                             </div>
+                             <p className="text-[11px] font-medium text-white/40 text-center leading-relaxed">
+                               The hirer reviews applications directly. You'll get a notification when your status changes.
+                             </p>
+                           </div>
+                         ) : deadlinePassed || gig.status !== 'open' ? (
+                           <button type="button" disabled className="w-full h-14 rounded-full font-black text-[15px] flex justify-center items-center bg-white/5 text-white/40 border border-white/10 cursor-not-allowed uppercase tracking-wide">
+                             Applications Closed
+                           </button>
+                         ) : (
+                           <button
+                             type="button"
+                             onClick={handleInternshipApplyClick}
+                             className="w-full h-14 rounded-full font-black text-[15px] flex justify-center items-center text-white bg-[#F4511E] hover:bg-[#D84315] transition-all shadow-lg btn-tap uppercase tracking-wide"
+                           >
+                             Apply Now
+                           </button>
+                         )}
+
+                         <div className="mt-8 space-y-3.5 pt-6 border-t border-white/5 -mx-2 px-2">
+                            <div className="flex items-center text-[11px] font-bold text-white/60 uppercase tracking-wide">
+                              <CheckCircle2 size={16} className="text-[#F4511E] mr-2.5 shrink-0" /> Takes about 3 minutes
+                            </div>
+                            <div className="flex items-center text-[11px] font-bold text-white/60 uppercase tracking-wide">
+                              <CheckCircle2 size={16} className="text-[#F4511E] mr-2.5 shrink-0" /> Your details are prefilled
+                            </div>
+                            <div className="flex items-center text-[11px] font-bold text-white/60 uppercase tracking-wide">
+                              <ShieldCheck size={16} className="text-[#F4511E] mr-2.5 shrink-0" /> Shared only with this hirer
+                            </div>
+                         </div>
+                       </>
+                     ) : (
+                     <>
                      <p className="text-[10px] font-black text-white/40 uppercase tracking-widest mb-1">Total Project Payout</p>
                      <h2 className="text-[44px] font-black text-[#F4511E] tracking-tight mb-8 leading-none">₹{payTotal}</h2>
-                     
+
                      <div className="space-y-4 mb-6">
                        <div className="flex justify-between items-center pb-2">
                          <span className="text-[13px] font-bold text-white/50">Hourly Rate ({gig.duration_hrs}hrs)</span>
@@ -567,7 +758,8 @@ export default function GigDetailScreen() {
                           <ShieldCheck size={16} className="text-[#F4511E] mr-2.5" /> Verified Gig Guarantee
                         </div>
                       </div>
-
+                     </>
+                     )}
                     </div>
                  </div>
 
@@ -615,7 +807,9 @@ export default function GigDetailScreen() {
             "description": ssrGig.description ?? "",
             "datePosted": ssrGig.created_at,
             "validThrough": ssrGig.event_date,
-            "employmentType": "TEMPORARY",
+            "employmentType": ssrGig.gig_type === "internship"
+              ? (ssrGig.commitment === "full_time" ? "FULL_TIME" : "PART_TIME")
+              : "TEMPORARY",
             "hiringOrganization": {
               "@type": "Organization",
               "name": "GigDekho",
@@ -635,8 +829,8 @@ export default function GigDetailScreen() {
               "currency": "INR",
               "value": {
                 "@type": "QuantitativeValue",
-                "value": ssrGig.pay_rate,
-                "unitText": "HOUR",
+                "value": ssrGig.gig_type === "internship" ? (ssrGig.stipend_min ?? 0) : ssrGig.pay_rate,
+                "unitText": ssrGig.gig_type === "internship" ? "MONTH" : "HOUR",
               },
             },
             "totalJobOpenings": ssrGig.slots_total - ssrGig.slots_filled,

@@ -3,6 +3,7 @@ import { supabase } from "~/lib/supabase.client";
 import { Calendar, MapPin, MoreVertical, Phone, Star, CheckCircle2, XCircle, Info, Loader2, Megaphone } from "lucide-react";
 import { useAuth } from "~/context/AuthContext";
 import AnnounceModal from "./AnnounceModal";
+import ApplicantExportBar from "./ApplicantExportBar";
 
 interface WorkerApplication {
   id: string;
@@ -454,6 +455,11 @@ export default function GigManagementCard({
             )}
           </div>
         )}
+      </div>
+
+      {/* Export & live sheet */}
+      <div className="border-t border-white/5 pt-3 mt-3">
+        <ApplicantExportBar gigId={gig.id} kind="volunteers" showToast={showToast} />
       </div>
 
       {/* Announcement composer */}

@@ -65,6 +65,18 @@ const FAQ_CATEGORIES: { category: string; faqs: { q: string; a: string }[] }[] =
     ],
   },
   {
+    category: "Internships & Jobs",
+    faqs: [
+      { q: "Can I hire an intern or a part-time employee on GigDekho?", a: "Yes. When you post, choose \"Internship / Job\" instead of \"Event / Temporary Staff\". You'll set the stipend, duration, work mode (on-site, hybrid, or remote), and commitment (full-time or part-time), and candidates submit a full application with their resume." },
+      { q: "How is applying to an internship different from applying to a gig?", a: "Event gigs are one-tap and first-come-first-served. Internships need a proper application: your contact details, education, a short pitch on why you're a fit, and your resume or portfolio. The hirer reviews everyone and shortlists." },
+      { q: "Do I need ID verification to apply for an internship?", a: "No. ID verification is required before you work an event gig in person, but internship applications are judged on your application and resume, so you can apply right away." },
+      { q: "Where do I see my internship applications?", a: "In My Gigs, under the \"Applications\" tab. You'll see your status for each one — Submitted, Shortlisted, Interviewing, Hired, or Not selected — and you get a notification whenever a hirer moves you forward." },
+      { q: "As a hirer, where do I see and manage applicants?", a: "On your dashboard, under \"Internships & Jobs\". Each listing shows a pipeline summary and every applicant's full details, resume, and portfolio, and you can move candidates through Shortlisted → Interviewing → Hired with one tap." },
+      { q: "Can I get applications in a spreadsheet?", a: "Yes. Every internship listing can have a live Google Sheet that's shared to your email and updates automatically as applications come in and as you change candidate statuses. Open it from the listing card on your dashboard." },
+      { q: "Do I need a resume to apply?", a: "It's not strictly required, but we'll warn you before submitting without one — hirers almost always shortlist candidates who attach a resume or a portfolio link. You can upload one during the application, or reuse one already saved on your profile." },
+    ],
+  },
+  {
     category: "GigDekho Celebrations",
     faqs: [
       { q: "What is GigDekho Celebrations?", a: "A bundled package for personal events — birthdays, anniversaries, proposals, and small get-togethers — combining photography and reels, event setup, and optional gifting, all booked in one place." },

@@ -40,6 +40,7 @@ export default function HomeScreen() {
   const [error, setError] = useState('');
   const [selectedRole, setSelectedRole] = useState('All Roles');
   const [sortBy, setSortBy] = useState<typeof SORT_OPTIONS[number]['id']>('soonest');
+  const [feedTab, setFeedTab] = useState<'all' | 'event' | 'internship'>('all');
   const [showFilters, setShowFilters] = useState(false);
   const [showSort, setShowSort] = useState(false);
   const [showHowItWorks, setShowHowItWorks] = useState(false);
@@ -145,7 +146,11 @@ export default function HomeScreen() {
   };
 
   const filteredGigs = useMemo(() => {
-    let list = gigs;
+    // Hide internships whose application deadline has passed
+    let list = gigs.filter(g => !g.application_deadline || new Date(g.application_deadline) >= new Date());
+    if (feedTab !== 'all') {
+      list = list.filter(gig => (gig.gig_type ?? 'event') === feedTab);
+    }
     if (selectedRole !== 'All Roles') {
       list = list.filter(gig => gig.role_type?.toLowerCase().includes(selectedRole.toLowerCase()));
     }
@@ -154,7 +159,10 @@ export default function HomeScreen() {
     else if (sortBy === 'newest') sorted.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
     else sorted.sort((a, b) => Number(b.is_urgent) - Number(a.is_urgent) || new Date(a.event_date).getTime() - new Date(b.event_date).getTime());
     return sorted;
-  }, [gigs, selectedRole, sortBy]);
+  }, [gigs, selectedRole, sortBy, feedTab]);
+
+  const internshipCount = gigs.filter(g => g.gig_type === 'internship').length;
+  const eventCount = gigs.length - internshipCount;
 
   // Derived worker activity
   const completedApps = myApps.filter(a => a.status === 'completed' && a.gig);
@@ -305,6 +313,30 @@ export default function HomeScreen() {
                 </div>
              </div>
           </div>
+
+          {/* Feed type tabs */}
+          {internshipCount > 0 && (
+            <div className="flex bg-[#1C1C1C] border border-white/10 p-1 rounded-full w-full sm:w-auto sm:inline-flex mb-5">
+              {([
+                { id: 'all', label: `All (${gigs.length})` },
+                { id: 'event', label: `Gigs (${eventCount})` },
+                { id: 'internship', label: `Internships (${internshipCount})` },
+              ] as const).map(t => (
+                <button
+                  key={t.id}
+                  type="button"
+                  onClick={() => setFeedTab(t.id)}
+                  aria-pressed={feedTab === t.id}
+                  className={`flex-1 sm:flex-none sm:px-6 py-2 text-xs font-black rounded-full transition-all btn-tap min-h-0 ${
+                    feedTab === t.id ? 'bg-[#F4511E] text-white shadow-md' : 'text-white/50 hover:text-white'
+                  }`}
+                  style={{ minHeight: '38px' }}
+                >
+                  {t.label}
+                </button>
+              ))}
+            </div>
+          )}
 
           {/* Role Filter Panel */}
           {showFilters && (

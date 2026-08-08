@@ -2,6 +2,7 @@ import { type ActionFunctionArgs } from "react-router";
 import { createClient } from "@supabase/supabase-js";
 import { createSupabaseServerClient } from "~/lib/supabase.server";
 import { sendEmail, cancellationConfirmEmail, promotedFromWaitlistEmail } from "~/lib/email.server";
+import { syncGigSheet } from "~/lib/sheet-sync.server";
 
 function adminClient() {
   return createClient(
@@ -114,6 +115,8 @@ export async function action({ request }: ActionFunctionArgs) {
           await sendEmail({ to: promotedEmail, ...tpl });
         }
       }
+      // Reflect the cancellation + any waitlist promotion in the hirer's sheet
+      await syncGigSheet(admin, app.gig_id, { createIfMissing: false });
     } catch (e) {
       console.error("[api.cancel] email error:", e);
     }

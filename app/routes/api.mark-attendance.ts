@@ -1,6 +1,7 @@
 import { type ActionFunctionArgs } from "react-router";
 import { createClient } from "@supabase/supabase-js";
 import { createSupabaseServerClient } from "~/lib/supabase.server";
+import { syncGigSheet } from "~/lib/sheet-sync.server";
 
 function adminClient() {
   return createClient(
@@ -85,6 +86,14 @@ export async function action({ request }: ActionFunctionArgs) {
       const { data: p } = await admin.from("profiles").select("total_earned").eq("id", app.worker_id).single();
       await admin.from("profiles").update({ total_earned: (p?.total_earned || 0) + earning }).eq("id", app.worker_id);
     }
+  }
+
+  // Attendance changes the worker's status — mirror it into the sheet if one exists
+  const { data: appGig } = await admin
+    .from("applications").select("gig_id").eq("id", applicationId).single();
+  if (appGig?.gig_id) {
+    syncGigSheet(admin, appGig.gig_id, { createIfMissing: false })
+      .catch((e) => console.error("[api.mark-attendance] sheet sync:", e));
   }
 
   return Response.json({ ok: true });
