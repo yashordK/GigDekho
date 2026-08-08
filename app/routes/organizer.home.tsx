@@ -2,9 +2,10 @@ import { useState, useEffect, useMemo } from "react";
 import { supabase } from "~/lib/supabase.client";
 import { useAuth } from "~/context/AuthContext";
 import { useNavigate } from "react-router";
-import { Plus, Briefcase, Users, IndianRupee, ShieldCheck, ChevronDown, ChevronUp, Clock, Calendar, Star, Phone, Heart, MapPin } from "lucide-react";
+import { Plus, Briefcase, Users, IndianRupee, ShieldCheck, ChevronDown, ChevronUp, Clock, Calendar, Star, Phone, Heart, MapPin, GraduationCap } from "lucide-react";
 import { fetchSkillCategories } from "~/lib/categories";
 import GigManagementCard from "~/components/GigManagementCard";
+import InternshipManagementCard from "~/components/InternshipManagementCard";
 import PostGigModal, { type GigTemplate } from "~/components/PostGigModal";
 import Toast from "~/components/Toast";
 import SpotlightCategories from "~/components/SpotlightCategories";
@@ -158,7 +159,8 @@ export default function OrganizerHomeScreen() {
         .select(`
           id, title, role_type, custom_role, pay_rate, duration_hrs,
           event_date, location_text, is_urgent, slots_total, slots_filled,
-          status, created_at,
+          status, created_at, gig_type, work_mode, commitment, duration_months,
+          stipend_min, stipend_max, is_unpaid, application_deadline,
           gig_payments (
             id, advance_paid, advance_paid_at, final_paid, final_paid_at,
             payout_released, organizer_total, advance_amount, final_amount
@@ -245,7 +247,9 @@ export default function OrganizerHomeScreen() {
     return sum;
   }, 0);
 
-  const activeGigsList = gigs.filter((g) => g.status !== "completed" && g.status !== "cancelled");
+  const liveList = gigs.filter((g) => g.status !== "completed" && g.status !== "cancelled");
+  const activeGigsList = liveList.filter((g) => g.gig_type !== "internship");
+  const internshipList = liveList.filter((g) => g.gig_type === "internship");
   const pastGigsList = gigs.filter((g) => g.status === "completed" || g.status === "cancelled");
   const totalPendingApplicants = applications.length;
 
@@ -253,7 +257,7 @@ export default function OrganizerHomeScreen() {
   const upcomingByDay = useMemo(() => {
     const startOfToday = new Date();
     startOfToday.setHours(0, 0, 0, 0);
-    const upcoming = activeGigsList
+    const upcoming = liveList
       .filter((g) => new Date(g.event_date) >= startOfToday)
       .sort((a, b) => new Date(a.event_date).getTime() - new Date(b.event_date).getTime());
     const groups = new Map<string, any[]>();
@@ -438,7 +442,30 @@ export default function OrganizerHomeScreen() {
           )}
         </section>
 
-        {/* ── 2. My Regulars ──────────────────────────────────────────── */}
+        {/* ── 2. Internships & Jobs ───────────────────────────────────── */}
+        {internshipList.length > 0 && (
+          <section className="space-y-4">
+            <div className="flex items-center gap-2">
+              <h2 className="text-lg font-black text-white uppercase tracking-wider">Internships & Jobs</h2>
+              <GraduationCap size={16} className="text-blue-400" />
+            </div>
+            <p className="text-xs font-medium text-white/40 -mt-2">
+              Review full applications, move candidates through your pipeline, and track everything in a live Google Sheet.
+            </p>
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              {internshipList.map((gig) => (
+                <InternshipManagementCard
+                  key={gig.id}
+                  gig={gig}
+                  onActionSuccess={fetchData}
+                  showToast={showToast}
+                />
+              ))}
+            </div>
+          </section>
+        )}
+
+        {/* ── 3. My Regulars ──────────────────────────────────────────── */}
         <section className="space-y-4">
           <div className="flex items-center gap-2">
             <h2 className="text-lg font-black text-white uppercase tracking-wider">My Regulars</h2>
@@ -489,7 +516,7 @@ export default function OrganizerHomeScreen() {
           )}
         </section>
 
-        {/* ── 3. Upcoming Calendar ────────────────────────────────────── */}
+        {/* ── 4. Upcoming Calendar ────────────────────────────────────── */}
         <section className="space-y-4">
           <h2 className="text-lg font-black text-white uppercase tracking-wider">Upcoming Calendar</h2>
 
@@ -546,7 +573,7 @@ export default function OrganizerHomeScreen() {
           )}
         </section>
 
-        {/* ── 4. History & Spend ──────────────────────────────────────── */}
+        {/* ── 5. History & Spend ──────────────────────────────────────── */}
         <section className="border-t border-white/5 pt-8 space-y-4">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <h2 className="text-lg font-black text-white uppercase tracking-wider">History & Spend</h2>

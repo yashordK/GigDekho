@@ -2,6 +2,7 @@ import { type ActionFunctionArgs } from "react-router";
 import { createClient } from "@supabase/supabase-js";
 import { createSupabaseServerClient } from "~/lib/supabase.server";
 import { sendEmail, applicationAcceptedEmail, waitlistEmail } from "~/lib/email.server";
+import { syncGigSheet } from "~/lib/sheet-sync.server";
 
 function adminClient() {
   return createClient(
@@ -95,6 +96,8 @@ export async function action({ request }: ActionFunctionArgs) {
         const tpl = waitlistEmail(name, gig.title, newApp.waitlist_position!);
         await sendEmail({ to: user.email, ...tpl });
       }
+      // Keep the hirer's volunteer sheet current — but never create one here
+      await syncGigSheet(admin, gigId, { createIfMissing: false });
     } catch (e) {
       console.error("[api.apply] email error:", e);
     }

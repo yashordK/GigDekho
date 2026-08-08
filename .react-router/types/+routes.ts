@@ -60,6 +60,15 @@ type Pages = {
   "/api/qa": {
     params: {};
   };
+  "/api/apply-internship": {
+    params: {};
+  };
+  "/api/internship-applicants": {
+    params: {};
+  };
+  "/api/export-applicants": {
+    params: {};
+  };
   "/api/bank": {
     params: {};
   };
@@ -92,7 +101,7 @@ type Pages = {
 type RouteFiles = {
   "root.tsx": {
     id: "root";
-    page: "/" | "/auth" | "/auth/callback" | "/auth/reset" | "/setup-profile" | "/organizer/preview" | "/gigs/:id" | "/hirer/:id" | "/admin" | "/api/apply" | "/api/cancel" | "/api/mark-attendance" | "/api/pay" | "/api/announce" | "/api/qa" | "/api/bank" | "/api/withdraw" | "/api/cron/reminders" | "/worker/home" | "/about" | "/worker/dashboard" | "/worker/earnings" | "/worker/profile" | "/organizer/home";
+    page: "/" | "/auth" | "/auth/callback" | "/auth/reset" | "/setup-profile" | "/organizer/preview" | "/gigs/:id" | "/hirer/:id" | "/admin" | "/api/apply" | "/api/cancel" | "/api/mark-attendance" | "/api/pay" | "/api/announce" | "/api/qa" | "/api/apply-internship" | "/api/internship-applicants" | "/api/export-applicants" | "/api/bank" | "/api/withdraw" | "/api/cron/reminders" | "/worker/home" | "/about" | "/worker/dashboard" | "/worker/earnings" | "/worker/profile" | "/organizer/home";
   };
   "routes/home.tsx": {
     id: "routes/home";
@@ -153,6 +162,18 @@ type RouteFiles = {
   "routes/api.qa.ts": {
     id: "routes/api.qa";
     page: "/api/qa";
+  };
+  "routes/api.apply-internship.ts": {
+    id: "routes/api.apply-internship";
+    page: "/api/apply-internship";
+  };
+  "routes/api.internship-applicants.ts": {
+    id: "routes/api.internship-applicants";
+    page: "/api/internship-applicants";
+  };
+  "routes/api.export-applicants.ts": {
+    id: "routes/api.export-applicants";
+    page: "/api/export-applicants";
   };
   "routes/api.bank.ts": {
     id: "routes/api.bank";
@@ -217,6 +238,9 @@ type RouteModules = {
   "routes/api.pay": typeof import("./app/routes/api.pay.ts");
   "routes/api.announce": typeof import("./app/routes/api.announce.ts");
   "routes/api.qa": typeof import("./app/routes/api.qa.ts");
+  "routes/api.apply-internship": typeof import("./app/routes/api.apply-internship.ts");
+  "routes/api.internship-applicants": typeof import("./app/routes/api.internship-applicants.ts");
+  "routes/api.export-applicants": typeof import("./app/routes/api.export-applicants.ts");
   "routes/api.bank": typeof import("./app/routes/api.bank.ts");
   "routes/api.withdraw": typeof import("./app/routes/api.withdraw.ts");
   "routes/api.cron.reminders": typeof import("./app/routes/api.cron.reminders.ts");

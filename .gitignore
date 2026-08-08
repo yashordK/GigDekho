@@ -14,6 +14,15 @@ dist-ssr
 build
 .vercel
 
+# Secrets — never commit these
+.env
+.env.*
+!.env.example
+# Google service-account keys (any *-<hash>.json at the repo root)
+gigdekho-*.json
+*service-account*.json
+*credentials*.json
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json
