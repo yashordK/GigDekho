@@ -4,11 +4,38 @@ import {
   Outlet,
   Scripts,
   ScrollRestoration,
+  useRouteLoaderData,
 } from "react-router";
 import { AuthProvider } from "./context/AuthContext";
+import AnalyticsTracker from "./components/AnalyticsTracker";
 import "./index.css";
 
+/**
+ * Runtime config for the browser.
+ *
+ * The Maps key is read from a SERVER env var here rather than an
+ * `import.meta.env.VITE_*` one. Vite inlines VITE_ vars at BUILD time, so a
+ * key that only exists in local `.env.local` gets baked in as `undefined` on
+ * the deployed build and the Maps script never renders — which is exactly why
+ * maps worked locally but not in production. Reading it at request time means
+ * setting the variable takes effect on redeploy without any build-time
+ * coupling. (Maps browser keys are public by design; lock them down with HTTP
+ * referrer restrictions, not by hiding them.)
+ */
+export function loader() {
+  return {
+    googleMapsApiKey:
+      process.env.GOOGLE_MAPS_API_KEY ||
+      process.env.VITE_GOOGLE_MAPS_API_KEY ||
+      "",
+  };
+}
+
 export function Layout({ children }: { children: React.ReactNode }) {
+  const data = useRouteLoaderData<typeof loader>("root");
+  // Fall back to the build-time value so local dev keeps working unchanged
+  const mapsKey = data?.googleMapsApiKey || import.meta.env.VITE_GOOGLE_MAPS_API_KEY || "";
+
   return (
     <html lang="en">
       <head>
@@ -23,9 +50,9 @@ export function Layout({ children }: { children: React.ReactNode }) {
         <script dangerouslySetInnerHTML={{ __html: "try{if(localStorage.getItem('gd-theme')==='light')document.documentElement.classList.add('light')}catch(e){}" }} />
         {/* Global gm_authFailure handler — must exist before Maps script loads */}
         <script dangerouslySetInnerHTML={{ __html: "window.gm_authFailure=function(){window.__MAPS_AUTH_FAILED__=true;};" }} />
-        {import.meta.env.VITE_GOOGLE_MAPS_API_KEY ? (
+        {mapsKey ? (
           <script
-            src={`https://maps.googleapis.com/maps/api/js?key=${import.meta.env.VITE_GOOGLE_MAPS_API_KEY}&libraries=places`}
+            src={`https://maps.googleapis.com/maps/api/js?key=${mapsKey}&libraries=places`}
             async
             defer
           />
@@ -51,6 +78,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
           Skip to main content
         </a>
         <AuthProvider>
+          <AnalyticsTracker />
           {children}
         </AuthProvider>
         <ScrollRestoration />

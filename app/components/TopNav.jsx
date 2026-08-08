@@ -2,7 +2,7 @@ import { NavLink, useNavigate } from 'react-router';
 import { useAuth } from '~/context/AuthContext';
 import { supabase } from '~/lib/supabase.client';
 import { formatRelativeDate } from '~/lib/utils';
-import { User, LogOut, Bell, ArrowLeftRight } from 'lucide-react';
+import { User, LogOut, Bell, ArrowLeftRight, ShieldCheck } from 'lucide-react';
 import { useState, useRef, useEffect } from 'react';
 
 const STATUS_LABELS = {
@@ -292,6 +292,15 @@ export default function TopNav() {
                     >
                       <User size={15} className="mr-2 text-[#F4511E]" /> View Profile
                     </button>
+                    {profile?.is_admin && (
+                      <button
+                        type="button"
+                        onClick={() => { setMenuOpen(false); navigate('/admin'); }}
+                        className="w-full text-left px-4 py-2.5 text-sm font-bold text-white/70 hover:bg-white/10 hover:text-white flex items-center transition-colors"
+                      >
+                        <ShieldCheck size={15} className="mr-2 text-[#F4511E]" /> Admin Panel
+                      </button>
+                    )}
                     <button
                       type="button"
                       onClick={handleSignOut}

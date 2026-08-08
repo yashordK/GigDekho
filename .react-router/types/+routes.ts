@@ -42,6 +42,27 @@ type Pages = {
   "/admin": {
     params: {};
   };
+  "/admin/reports": {
+    params: {};
+  };
+  "/admin/verifications": {
+    params: {};
+  };
+  "/admin/payouts": {
+    params: {};
+  };
+  "/admin/users": {
+    params: {};
+  };
+  "/admin/gigs": {
+    params: {};
+  };
+  "/admin/accounts": {
+    params: {};
+  };
+  "/admin/settings": {
+    params: {};
+  };
   "/api/apply": {
     params: {};
   };
@@ -67,6 +88,15 @@ type Pages = {
     params: {};
   };
   "/api/export-applicants": {
+    params: {};
+  };
+  "/api/track": {
+    params: {};
+  };
+  "/api/report": {
+    params: {};
+  };
+  "/api/admin/accounts": {
     params: {};
   };
   "/api/bank": {
@@ -101,7 +131,7 @@ type Pages = {
 type RouteFiles = {
   "root.tsx": {
     id: "root";
-    page: "/" | "/auth" | "/auth/callback" | "/auth/reset" | "/setup-profile" | "/organizer/preview" | "/gigs/:id" | "/hirer/:id" | "/admin" | "/api/apply" | "/api/cancel" | "/api/mark-attendance" | "/api/pay" | "/api/announce" | "/api/qa" | "/api/apply-internship" | "/api/internship-applicants" | "/api/export-applicants" | "/api/bank" | "/api/withdraw" | "/api/cron/reminders" | "/worker/home" | "/about" | "/worker/dashboard" | "/worker/earnings" | "/worker/profile" | "/organizer/home";
+    page: "/" | "/auth" | "/auth/callback" | "/auth/reset" | "/setup-profile" | "/organizer/preview" | "/gigs/:id" | "/hirer/:id" | "/admin" | "/admin/reports" | "/admin/verifications" | "/admin/payouts" | "/admin/users" | "/admin/gigs" | "/admin/accounts" | "/admin/settings" | "/api/apply" | "/api/cancel" | "/api/mark-attendance" | "/api/pay" | "/api/announce" | "/api/qa" | "/api/apply-internship" | "/api/internship-applicants" | "/api/export-applicants" | "/api/track" | "/api/report" | "/api/admin/accounts" | "/api/bank" | "/api/withdraw" | "/api/cron/reminders" | "/worker/home" | "/about" | "/worker/dashboard" | "/worker/earnings" | "/worker/profile" | "/organizer/home";
   };
   "routes/home.tsx": {
     id: "routes/home";
@@ -137,7 +167,39 @@ type RouteFiles = {
   };
   "routes/admin.tsx": {
     id: "routes/admin";
+    page: "/admin" | "/admin/reports" | "/admin/verifications" | "/admin/payouts" | "/admin/users" | "/admin/gigs" | "/admin/accounts" | "/admin/settings";
+  };
+  "routes/admin._index.tsx": {
+    id: "routes/admin._index";
     page: "/admin";
+  };
+  "routes/admin.reports.tsx": {
+    id: "routes/admin.reports";
+    page: "/admin/reports";
+  };
+  "routes/admin.verifications.tsx": {
+    id: "routes/admin.verifications";
+    page: "/admin/verifications";
+  };
+  "routes/admin.payouts.tsx": {
+    id: "routes/admin.payouts";
+    page: "/admin/payouts";
+  };
+  "routes/admin.users.tsx": {
+    id: "routes/admin.users";
+    page: "/admin/users";
+  };
+  "routes/admin.gigs.tsx": {
+    id: "routes/admin.gigs";
+    page: "/admin/gigs";
+  };
+  "routes/admin.accounts.tsx": {
+    id: "routes/admin.accounts";
+    page: "/admin/accounts";
+  };
+  "routes/admin.settings.tsx": {
+    id: "routes/admin.settings";
+    page: "/admin/settings";
   };
   "routes/api.apply.ts": {
     id: "routes/api.apply";
@@ -174,6 +236,18 @@ type RouteFiles = {
   "routes/api.export-applicants.ts": {
     id: "routes/api.export-applicants";
     page: "/api/export-applicants";
+  };
+  "routes/api.track.ts": {
+    id: "routes/api.track";
+    page: "/api/track";
+  };
+  "routes/api.report.ts": {
+    id: "routes/api.report";
+    page: "/api/report";
+  };
+  "routes/api.admin.accounts.ts": {
+    id: "routes/api.admin.accounts";
+    page: "/api/admin/accounts";
   };
   "routes/api.bank.ts": {
     id: "routes/api.bank";
@@ -232,6 +306,14 @@ type RouteModules = {
   "routes/gigs.$id": typeof import("./app/routes/gigs.$id.tsx");
   "routes/hirer.$id": typeof import("./app/routes/hirer.$id.tsx");
   "routes/admin": typeof import("./app/routes/admin.tsx");
+  "routes/admin._index": typeof import("./app/routes/admin._index.tsx");
+  "routes/admin.reports": typeof import("./app/routes/admin.reports.tsx");
+  "routes/admin.verifications": typeof import("./app/routes/admin.verifications.tsx");
+  "routes/admin.payouts": typeof import("./app/routes/admin.payouts.tsx");
+  "routes/admin.users": typeof import("./app/routes/admin.users.tsx");
+  "routes/admin.gigs": typeof import("./app/routes/admin.gigs.tsx");
+  "routes/admin.accounts": typeof import("./app/routes/admin.accounts.tsx");
+  "routes/admin.settings": typeof import("./app/routes/admin.settings.tsx");
   "routes/api.apply": typeof import("./app/routes/api.apply.ts");
   "routes/api.cancel": typeof import("./app/routes/api.cancel.ts");
   "routes/api.mark-attendance": typeof import("./app/routes/api.mark-attendance.ts");
@@ -241,6 +323,9 @@ type RouteModules = {
   "routes/api.apply-internship": typeof import("./app/routes/api.apply-internship.ts");
   "routes/api.internship-applicants": typeof import("./app/routes/api.internship-applicants.ts");
   "routes/api.export-applicants": typeof import("./app/routes/api.export-applicants.ts");
+  "routes/api.track": typeof import("./app/routes/api.track.ts");
+  "routes/api.report": typeof import("./app/routes/api.report.ts");
+  "routes/api.admin.accounts": typeof import("./app/routes/api.admin.accounts.ts");
   "routes/api.bank": typeof import("./app/routes/api.bank.ts");
   "routes/api.withdraw": typeof import("./app/routes/api.withdraw.ts");
   "routes/api.cron.reminders": typeof import("./app/routes/api.cron.reminders.ts");

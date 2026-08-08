@@ -13,8 +13,17 @@ export default [
   route("gigs/:id", "routes/gigs.$id.tsx"),
   route("hirer/:id", "routes/hirer.$id.tsx"),
 
-  // Internal admin panel — gated by is_admin (client check + RLS on every query)
-  route("admin", "routes/admin.tsx"),
+  // Internal admin portal — every loader/action verifies is_admin server-side
+  route("admin", "routes/admin.tsx", [
+    index("routes/admin._index.tsx"),
+    route("reports", "routes/admin.reports.tsx"),
+    route("verifications", "routes/admin.verifications.tsx"),
+    route("payouts", "routes/admin.payouts.tsx"),
+    route("users", "routes/admin.users.tsx"),
+    route("gigs", "routes/admin.gigs.tsx"),
+    route("accounts", "routes/admin.accounts.tsx"),
+    route("settings", "routes/admin.settings.tsx"),
+  ]),
 
   // Server-only API routes (no component)
   route("api/apply", "routes/api.apply.ts"),
@@ -26,6 +35,9 @@ export default [
   route("api/apply-internship", "routes/api.apply-internship.ts"),
   route("api/internship-applicants", "routes/api.internship-applicants.ts"),
   route("api/export-applicants", "routes/api.export-applicants.ts"),
+  route("api/track", "routes/api.track.ts"),
+  route("api/report", "routes/api.report.ts"),
+  route("api/admin/accounts", "routes/api.admin.accounts.ts"),
   route("api/bank", "routes/api.bank.ts"),
   route("api/withdraw", "routes/api.withdraw.ts"),
   route("api/cron/reminders", "routes/api.cron.reminders.ts"),

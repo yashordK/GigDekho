@@ -19,25 +19,34 @@ export default function ResetPasswordScreen() {
   const [error, setError] = useState('');
 
   useEffect(() => {
-    const init = async () => {
-      try {
-        const code = new URL(window.location.href).searchParams.get('code');
-        if (code) {
-          const { error } = await supabase.auth.exchangeCodeForSession(code);
-          if (error) throw error;
-          setStage('form');
-          return;
-        }
-        // No code — maybe the recovery session is already active (hash flow / refresh)
-        const { data: { session } } = await supabase.auth.getSession();
-        if (session) setStage('form');
-        else setStage('invalid');
-      } catch (err) {
-        console.error('Reset link error:', err);
-        setStage('invalid');
-      }
+    // Same rule as /auth/callback: the browser client consumes the ?code= and
+    // the PKCE verifier by itself, so exchanging it again here would fail with
+    // "PKCE code verifier not found in storage". Just wait for the recovery
+    // session it establishes.
+    let settled = false;
+    const ready = () => {
+      if (settled) return;
+      settled = true;
+      setStage('form');
     };
-    init();
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      if (session) ready();
+    });
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (session) ready();
+    });
+
+    const timeout = setTimeout(() => {
+      if (settled) return;
+      settled = true;
+      setStage('invalid');
+    }, 12000);
+
+    return () => {
+      subscription.unsubscribe();
+      clearTimeout(timeout);
+    };
   }, []);
 
   const handleSave = async (e: React.FormEvent) => {
