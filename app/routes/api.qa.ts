@@ -1,20 +1,12 @@
 import { type ActionFunctionArgs } from "react-router";
-import { createClient } from "@supabase/supabase-js";
+import { serviceClient, jsonRoute } from "~/lib/service-client.server";
 import { createSupabaseServerClient } from "~/lib/supabase.server";
 import { detectContactInfo } from "~/lib/contact-filter";
-
-function adminClient() {
-  return createClient(
-    process.env.VITE_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!,
-    { auth: { autoRefreshToken: false, persistSession: false } }
-  );
-}
 
 // Post a question (applicant) or reply (hirer or applicant) on a gig's Q&A thread.
 // Server is the authority for: participation check, contact-info filter,
 // auto-lock after the event date, and notifying the hirer of new questions.
-export async function action({ request }: ActionFunctionArgs) {
+export const action = jsonRoute(async ({ request }: ActionFunctionArgs) => {
   const supabase = createSupabaseServerClient(request);
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return Response.json({ error: "Unauthorized" }, { status: 401 });
@@ -36,7 +28,7 @@ export async function action({ request }: ActionFunctionArgs) {
     );
   }
 
-  const admin = adminClient();
+  const admin = serviceClient();
 
   const { data: gig } = await admin
     .from("gigs")
@@ -83,4 +75,4 @@ export async function action({ request }: ActionFunctionArgs) {
   }
 
   return Response.json({ ok: true, id: msg.id });
-}
+});

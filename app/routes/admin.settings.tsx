@@ -2,8 +2,9 @@ import { useState } from "react";
 import { useLoaderData, useRevalidator } from "react-router";
 import type { LoaderFunctionArgs, ActionFunctionArgs } from "react-router";
 import { requireAdmin, logAdminAction } from "~/lib/admin.server";
+import { serviceRoleConfigured } from "~/lib/service-client.server";
 import { PageTitle, Card, Pill } from "~/components/AdminUI";
-import { Settings as SettingsIcon, Save, History, Table2, Map as MapIcon, Mail, CheckCircle2, AlertTriangle } from "lucide-react";
+import { Settings as SettingsIcon, Save, History, Table2, Map as MapIcon, Mail, CheckCircle2, AlertTriangle, ShieldCheck } from "lucide-react";
 
 const EDITABLE = [
   { key: "min_withdrawal_amount", label: "Minimum withdrawal (₹)", hint: "Workers can't request less than this.", type: "number" },
@@ -30,6 +31,7 @@ export async function loader({ request }: LoaderFunctionArgs) {
     settings: map,
     recentActions: recentActions ?? [],
     integrations: {
+      serviceRole: serviceRoleConfigured(),
       sheets: Boolean(process.env.GOOGLE_SERVICE_ACCOUNT_JSON || (process.env.GOOGLE_SA_EMAIL && process.env.GOOGLE_SA_PRIVATE_KEY)),
       maps: Boolean(process.env.GOOGLE_MAPS_API_KEY || process.env.VITE_GOOGLE_MAPS_API_KEY),
       email: Boolean(process.env.RESEND_API_KEY),
@@ -84,6 +86,7 @@ export default function AdminSettings() {
   };
 
   const INTEGRATIONS = [
+    { ok: integrations.serviceRole, label: "Supabase service role", env: "SUPABASE_SERVICE_ROLE_KEY", icon: <ShieldCheck size={15} />, why: "Required — every write API and this panel depend on it" },
     { ok: integrations.email, label: "Transactional email (Resend)", env: "RESEND_API_KEY", icon: <Mail size={15} />, why: "Confirmations, reminders, claim emails" },
     { ok: integrations.maps, label: "Google Maps", env: "GOOGLE_MAPS_API_KEY", icon: <MapIcon size={15} />, why: "Location picker and gig maps" },
     { ok: integrations.sheets, label: "Google Sheets export", env: "GOOGLE_SERVICE_ACCOUNT_JSON", icon: <Table2 size={15} />, why: "Live applicant sheets for hirers" },

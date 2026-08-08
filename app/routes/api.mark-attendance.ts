@@ -1,17 +1,9 @@
 import { type ActionFunctionArgs } from "react-router";
-import { createClient } from "@supabase/supabase-js";
+import { serviceClient, jsonRoute } from "~/lib/service-client.server";
 import { createSupabaseServerClient } from "~/lib/supabase.server";
 import { syncGigSheet } from "~/lib/sheet-sync.server";
 
-function adminClient() {
-  return createClient(
-    process.env.VITE_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!,
-    { auth: { autoRefreshToken: false, persistSession: false } }
-  );
-}
-
-export async function action({ request }: ActionFunctionArgs) {
+export const action = jsonRoute(async ({ request }: ActionFunctionArgs) => {
   const supabase = createSupabaseServerClient(request);
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return Response.json({ error: "Unauthorized" }, { status: 401 });
@@ -20,7 +12,7 @@ export async function action({ request }: ActionFunctionArgs) {
   const applicationId = formData.get("application_id") as string;
   if (!applicationId) return Response.json({ error: "Missing application_id" }, { status: 400 });
 
-  const admin = adminClient();
+  const admin = serviceClient();
 
   // Verify the caller is the organizer of this gig
   const { data: app } = await admin
@@ -97,4 +89,4 @@ export async function action({ request }: ActionFunctionArgs) {
   }
 
   return Response.json({ ok: true });
-}
+});

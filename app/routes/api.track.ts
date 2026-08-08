@@ -1,14 +1,6 @@
 import { type ActionFunctionArgs } from "react-router";
-import { createClient } from "@supabase/supabase-js";
+import { serviceClient, jsonRoute } from "~/lib/service-client.server";
 import { createSupabaseServerClient } from "~/lib/supabase.server";
-
-function adminClient() {
-  return createClient(
-    process.env.VITE_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!,
-    { auth: { autoRefreshToken: false, persistSession: false } }
-  );
-}
 
 const ALLOWED_EVENTS = new Set([
   "pageview", "signup_started", "profile_completed",
@@ -23,7 +15,7 @@ const ALLOWED_EVENTS = new Set([
  * user agents, no cross-site identifiers. Enough to answer "how many people
  * came and what did they do", not enough to profile anyone.
  */
-export async function action({ request }: ActionFunctionArgs) {
+export const action = jsonRoute(async ({ request }: ActionFunctionArgs) => {
   try {
     const body = await request.json();
     const eventName = String(body.event ?? "pageview");
@@ -46,7 +38,7 @@ export async function action({ request }: ActionFunctionArgs) {
 
     const device = ["mobile", "tablet", "desktop"].includes(body.device) ? body.device : null;
 
-    await adminClient().from("analytics_events").insert({
+    await serviceClient().from("analytics_events").insert({
       event_name: eventName,
       path: String(body.path ?? "").slice(0, 300) || null,
       referrer_host: referrerHost,
@@ -62,4 +54,4 @@ export async function action({ request }: ActionFunctionArgs) {
     console.error("[api.track]", e);
     return Response.json({ ok: false }, { status: 200 });
   }
-}
+});

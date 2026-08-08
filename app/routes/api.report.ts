@@ -1,15 +1,7 @@
 import { type ActionFunctionArgs } from "react-router";
-import { createClient } from "@supabase/supabase-js";
+import { serviceClient, jsonRoute } from "~/lib/service-client.server";
 import { createSupabaseServerClient } from "~/lib/supabase.server";
 import { sendEmail } from "~/lib/email.server";
-
-function adminClient() {
-  return createClient(
-    process.env.VITE_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!,
-    { auth: { autoRefreshToken: false, persistSession: false } }
-  );
-}
 
 const CATEGORIES = ["safety", "fraud", "payment", "behaviour", "spam", "no_show", "other"];
 const TARGETS = ["user", "gig", "application", "message", "other"];
@@ -17,7 +9,7 @@ const TARGETS = ["user", "gig", "application", "message", "other"];
 // Safety and fraud jump the queue automatically
 const PRIORITY: Record<string, string> = { safety: "urgent", fraud: "high", payment: "high" };
 
-export async function action({ request }: ActionFunctionArgs) {
+export const action = jsonRoute(async ({ request }: ActionFunctionArgs) => {
   const supabase = createSupabaseServerClient(request);
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return Response.json({ error: "Sign in to report an issue." }, { status: 401 });
@@ -35,7 +27,7 @@ export async function action({ request }: ActionFunctionArgs) {
     return Response.json({ error: "Please describe what happened in a bit more detail." }, { status: 400 });
   }
 
-  const admin = adminClient();
+  const admin = serviceClient();
   const priority = PRIORITY[category] ?? "normal";
 
   const { data: created, error } = await admin.from("reports").insert({
@@ -92,4 +84,4 @@ export async function action({ request }: ActionFunctionArgs) {
   })();
 
   return Response.json({ ok: true, id: created.id });
-}
+});

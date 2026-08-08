@@ -1,16 +1,8 @@
 import { type ActionFunctionArgs } from "react-router";
-import { createClient } from "@supabase/supabase-js";
+import { serviceClient, jsonRoute } from "~/lib/service-client.server";
 import { createSupabaseServerClient } from "~/lib/supabase.server";
 import { syncGigSheet } from "~/lib/sheet-sync.server";
 import { sheetsConfigured } from "~/lib/google-sheets.server";
-
-function adminClient() {
-  return createClient(
-    process.env.VITE_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!,
-    { auth: { autoRefreshToken: false, persistSession: false } }
-  );
-}
 
 const VALID_STATUS = ["submitted", "shortlisted", "interviewing", "hired", "rejected"];
 
@@ -19,7 +11,7 @@ const VALID_STATUS = ["submitted", "shortlisted", "interviewing", "hired", "reje
  *   intent=status  → move a candidate through the pipeline (then re-sync the sheet)
  *   intent=sync    → create the Google Sheet if needed and push all rows
  */
-export async function action({ request }: ActionFunctionArgs) {
+export const action = jsonRoute(async ({ request }: ActionFunctionArgs) => {
   const supabase = createSupabaseServerClient(request);
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return Response.json({ error: "Unauthorized" }, { status: 401 });
@@ -29,7 +21,7 @@ export async function action({ request }: ActionFunctionArgs) {
   const gigId = (fd.get("gig_id") as string) || "";
   if (!gigId) return Response.json({ error: "Missing gig_id" }, { status: 400 });
 
-  const admin = adminClient();
+  const admin = serviceClient();
 
   // Ownership check — the caller must own the listing
   const { data: gig } = await admin
@@ -98,4 +90,4 @@ export async function action({ request }: ActionFunctionArgs) {
   })();
 
   return Response.json({ ok: true });
-}
+});

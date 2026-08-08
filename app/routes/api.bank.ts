@@ -1,20 +1,12 @@
 import { type ActionFunctionArgs } from "react-router";
-import { createClient } from "@supabase/supabase-js";
+import { serviceClient, jsonRoute } from "~/lib/service-client.server";
 import { createSupabaseServerClient } from "~/lib/supabase.server";
-
-function adminClient() {
-  return createClient(
-    process.env.VITE_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!,
-    { auth: { autoRefreshToken: false, persistSession: false } }
-  );
-}
 
 // Save (upsert) the worker's bank details for withdrawals.
 // Penny-drop verification will go through Razorpay once the gateway is
 // integrated — until then details are validated by format and marked verified
 // so the withdrawal flow can be exercised end-to-end.
-export async function action({ request }: ActionFunctionArgs) {
+export const action = jsonRoute(async ({ request }: ActionFunctionArgs) => {
   const supabase = createSupabaseServerClient(request);
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return Response.json({ error: "Unauthorized" }, { status: 401 });
@@ -34,7 +26,7 @@ export async function action({ request }: ActionFunctionArgs) {
     return Response.json({ error: "Account holder name is required." }, { status: 400 });
   }
 
-  const admin = adminClient();
+  const admin = serviceClient();
 
   // TODO(razorpay): replace with a real penny-drop via Razorpay Fund Account
   // Validation API. Until the gateway is integrated, format-validated details
@@ -54,4 +46,4 @@ export async function action({ request }: ActionFunctionArgs) {
   if (error) return Response.json({ error: error.message }, { status: 500 });
 
   return Response.json({ ok: true, status: "verified" });
-}
+});

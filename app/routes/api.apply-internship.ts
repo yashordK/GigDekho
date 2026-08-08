@@ -1,21 +1,13 @@
 import { type ActionFunctionArgs } from "react-router";
-import { createClient } from "@supabase/supabase-js";
+import { serviceClient, jsonRoute } from "~/lib/service-client.server";
 import { createSupabaseServerClient } from "~/lib/supabase.server";
 import { sendEmail } from "~/lib/email.server";
 import { syncGigSheet } from "~/lib/sheet-sync.server";
 
-function adminClient() {
-  return createClient(
-    process.env.VITE_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!,
-    { auth: { autoRefreshToken: false, persistSession: false } }
-  );
-}
-
 const str = (fd: FormData, key: string, max = 2000) =>
   ((fd.get(key) as string) || "").trim().slice(0, max);
 
-export async function action({ request }: ActionFunctionArgs) {
+export const action = jsonRoute(async ({ request }: ActionFunctionArgs) => {
   const supabase = createSupabaseServerClient(request);
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return Response.json({ error: "Unauthorized" }, { status: 401 });
@@ -24,7 +16,7 @@ export async function action({ request }: ActionFunctionArgs) {
   const gigId = str(fd, "gig_id", 64);
   if (!gigId) return Response.json({ error: "Missing gig_id" }, { status: 400 });
 
-  const admin = adminClient();
+  const admin = serviceClient();
 
   // Suspended accounts can't apply. (ID verification is intentionally NOT
   // required here — internship candidates are judged on their application,
@@ -137,4 +129,4 @@ export async function action({ request }: ActionFunctionArgs) {
   })();
 
   return Response.json({ ok: true, id: created.id });
-}
+});

@@ -1,18 +1,10 @@
 import { type ActionFunctionArgs } from "react-router";
-import { createClient } from "@supabase/supabase-js";
+import { serviceClient, jsonRoute } from "~/lib/service-client.server";
 import { createSupabaseServerClient } from "~/lib/supabase.server";
 import { sendEmail, applicationAcceptedEmail, waitlistEmail } from "~/lib/email.server";
 import { syncGigSheet } from "~/lib/sheet-sync.server";
 
-function adminClient() {
-  return createClient(
-    process.env.VITE_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!,
-    { auth: { autoRefreshToken: false, persistSession: false } }
-  );
-}
-
-export async function action({ request }: ActionFunctionArgs) {
+export const action = jsonRoute(async ({ request }: ActionFunctionArgs) => {
   const supabase = createSupabaseServerClient(request);
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return Response.json({ error: "Unauthorized" }, { status: 401 });
@@ -21,7 +13,7 @@ export async function action({ request }: ActionFunctionArgs) {
   const gigId = formData.get("gig_id") as string;
   if (!gigId) return Response.json({ error: "Missing gig_id" }, { status: 400 });
 
-  const admin = adminClient();
+  const admin = serviceClient();
 
   // ID verification is required before a worker's first (and every) application
   const { data: workerProfile } = await admin
@@ -107,4 +99,4 @@ export async function action({ request }: ActionFunctionArgs) {
     status: isAccepted ? "accepted" : "waitlisted",
     waitlist_position: newApp.waitlist_position ?? null,
   });
-}
+});

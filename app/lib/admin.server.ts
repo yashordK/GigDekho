@@ -1,13 +1,9 @@
-import { createClient, type SupabaseClient } from "@supabase/supabase-js";
+import type { SupabaseClient } from "@supabase/supabase-js";
+import { serviceClient } from "~/lib/service-client.server";
 import { createSupabaseServerClient } from "./supabase.server";
 
-export function adminClient(): SupabaseClient {
-  return createClient(
-    process.env.VITE_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!,
-    { auth: { autoRefreshToken: false, persistSession: false } }
-  );
-}
+/** @deprecated use `serviceClient()` from ~/lib/service-client.server */
+export const adminClient = serviceClient;
 
 export interface AdminContext {
   admin: SupabaseClient;
@@ -30,7 +26,7 @@ export async function requireAdmin(request: Request): Promise<AdminContext> {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) throw new Response("Not Found", { status: 404 });
 
-  const admin = adminClient();
+  const admin = serviceClient();
   const { data: profile } = await admin
     .from("profiles")
     .select("id, full_name, is_admin, is_suspended")
