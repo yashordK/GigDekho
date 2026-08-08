@@ -17,9 +17,16 @@ export function getMapsLoader() {
         return Promise.reject(new Error("Maps auth failed"));
       }
 
-      // No key configured — skip silently so fallback shows immediately
-      if (!import.meta.env.VITE_GOOGLE_MAPS_API_KEY) {
-        return Promise.reject(new Error("VITE_GOOGLE_MAPS_API_KEY not set"));
+      // The <script> tag is rendered by root.tsx from a runtime key. If it
+      // isn't in the document at all, no key is configured — fail fast so the
+      // caller's fallback UI shows immediately instead of polling for 15s.
+      const scriptPresent = document.querySelector(
+        'script[src*="maps.googleapis.com/maps/api/js"]'
+      );
+      if (!scriptPresent) {
+        return Promise.reject(
+          new Error("Google Maps key not configured (set GOOGLE_MAPS_API_KEY)")
+        );
       }
 
       // Poll until window.google is ready (max 15 s)

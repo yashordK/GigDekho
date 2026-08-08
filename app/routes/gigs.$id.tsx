@@ -8,6 +8,7 @@ import { createSupabaseServerClient } from '~/lib/supabase.server';
 import { getMapsLoader } from "~/lib/maps";
 import GigThread from "~/components/GigThread";
 import InternshipApplyModal from "~/components/InternshipApplyModal";
+import ReportModal from "~/components/ReportModal";
 
 export async function loader({ params, request }) {
   const supabaseServer = createSupabaseServerClient(request);
@@ -168,6 +169,7 @@ export default function GigDetailScreen() {
   const [isErrorToast, setIsErrorToast] = useState(false);
   const [showTerms, setShowTerms] = useState(false);
   const [showApplyModal, setShowApplyModal] = useState(false);
+  const [showReport, setShowReport] = useState(false);
   const [internApplication, setInternApplication] = useState<any>(null);
   const { profile } = useAuth();
 
@@ -406,6 +408,14 @@ export default function GigDetailScreen() {
           </div>
         </div>
       )}
+
+      <ReportModal
+        isOpen={showReport}
+        onClose={() => setShowReport(false)}
+        targetType="gig"
+        targetId={gig.id}
+        targetLabel={gig.title}
+      />
 
       {/* Internship application */}
       <InternshipApplyModal
@@ -790,6 +800,17 @@ export default function GigDetailScreen() {
                       View Hirer Profile <ChevronRight size={14} className="ml-1" />
                     </button>
                  </div>
+
+                 {/* Report */}
+                 {user && user.id !== gig.organizer_id && (
+                   <button
+                     type="button"
+                     onClick={() => setShowReport(true)}
+                     className="mt-3 w-full text-[10px] font-bold text-white/30 hover:text-red-400 transition-colors btn-tap py-2"
+                   >
+                     Report this listing
+                   </button>
+                 )}
 
              </div>
            </div>

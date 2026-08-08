@@ -2,90 +2,106 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router";
 import { supabase } from "~/lib/supabase.client";
 
+/**
+ * OAuth / magic-link landing page.
+ *
+ * IMPORTANT: do NOT call `exchangeCodeForSession()` here. The browser client
+ * from `@supabase/ssr` has `detectSessionInUrl` enabled, so it consumes the
+ * `?code=` and the PKCE verifier automatically as soon as it loads. Calling
+ * the exchange again afterwards fails with "PKCE code verifier not found in
+ * storage" — the verifier is single-use and already gone — which is what made
+ * sign-in show an error and then only work after a delay.
+ *
+ * So: wait for the session the client is already establishing, then route.
+ */
 export default function AuthCallback() {
   const navigate = useNavigate();
   const [errorText, setErrorText] = useState("");
 
   useEffect(() => {
-    const handleCallback = async () => {
+    let settled = false;
+
+    const routeTo = async (session: any) => {
+      if (settled) return;
+      settled = true;
       try {
-        const code = new URL(window.location.href).searchParams.get("code");
-        
-        if (!code) {
-          // If there is no code in the URL, check if we already have an active session
-          const { data: { session }, error: sessionError } = await supabase.auth.getSession();
-          if (sessionError || !session) {
-            navigate("/auth");
-            return;
-          }
-          await proceedWithSession(session);
+        const { data: profile } = await supabase
+          .from("profiles")
+          .select("id, role, full_name")
+          .eq("id", session.user.id)
+          .maybeSingle();
+
+        if (!profile || !profile.full_name) {
+          navigate("/setup-profile", { replace: true });
           return;
         }
 
-        // Exchange the code for a session
-        const { data, error: exchangeError } = await supabase.auth.exchangeCodeForSession(code);
-        
-        if (exchangeError) throw exchangeError;
-
-        const sessionUser = data?.user;
-        const session = data?.session;
-        if (!sessionUser || !session) {
-          navigate("/auth");
+        const nextUrl = localStorage.getItem("redirectAfterLogin");
+        if (nextUrl) {
+          localStorage.removeItem("redirectAfterLogin");
+          navigate(nextUrl, { replace: true });
           return;
         }
 
-        await proceedWithSession(session);
+        const lastView = localStorage.getItem("activeView");
+        if (lastView === "organizer") navigate("/organizer/home", { replace: true });
+        else if (lastView === "worker") navigate("/worker/home", { replace: true });
+        else navigate(profile.role === "organizer" ? "/organizer/home" : "/worker/home", { replace: true });
       } catch (err: any) {
         console.error("Auth callback error:", err);
-        setErrorText(err.message || "Failed to complete authentication. Redirecting to login...");
-        setTimeout(() => {
-          navigate("/auth");
-        }, 3000);
+        setErrorText(err.message || "Could not finish signing you in.");
       }
     };
 
-    const proceedWithSession = async (session: any) => {
-      // Check if profile exists
-      const { data: profile, error: profileErr } = await supabase
-        .from("profiles")
-        .select("id, role, full_name")
-        .eq("id", session.user.id)
-        .maybeSingle();
+    // The provider may report a failure straight back in the URL
+    const url = new URL(window.location.href);
+    const providerError =
+      url.searchParams.get("error_description") || url.searchParams.get("error");
+    if (providerError) {
+      setErrorText(decodeURIComponent(providerError));
+      setTimeout(() => navigate("/auth", { replace: true }), 3500);
+      return;
+    }
 
-      if (profileErr) throw profileErr;
+    // Catch the session whenever the automatic exchange completes…
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      if (session) routeTo(session);
+    });
 
-      if (!profile || !profile.full_name) {
-        // New user — send to setup
-        navigate("/setup-profile");
-        return;
-      }
+    // …and cover the case where it finished before this effect ran.
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (session) routeTo(session);
+    });
 
-      // Existing user — redirect based on last active view, fall back to signup role
-      const lastView = localStorage.getItem('activeView');
-      if (lastView === 'organizer') {
-        navigate("/organizer/home");
-      } else if (lastView === 'worker') {
-        navigate("/worker/home");
-      } else if (profile.role === "organizer") {
-        navigate("/organizer/home");
-      } else {
-        navigate("/worker/home");
-      }
+    // Give up rather than spinning forever (link opened in another browser,
+    // storage cleared, expired link, etc.)
+    const timeout = setTimeout(() => {
+      if (settled) return;
+      settled = true;
+      setErrorText(
+        "That sign-in link couldn't be completed. It may have expired, already been used, or been opened in a different browser. Please request a new one."
+      );
+      setTimeout(() => navigate("/auth", { replace: true }), 3500);
+    }, 12000);
+
+    return () => {
+      subscription.unsubscribe();
+      clearTimeout(timeout);
     };
-
-    handleCallback();
   }, [navigate]);
 
   return (
-    <div className="min-h-screen bg-[#111111] flex items-center justify-center">
+    <div className="min-h-screen bg-[#111111] flex items-center justify-center px-4">
       <div className="text-white text-center">
         {errorText ? (
-          <p className="text-red-400 font-bold max-w-sm px-4">{errorText}</p>
+          <>
+            <p className="text-red-400 font-bold max-w-sm">{errorText}</p>
+            <p className="text-white/40 text-xs font-semibold mt-3">Taking you back to sign in…</p>
+          </>
         ) : (
           <>
-            <div className="w-8 h-8 border-2 border-[#F4511E] border-t-transparent 
-                            rounded-full animate-spin mx-auto mb-4" />
-            <p className="text-gray-400">Signing you in...</p>
+            <div className="w-8 h-8 border-2 border-[#F4511E] border-t-transparent rounded-full animate-spin mx-auto mb-4" />
+            <p className="text-gray-400">Signing you in…</p>
           </>
         )}
       </div>

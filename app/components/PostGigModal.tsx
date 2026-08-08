@@ -228,10 +228,38 @@ export default function PostGigModal({ isOpen, onClose, onSuccess, user, showToa
   const calculateTotalCost = () =>
     roles.reduce((sum, r) => sum + Number(r.pay_rate || 0) * Number(r.duration_hrs || 0) * Number(r.slots_total || 0), 0);
 
+  /**
+   * Turns Postgres/PostgREST failures into something a hirer can act on.
+   * 42501 (RLS) almost always means the session expired underneath them —
+   * auth.uid() is null, so the row looks like it belongs to someone else.
+   */
+  const explainError = (err: any) => {
+    const code = err?.code;
+    if (code === "42501") {
+      return "Your session has expired. Please sign in again and re-post — nothing was saved.";
+    }
+    if (code === "23502") {
+      return "Something's missing from the listing. Go back and check every required field is filled.";
+    }
+    if (code === "23514") {
+      return "One of the values isn't allowed. Check the stipend, duration and headcount.";
+    }
+    return err?.message || "Failed to post. Try again.";
+  };
+
   // ── Submit ────────────────────────────────────────────────────────
   const handleSubmit = async () => {
     setLoading(true);
     try {
+      // Catch a dead session before we build the payload, so the hirer gets a
+      // clear "sign in again" instead of an opaque RLS rejection.
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        showToast("Your session has expired. Please sign in again — nothing was lost.", "error");
+        setLoading(false);
+        return;
+      }
+
       if (hiringType === "event") {
         if (!validateEventStep1() || !validateEventStep2()) {
           showToast("Please fix the validation errors before submitting", "error");
@@ -299,7 +327,7 @@ export default function PostGigModal({ isOpen, onClose, onSuccess, user, showToa
       onClose();
     } catch (err: any) {
       console.error(err);
-      showToast(err.message || "Failed to post. Try again.", "error");
+      showToast(explainError(err), "error");
     } finally {
       setLoading(false);
     }
