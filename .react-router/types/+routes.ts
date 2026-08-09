@@ -126,12 +126,17 @@ type Pages = {
   "/organizer/home": {
     params: {};
   };
+  "/*": {
+    params: {
+      "*": string;
+    };
+  };
 };
 
 type RouteFiles = {
   "root.tsx": {
     id: "root";
-    page: "/" | "/auth" | "/auth/callback" | "/auth/reset" | "/setup-profile" | "/organizer/preview" | "/gigs/:id" | "/hirer/:id" | "/admin" | "/admin/reports" | "/admin/verifications" | "/admin/payouts" | "/admin/users" | "/admin/gigs" | "/admin/accounts" | "/admin/settings" | "/api/apply" | "/api/cancel" | "/api/mark-attendance" | "/api/pay" | "/api/announce" | "/api/qa" | "/api/apply-internship" | "/api/internship-applicants" | "/api/export-applicants" | "/api/track" | "/api/report" | "/api/admin/accounts" | "/api/bank" | "/api/withdraw" | "/api/cron/reminders" | "/worker/home" | "/about" | "/worker/dashboard" | "/worker/earnings" | "/worker/profile" | "/organizer/home";
+    page: "/" | "/auth" | "/auth/callback" | "/auth/reset" | "/setup-profile" | "/organizer/preview" | "/gigs/:id" | "/hirer/:id" | "/admin" | "/admin/reports" | "/admin/verifications" | "/admin/payouts" | "/admin/users" | "/admin/gigs" | "/admin/accounts" | "/admin/settings" | "/api/apply" | "/api/cancel" | "/api/mark-attendance" | "/api/pay" | "/api/announce" | "/api/qa" | "/api/apply-internship" | "/api/internship-applicants" | "/api/export-applicants" | "/api/track" | "/api/report" | "/api/admin/accounts" | "/api/bank" | "/api/withdraw" | "/api/cron/reminders" | "/worker/home" | "/about" | "/worker/dashboard" | "/worker/earnings" | "/worker/profile" | "/organizer/home" | "/*";
   };
   "routes/home.tsx": {
     id: "routes/home";
@@ -293,6 +298,10 @@ type RouteFiles = {
     id: "routes/organizer.home";
     page: "/organizer/home";
   };
+  "routes/$.tsx": {
+    id: "routes/$";
+    page: "/*";
+  };
 };
 
 type RouteModules = {
@@ -337,4 +346,5 @@ type RouteModules = {
   "routes/worker.earnings": typeof import("./app/routes/worker.earnings.tsx");
   "routes/worker.profile": typeof import("./app/routes/worker.profile.tsx");
   "routes/organizer.home": typeof import("./app/routes/organizer.home.tsx");
+  "routes/$": typeof import("./app/routes/$.tsx");
 };

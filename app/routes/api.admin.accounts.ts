@@ -1,4 +1,5 @@
 import { type ActionFunctionArgs } from "react-router";
+import { jsonRoute } from "~/lib/service-client.server";
 import { requireAdmin, logAdminAction } from "~/lib/admin.server";
 import { sendEmail } from "~/lib/email.server";
 
@@ -51,7 +52,7 @@ function gigPostedEmail(name: string, gigTitle: string, count: number) {
   };
 }
 
-export async function action({ request }: ActionFunctionArgs) {
+export const action = jsonRoute(async ({ request }: ActionFunctionArgs) => {
   const ctx = await requireAdmin(request);
   const fd = await request.formData();
   const intent = String(fd.get("intent") ?? "");
@@ -154,4 +155,4 @@ export async function action({ request }: ActionFunctionArgs) {
   }
 
   return Response.json({ error: "Unknown intent" }, { status: 400 });
-}
+});

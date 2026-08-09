@@ -1,19 +1,11 @@
 import { type ActionFunctionArgs } from "react-router";
-import { createClient } from "@supabase/supabase-js";
+import { serviceClient, jsonRoute } from "~/lib/service-client.server";
 import { createSupabaseServerClient } from "~/lib/supabase.server";
-
-function adminClient() {
-  return createClient(
-    process.env.VITE_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!,
-    { auth: { autoRefreshToken: false, persistSession: false } }
-  );
-}
 
 // Withdraw from wallet balance. Balance, minimum, and bank verification are
 // all checked server-side. Actual bank transfer is processed manually until
 // Razorpay Payouts is integrated.
-export async function action({ request }: ActionFunctionArgs) {
+export const action = jsonRoute(async ({ request }: ActionFunctionArgs) => {
   const supabase = createSupabaseServerClient(request);
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return Response.json({ error: "Unauthorized" }, { status: 401 });
@@ -24,7 +16,7 @@ export async function action({ request }: ActionFunctionArgs) {
     return Response.json({ error: "Enter a valid amount." }, { status: 400 });
   }
 
-  const admin = adminClient();
+  const admin = serviceClient();
 
   // Configurable minimum (admin-editable app_settings, env fallback)
   const { data: setting } = await admin.from("app_settings").select("value").eq("key", "min_withdrawal_amount").maybeSingle();
@@ -84,4 +76,4 @@ export async function action({ request }: ActionFunctionArgs) {
   }
 
   return Response.json({ ok: true, id: wr.id, balance: balance - amount });
-}
+});

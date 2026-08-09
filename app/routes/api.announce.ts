@@ -1,19 +1,11 @@
 import { type ActionFunctionArgs } from "react-router";
-import { createClient } from "@supabase/supabase-js";
+import { serviceClient, jsonRoute } from "~/lib/service-client.server";
 import { createSupabaseServerClient } from "~/lib/supabase.server";
 import { sendEmail } from "~/lib/email.server";
 
-function adminClient() {
-  return createClient(
-    process.env.VITE_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!,
-    { auth: { autoRefreshToken: false, persistSession: false } }
-  );
-}
-
 // Hirer posts a gig-scoped announcement → stored on the gig, fanned out as
 // in-app notifications + backup emails to the chosen audience.
-export async function action({ request }: ActionFunctionArgs) {
+export const action = jsonRoute(async ({ request }: ActionFunctionArgs) => {
   const supabase = createSupabaseServerClient(request);
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return Response.json({ error: "Unauthorized" }, { status: 401 });
@@ -30,7 +22,7 @@ export async function action({ request }: ActionFunctionArgs) {
     return Response.json({ error: "Announcement too long (max 1000 characters)" }, { status: 400 });
   }
 
-  const admin = adminClient();
+  const admin = serviceClient();
 
   // Verify ownership
   const { data: gig } = await admin
@@ -102,4 +94,4 @@ export async function action({ request }: ActionFunctionArgs) {
   })();
 
   return Response.json({ ok: true, id: ann.id, recipients: workerIds.length });
-}
+});

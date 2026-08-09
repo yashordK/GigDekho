@@ -56,4 +56,7 @@ export default [
     route("organizer/home", "routes/organizer.home.tsx"),
   ]),
 
+  // Catch-all 404 — must stay last so it only matches what nothing else did
+  route("*", "routes/$.tsx"),
+
 ] satisfies RouteConfig;

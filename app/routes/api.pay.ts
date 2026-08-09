@@ -1,18 +1,10 @@
 import { type ActionFunctionArgs } from "react-router";
-import { createClient } from "@supabase/supabase-js";
+import { serviceClient, jsonRoute } from "~/lib/service-client.server";
 import { createSupabaseServerClient } from "~/lib/supabase.server";
-
-function adminClient() {
-  return createClient(
-    process.env.VITE_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!,
-    { auth: { autoRefreshToken: false, persistSession: false } }
-  );
-}
 
 // Simulated payment flow (Razorpay integration pending).
 // Amounts are computed server-side from the gig record — never trusted from the client.
-export async function action({ request }: ActionFunctionArgs) {
+export const action = jsonRoute(async ({ request }: ActionFunctionArgs) => {
   const supabase = createSupabaseServerClient(request);
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return Response.json({ error: "Unauthorized" }, { status: 401 });
@@ -24,7 +16,7 @@ export async function action({ request }: ActionFunctionArgs) {
     return Response.json({ error: "Invalid request" }, { status: 400 });
   }
 
-  const admin = adminClient();
+  const admin = serviceClient();
 
   // Verify caller owns the gig
   const { data: gig } = await admin
@@ -92,4 +84,4 @@ export async function action({ request }: ActionFunctionArgs) {
     .eq("id", existing.id);
   if (error) return Response.json({ error: error.message }, { status: 500 });
   return Response.json({ ok: true, amount: finalAmount });
-}
+});

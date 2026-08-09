@@ -1,14 +1,6 @@
 import { type LoaderFunctionArgs } from "react-router";
-import { createClient } from "@supabase/supabase-js";
+import { serviceClient } from "~/lib/service-client.server";
 import { sendEmail, reminder48hEmail, reminder6hEmail, noShowPenaltyEmail } from "~/lib/email.server";
-
-function adminClient() {
-  return createClient(
-    process.env.VITE_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!,
-    { auth: { autoRefreshToken: false, persistSession: false } }
-  );
-}
 
 export async function loader({ request }: LoaderFunctionArgs) {
   // Vercel cron sends Authorization: Bearer <CRON_SECRET>
@@ -18,7 +10,7 @@ export async function loader({ request }: LoaderFunctionArgs) {
     return Response.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const admin = adminClient();
+  const admin = serviceClient();
   const now = new Date();
   const results = { reminders48h: 0, reminders6h: 0, noShows: 0, errors: [] as string[] };
 

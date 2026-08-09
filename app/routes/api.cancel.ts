@@ -1,16 +1,8 @@
 import { type ActionFunctionArgs } from "react-router";
-import { createClient } from "@supabase/supabase-js";
+import { serviceClient, jsonRoute } from "~/lib/service-client.server";
 import { createSupabaseServerClient } from "~/lib/supabase.server";
 import { sendEmail, cancellationConfirmEmail, promotedFromWaitlistEmail } from "~/lib/email.server";
 import { syncGigSheet } from "~/lib/sheet-sync.server";
-
-function adminClient() {
-  return createClient(
-    process.env.VITE_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!,
-    { auth: { autoRefreshToken: false, persistSession: false } }
-  );
-}
 
 function calcPenalty(eventDate: string): { points: number; reason: string } {
   const h = (new Date(eventDate).getTime() - Date.now()) / 3600000;
@@ -19,7 +11,7 @@ function calcPenalty(eventDate: string): { points: number; reason: string } {
   return       { points: 0,  reason: "cancel_48hrs_plus" };
 }
 
-export async function action({ request }: ActionFunctionArgs) {
+export const action = jsonRoute(async ({ request }: ActionFunctionArgs) => {
   const supabase = createSupabaseServerClient(request);
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return Response.json({ error: "Unauthorized" }, { status: 401 });
@@ -28,7 +20,7 @@ export async function action({ request }: ActionFunctionArgs) {
   const appId = formData.get("app_id") as string;
   if (!appId) return Response.json({ error: "Missing app_id" }, { status: 400 });
 
-  const admin = adminClient();
+  const admin = serviceClient();
 
   // 1. Fetch the application + gig info
   const { data: app } = await admin
@@ -123,4 +115,4 @@ export async function action({ request }: ActionFunctionArgs) {
   })();
 
   return Response.json({ penalty, promoted: !!nextWaitlistWorkerId });
-}
+});

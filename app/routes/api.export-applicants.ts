@@ -1,5 +1,5 @@
 import { type LoaderFunctionArgs, type ActionFunctionArgs } from "react-router";
-import { createClient } from "@supabase/supabase-js";
+import { serviceClient, jsonRoute } from "~/lib/service-client.server";
 import { createSupabaseServerClient } from "~/lib/supabase.server";
 import { buildApplicantReport } from "~/lib/applicant-report.server";
 import { buildXlsx } from "~/lib/xlsx.server";
@@ -7,21 +7,13 @@ import { sendEmail } from "~/lib/email.server";
 import { syncGigSheet } from "~/lib/sheet-sync.server";
 import { sheetsConfigured } from "~/lib/google-sheets.server";
 
-function adminClient() {
-  return createClient(
-    process.env.VITE_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!,
-    { auth: { autoRefreshToken: false, persistSession: false } }
-  );
-}
-
 /** Verifies the caller owns the listing, then returns an admin client + report. */
 async function authorize(request: Request, gigId: string) {
   const supabase = createSupabaseServerClient(request);
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return { error: Response.json({ error: "Unauthorized" }, { status: 401 }) };
 
-  const admin = adminClient();
+  const admin = serviceClient();
   const { data: gig } = await admin
     .from("gigs").select("id, organizer_id").eq("id", gigId).single();
   if (!gig) return { error: Response.json({ error: "not_found" }, { status: 404 }) };
@@ -67,7 +59,7 @@ export async function loader({ request }: LoaderFunctionArgs) {
 }
 
 // ── POST: email the hirer their live sheet link ────────────────────
-export async function action({ request }: ActionFunctionArgs) {
+export const action = jsonRoute(async ({ request }: ActionFunctionArgs) => {
   const fd = await request.formData();
   const gigId = (fd.get("gig_id") as string) ?? "";
   if (!gigId) return Response.json({ error: "Missing gig_id" }, { status: 400 });
@@ -115,4 +107,4 @@ export async function action({ request }: ActionFunctionArgs) {
   });
 
   return Response.json({ ok: true, url: sync.url, rows: sync.rows });
-}
+});
