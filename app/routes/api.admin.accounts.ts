@@ -92,20 +92,30 @@ export const action = jsonRoute(async ({ request }: ActionFunctionArgs) => {
       return Response.json({ error: createErr?.message ?? "Could not create the account." }, { status: 500 });
     }
 
-    const { error: profileErr } = await ctx.admin.from("profiles").insert({
-      id: created.user.id,
-      full_name: name,
-      email,
-      phone: phone || null,
-      city: city || "Indore",
-      role: "organizer",
-      company_name: companyName || null,
-      is_managed: true,
-      managed_by: ctx.adminId,
-      internal_note: note || null,
-    });
+    // A database trigger on auth.users already inserts a bare profile row
+    // (role 'worker') the moment the auth user is created. Inserting here
+    // collided with it on the primary key, so every attempt failed with a
+    // 500 — and left the auth user behind, which made the retry report
+    // "already exists". Upsert takes ownership of that row instead.
+    const { error: profileErr } = await ctx.admin.from("profiles").upsert(
+      {
+        id: created.user.id,
+        full_name: name,
+        email,
+        phone: phone || null,
+        city: city || "Indore",
+        role: "organizer",
+        company_name: companyName || null,
+        is_managed: true,
+        managed_by: ctx.adminId,
+        internal_note: note || null,
+      },
+      { onConflict: "id" }
+    );
     if (profileErr) {
-      // Don't leave a half-created auth user behind
+      // Don't leave a half-created account behind — including the row the
+      // trigger made, or the next attempt hits "already exists".
+      await ctx.admin.from("profiles").delete().eq("id", created.user.id);
       await ctx.admin.auth.admin.deleteUser(created.user.id).catch(() => {});
       return Response.json({ error: profileErr.message }, { status: 500 });
     }
@@ -151,6 +161,65 @@ export const action = jsonRoute(async ({ request }: ActionFunctionArgs) => {
 
     await sendEmail({ to: acct.email, ...claimEmail(acct.full_name ?? "there", acct.email, ctx.adminName) });
     await logAdminAction(ctx, "resend_claim_email", `Re-sent claim email to ${acct.email}`, { targetUserId: accountId });
+    return Response.json({ ok: true });
+  }
+
+  // ── Delete an account we set up, on request ──
+  // Deliberately narrow: only an account we created that nobody has claimed,
+  // and only while it has no listings. Once a business signs in it's their
+  // account, and once workers have applied there's other people's history
+  // attached — neither should vanish from a button in here.
+  if (intent === "delete") {
+    const accountId = String(fd.get("account_id") ?? "");
+    if (!accountId) return Response.json({ error: "Missing account_id" }, { status: 400 });
+
+    const { data: acct } = await ctx.admin
+      .from("profiles")
+      .select("id, email, company_name, full_name, is_managed, claimed_at")
+      .eq("id", accountId)
+      .maybeSingle();
+
+    if (!acct) return Response.json({ error: "not_found" }, { status: 404 });
+    if (!acct.is_managed) {
+      return Response.json({ error: "That isn't a managed account." }, { status: 400 });
+    }
+    if (acct.claimed_at) {
+      return Response.json(
+        { error: "They've already claimed this account, so it's theirs now. Deleting it has to go through support." },
+        { status: 400 }
+      );
+    }
+
+    const { count } = await ctx.admin
+      .from("gigs")
+      .select("id", { count: "exact", head: true })
+      .eq("organizer_id", accountId);
+    if (count && count > 0) {
+      return Response.json(
+        { error: `This account still has ${count} listing${count === 1 ? "" : "s"}. Remove those first — workers may have applied to them.` },
+        { status: 400 }
+      );
+    }
+
+    const label = `${acct.company_name || acct.full_name} <${acct.email}>`;
+
+    // Logged BEFORE the row goes, while the audit trail can still name them.
+    await logAdminAction(ctx, "delete_managed_account", `Deleted managed hirer ${label}`);
+
+    const { error: delErr } = await ctx.admin.from("profiles").delete().eq("id", accountId);
+    if (delErr) {
+      const blocked = delErr.code === "23503";
+      return Response.json(
+        {
+          error: blocked
+            ? "The database still has records pointing at this account. Run migration 012 and try again."
+            : delErr.message,
+        },
+        { status: 500 }
+      );
+    }
+    await ctx.admin.auth.admin.deleteUser(accountId).catch(() => {});
+
     return Response.json({ ok: true });
   }
 

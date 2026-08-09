@@ -5,7 +5,7 @@ import { requireAdmin } from "~/lib/admin.server";
 import { PageTitle, Card, Pill, EmptyState } from "~/components/AdminUI";
 import PostGigModal from "~/components/PostGigModal";
 import Toast from "~/components/Toast";
-import { Building2, Plus, Mail, Send, CheckCircle2, X, Briefcase, ExternalLink } from "lucide-react";
+import { Building2, Plus, Mail, Send, CheckCircle2, X, Briefcase, ExternalLink, Trash2 } from "lucide-react";
 
 export async function loader({ request }: LoaderFunctionArgs) {
   const { admin } = await requireAdmin(request);
@@ -44,9 +44,28 @@ export default function AdminAccounts() {
     const fd = new FormData();
     fd.append("intent", intent);
     Object.entries(fields).forEach(([k, v]) => fd.append(k, v));
-    const res = await fetch("/api/admin/accounts", { method: "POST", body: fd });
-    const r = await res.json();
-    if (!res.ok || r.error) throw new Error(r.error || "Something went wrong");
+    let res: Response;
+    try {
+      res = await fetch("/api/admin/accounts", { method: "POST", body: fd });
+    } catch {
+      // fetch() only rejects when the response never arrived at all
+      throw new Error("Couldn't reach the server. Check your connection and try again.");
+    }
+
+    // Never assume the body is JSON — an auth redirect or a proxy error page
+    // would otherwise surface as an unreadable "Unexpected token" parse error.
+    const raw = await res.text();
+    let r: any = {};
+    try {
+      r = raw ? JSON.parse(raw) : {};
+    } catch {
+      throw new Error(
+        res.status === 404
+          ? "That admin endpoint wasn't found on this deployment."
+          : `Server returned ${res.status}. Please try again.`
+      );
+    }
+    if (!res.ok || r.error) throw new Error(r.error || `Something went wrong (${res.status})`);
     return r;
   };
 
@@ -72,6 +91,21 @@ export default function AdminAccounts() {
     try {
       await submit("resend_claim", { account_id: account.id });
       showToast(`Claim email re-sent to ${account.email}`, "success");
+    } catch (err: any) {
+      showToast(err.message, "error");
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const deleteAccount = async (account: any) => {
+    const label = account.company_name || account.full_name;
+    if (!confirm(`Delete ${label} (${account.email})?\n\nThis removes the account and their sign-in entirely. It can't be undone.`)) return;
+    setBusy(true);
+    try {
+      await submit("delete", { account_id: account.id });
+      showToast(`${label} deleted.`, "success");
+      revalidator.revalidate();
     } catch (err: any) {
       showToast(err.message, "error");
     } finally {
@@ -157,6 +191,18 @@ export default function AdminAccounts() {
                 >
                   <ExternalLink size={12} /> Profile
                 </a>
+                {/* Only offered while it's still ours to delete — once they
+                    claim it, the account belongs to them. */}
+                {!a.claimed_at && (
+                  <button
+                    type="button"
+                    onClick={() => deleteAccount(a)}
+                    disabled={busy}
+                    className="flex items-center gap-1.5 text-[11px] font-black uppercase tracking-wider bg-[#111111] border border-red-500/25 text-red-400/80 hover:text-red-400 hover:border-red-500/50 px-3.5 py-2 rounded-full transition-colors btn-tap disabled:opacity-50"
+                  >
+                    <Trash2 size={12} /> Delete
+                  </button>
+                )}
               </div>
             </Card>
           ))}
