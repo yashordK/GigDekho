@@ -5,19 +5,7 @@ import { useNavigate } from 'react-router';
 import { Calendar, ChevronRight, Briefcase, Shield, XCircle, AlertTriangle, GraduationCap } from 'lucide-react';
 import { formatRelativeDate } from '~/lib/utils';
 import SpotlightCategories from '~/components/SpotlightCategories';
-
-const getImageUrl = (role) => {
-  const r = (role || '').toLowerCase();
-  let url = 'https://images.unsplash.com/photo-1511795409834-ef04bbd61622?w=400';
-  if (r.includes('wait') || r.includes('hostess')) url = 'https://images.unsplash.com/photo-1414235077428-338989a2e8c0?w=400';
-  else if (r.includes('sing') || r.includes('vocal')) url = 'https://images.unsplash.com/photo-1493225457124-a3eb161ffa5f?w=400';
-  else if (r.includes('dj') || r.includes('disc')) url = 'https://images.unsplash.com/photo-1571266028243-d220c6f3f07b?w=400';
-  else if (r.includes('art') || r.includes('sketch')) url = 'https://images.unsplash.com/photo-1513364776144-60967b0f800f?w=400';
-  else if (r.includes('secur') || r.includes('guard') || r.includes('bouncer')) url = 'https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=400';
-  else if (r.includes('danc')) url = 'https://images.unsplash.com/photo-1508700929628-666bc8bd84ea?w=400';
-  else if (r.includes('photo') || r.includes('camera')) url = 'https://images.unsplash.com/photo-1542038784456-1ea8e935640e?w=400';
-  return url + '&auto=format&fit=crop';
-};
+import { gigCoverUrl } from '~/lib/cover';
 
 function reliabilityLabel(score: number) {
   if (score >= 90) return { label: 'Excellent', color: 'text-green-400', bg: 'bg-green-500/10 border-green-500/20' };
@@ -312,13 +300,23 @@ export default function DashboardScreen() {
                 >
                   <div className="flex justify-between items-start mb-4">
                     <div className="flex pr-3 flex-1 min-w-0">
-                      <img
-                        src={getImageUrl(app.gig.role_type)}
-                        alt={app.gig.role_type}
-                        loading="lazy"
-                        decoding="async"
-                        className="w-12 h-12 rounded-xl object-cover mr-4 shrink-0"
-                      />
+                      {(() => {
+                        const thumb = gigCoverUrl(app.gig, 200);
+                        return thumb ? (
+                          <img
+                            src={thumb}
+                            alt=""
+                            loading="lazy"
+                            decoding="async"
+                            className="w-12 h-12 rounded-xl object-cover mr-4 shrink-0"
+                          />
+                        ) : (
+                          // Hirer chose no cover — a neutral tile keeps the row aligned
+                          <div className="w-12 h-12 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center mr-4 shrink-0">
+                            <Briefcase size={18} className="text-white/25" />
+                          </div>
+                        );
+                      })()}
                       <div className="min-w-0">
                         <h3 className="font-black text-white text-lg lg:text-xl leading-tight mb-0.5 truncate">{app.gig.title}</h3>
                         <p className="text-white/50 font-medium text-sm truncate">{app.gig.location_text}</p>

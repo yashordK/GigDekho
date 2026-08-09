@@ -1,8 +1,9 @@
 import { useState, useRef, useEffect } from "react";
 import { supabase } from "~/lib/supabase.client";
-import { Calendar, MapPin, MoreVertical, Phone, Star, CheckCircle2, XCircle, Info, Loader2, Megaphone } from "lucide-react";
+import { Calendar, MapPin, MoreVertical, Phone, Star, CheckCircle2, XCircle, Info, Loader2, Megaphone, Image as ImageIcon } from "lucide-react";
 import { useAuth } from "~/context/AuthContext";
 import AnnounceModal from "./AnnounceModal";
+import EditCoverModal from "./EditCoverModal";
 import ApplicantExportBar from "./ApplicantExportBar";
 
 interface WorkerApplication {
@@ -43,6 +44,9 @@ interface Gig {
   slots_filled: number;
   status: string;
   created_at: string;
+  organizer_id?: string;
+  cover_mode?: string | null;
+  cover_image_url?: string | null;
   gig_payments: GigPayment | GigPayment[] | null;
 }
 
@@ -72,6 +76,7 @@ export default function GigManagementCard({
   const [loading, setLoading] = useState(false);
   const [attendedIds, setAttendedIds] = useState<Set<string>>(new Set());
   const [showAnnounce, setShowAnnounce] = useState(false);
+  const [showCover, setShowCover] = useState(false);
 
   const menuRef = useRef<HTMLDivElement>(null);
 
@@ -244,10 +249,25 @@ export default function GigManagementCard({
             <div className="absolute right-0 mt-1.5 w-44 bg-[#111111] border border-white/10 shadow-2xl rounded-xl py-1.5 z-40 animate-in fade-in slide-in-from-top-1">
               <button
                 type="button"
+                onClick={() => { setMenuOpen(false); setShowCover(true); }}
+                className="w-full text-left px-4 py-2 text-xs font-bold text-white/70 hover:bg-white/5 flex items-center gap-1.5"
+              >
+                <ImageIcon size={14} /> Cover image
+              </button>
+
+              <button
+                type="button"
                 onClick={() => { setMenuOpen(false); setShowAnnounce(true); }}
                 className="w-full text-left px-4 py-2 text-xs font-bold text-[#F4511E] hover:bg-white/5 flex items-center gap-1.5"
               >
                 <Megaphone size={14} /> Announce
+              </button>
+              <button
+                type="button"
+                onClick={() => { setMenuOpen(false); setShowCover(true); }}
+                className="w-full text-left px-4 py-2 text-xs font-bold text-white/70 hover:bg-white/5 flex items-center gap-1.5"
+              >
+                <ImageIcon size={14} /> Cover image
               </button>
               <button
                 type="button"
@@ -463,6 +483,15 @@ export default function GigManagementCard({
       </div>
 
       {/* Announcement composer */}
+      <EditCoverModal
+        isOpen={showCover}
+        onClose={() => setShowCover(false)}
+        gig={gig}
+        userId={user?.id ?? gig.organizer_id}
+        onSaved={onActionSuccess}
+        showToast={showToast}
+      />
+
       <AnnounceModal
         isOpen={showAnnounce}
         onClose={() => setShowAnnounce(false)}

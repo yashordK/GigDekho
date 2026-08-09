@@ -3,9 +3,10 @@ import { supabase } from "~/lib/supabase.client";
 import {
   Calendar, MapPin, MoreVertical, Users, FileText, Link2, Mail, Phone,
   ChevronDown, ChevronUp, Loader2,
-  CheckCircle2, XCircle, GraduationCap, IndianRupee, Megaphone,
+  CheckCircle2, XCircle, GraduationCap, IndianRupee, Megaphone, Image as ImageIcon,
 } from "lucide-react";
 import AnnounceModal from "./AnnounceModal";
+import EditCoverModal from "./EditCoverModal";
 import ApplicantExportBar from "./ApplicantExportBar";
 
 const STATUS_FLOW = [
@@ -43,6 +44,7 @@ export default function InternshipManagementCard({
   const [loading, setLoading] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const [showAnnounce, setShowAnnounce] = useState(false);
+  const [showCover, setShowCover] = useState(false);
 
   const fetchApplicants = async () => {
     const { data: apps } = await supabase
@@ -145,6 +147,10 @@ export default function InternshipManagementCard({
               <button type="button" onClick={() => { setMenuOpen(false); setShowAnnounce(true); }}
                 className="w-full text-left px-4 py-2 text-xs font-bold text-[#F4511E] hover:bg-white/5 flex items-center gap-1.5">
                 <Megaphone size={14} /> Announce
+              </button>
+              <button type="button" onClick={() => { setMenuOpen(false); setShowCover(true); }}
+                className="w-full text-left px-4 py-2 text-xs font-bold text-white/70 hover:bg-white/5 flex items-center gap-1.5">
+                <ImageIcon size={14} /> Cover image
               </button>
               <button type="button" onClick={() => updateGigStatus("completed")}
                 className="w-full text-left px-4 py-2 text-xs font-bold text-green-400 hover:bg-white/5 flex items-center gap-1.5">
@@ -307,6 +313,15 @@ export default function InternshipManagementCard({
           </div>
         )}
       </div>
+
+      <EditCoverModal
+        isOpen={showCover}
+        onClose={() => setShowCover(false)}
+        gig={gig}
+        userId={gig.organizer_id}
+        onSaved={onActionSuccess}
+        showToast={showToast}
+      />
 
       <AnnounceModal
         isOpen={showAnnounce}

@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from "react";
 import { supabase } from "~/lib/supabase.client";
 import { fetchSkillCategories } from "~/lib/categories";
 import LocationPicker from "./LocationPicker";
+import CoverImagePicker, { type CoverValue } from "./CoverImagePicker";
 import {
   X, Plus, Trash2, Calendar, MapPin, AlertCircle, ChevronLeft, ChevronRight, Check,
   Users, GraduationCap, Briefcase, Clock, IndianRupee, Link2, FileText,
@@ -55,6 +56,7 @@ export default function PostGigModal({ isOpen, onClose, onSuccess, user, showToa
     location_text: "", lat: null as number | null, lng: null as number | null, is_remote: false,
   });
   const [roles, setRoles] = useState<RoleForm[]>([emptyRole()]);
+  const [cover, setCover] = useState<CoverValue>({ cover_mode: "default", cover_image_url: null });
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [roleErrors, setRoleErrors] = useState<any[]>([]);
 
@@ -97,6 +99,7 @@ export default function PostGigModal({ isOpen, onClose, onSuccess, user, showToa
     setRoles(template?.roles?.length ? template.roles.map((r) => ({ ...emptyRole(), ...r })) : [emptyRole()]);
     setErrors({});
     setRoleErrors([]);
+    setCover({ cover_mode: "default", cover_image_url: null });
     setIntern({
       title: "", role_type: "", isCustomRole: false, custom_role: "",
       work_mode: "onsite", commitment: "part_time", duration_months: "", openings: 1,
@@ -247,6 +250,29 @@ export default function PostGigModal({ isOpen, onClose, onSuccess, user, showToa
     return err?.message || "Failed to post. Try again.";
   };
 
+  /**
+   * Inserts gigs, and if the cover columns aren't in the database yet,
+   * retries without them.
+   *
+   * Deploys and migrations don't land at the same instant, and a listing
+   * failing to post is a far worse outcome than one going up with the
+   * default cover. Once migration 011 is applied this fallback never fires.
+   */
+  const insertGigs = async (rows: any[]) => {
+    const first = await supabase.from("gigs").insert(rows);
+    if (!first.error) return { error: null, coverSkipped: false };
+
+    const msg = `${first.error.message} ${first.error.code ?? ""}`;
+    const missingCoverColumn =
+      /cover_mode|cover_image_url/.test(msg) &&
+      /does not exist|schema cache|column/i.test(msg);
+    if (!missingCoverColumn) return { error: first.error, coverSkipped: false };
+
+    const stripped = rows.map(({ cover_mode, cover_image_url, ...rest }) => rest);
+    const retry = await supabase.from("gigs").insert(stripped);
+    return { error: retry.error, coverSkipped: !retry.error };
+  };
+
   // ── Submit ────────────────────────────────────────────────────────
   const handleSubmit = async () => {
     setLoading(true);
@@ -282,18 +308,20 @@ export default function PostGigModal({ isOpen, onClose, onSuccess, user, showToa
           lat: location.lat,
           lng: location.lng,
           is_urgent: isUrgent,
+          cover_mode: cover.cover_mode,
+          cover_image_url: cover.cover_mode === "custom" ? cover.cover_image_url : null,
           status: "open",
         }));
-        const { error } = await supabase.from("gigs").insert(gigInserts);
+        const { error, coverSkipped } = await insertGigs(gigInserts);
         if (error) throw error;
-        showToast("Event posted successfully!", "success");
+        showToast(coverSkipped ? "Event posted! (Cover images aren't enabled yet.)" : "Event posted successfully!", "success");
       } else {
         if (!validateInternStep1() || !validateInternStep2()) {
           showToast("Please fix the validation errors before submitting", "error");
           setLoading(false);
           return;
         }
-        const { error } = await supabase.from("gigs").insert({
+        const { error, coverSkipped } = await insertGigs([{
           organizer_id: user.id,
           gig_type: "internship",
           title: intern.title.trim(),
@@ -318,10 +346,12 @@ export default function PostGigModal({ isOpen, onClose, onSuccess, user, showToa
           jd_url: intern.jd_url.trim() || null,
           preferences: intern.preferences.trim() || null,
           application_deadline: intern.deadline ? new Date(intern.deadline).toISOString() : null,
+          cover_mode: cover.cover_mode,
+          cover_image_url: cover.cover_mode === "custom" ? cover.cover_image_url : null,
           status: "open",
-        });
+        }]);
         if (error) throw error;
-        showToast("Listing posted! Applications will appear on your dashboard.", "success");
+        showToast(coverSkipped ? "Listing posted! (Cover images aren't enabled yet.)" : "Listing posted! Applications will appear on your dashboard.", "success");
       }
       onSuccess();
       onClose();
@@ -447,6 +477,19 @@ export default function PostGigModal({ isOpen, onClose, onSuccess, user, showToa
                 <label className={labelCls}>Event Location</label>
                 <LocationPicker value={location} onChange={setLocation} />
                 <Err msg={errors.location} />
+              </div>
+
+              <div className="flex flex-col space-y-1.5">
+                <label className={labelCls}>Cover Image</label>
+                <p className="text-[11px] font-medium text-white/40 -mt-0.5 mb-1">
+                  Applicants see this on the listing. A default is picked for you — upload your own or turn it off.
+                </p>
+                <CoverImagePicker
+                  value={cover}
+                  onChange={setCover}
+                  userId={user?.id}
+                  roleHint={roles[0]?.isCustom ? roles[0]?.custom_role : roles[0]?.role_type}
+                />
               </div>
 
               <div className="flex items-center justify-between bg-[#1C1C1C] md:bg-[#111111] p-4 rounded-2xl border border-white/5">
@@ -724,6 +767,19 @@ export default function PostGigModal({ isOpen, onClose, onSuccess, user, showToa
                   onChange={(e) => setI("openings", e.target.value === "" ? "" : Number(e.target.value))}
                   className={inputCls(errors.openings)} />
                 <Err msg={errors.openings} />
+              </div>
+
+              <div className="flex flex-col space-y-1.5">
+                <label className={labelCls}>Cover Image</label>
+                <p className="text-[11px] font-medium text-white/40 -mt-0.5 mb-1">
+                  Shown to candidates on the listing. Upload your own, or turn it off for a clean text-only look.
+                </p>
+                <CoverImagePicker
+                  value={cover}
+                  onChange={setCover}
+                  userId={user?.id}
+                  roleHint={intern.isCustomRole ? intern.custom_role : intern.role_type}
+                />
               </div>
             </div>
           )}
