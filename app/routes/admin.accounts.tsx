@@ -44,9 +44,28 @@ export default function AdminAccounts() {
     const fd = new FormData();
     fd.append("intent", intent);
     Object.entries(fields).forEach(([k, v]) => fd.append(k, v));
-    const res = await fetch("/api/admin/accounts", { method: "POST", body: fd });
-    const r = await res.json();
-    if (!res.ok || r.error) throw new Error(r.error || "Something went wrong");
+    let res: Response;
+    try {
+      res = await fetch("/api/admin/accounts", { method: "POST", body: fd });
+    } catch {
+      // fetch() only rejects when the response never arrived at all
+      throw new Error("Couldn't reach the server. Check your connection and try again.");
+    }
+
+    // Never assume the body is JSON — an auth redirect or a proxy error page
+    // would otherwise surface as an unreadable "Unexpected token" parse error.
+    const raw = await res.text();
+    let r: any = {};
+    try {
+      r = raw ? JSON.parse(raw) : {};
+    } catch {
+      throw new Error(
+        res.status === 404
+          ? "That admin endpoint wasn't found on this deployment."
+          : `Server returned ${res.status}. Please try again.`
+      );
+    }
+    if (!res.ok || r.error) throw new Error(r.error || `Something went wrong (${res.status})`);
     return r;
   };
 

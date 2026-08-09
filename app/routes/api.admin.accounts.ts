@@ -92,20 +92,30 @@ export const action = jsonRoute(async ({ request }: ActionFunctionArgs) => {
       return Response.json({ error: createErr?.message ?? "Could not create the account." }, { status: 500 });
     }
 
-    const { error: profileErr } = await ctx.admin.from("profiles").insert({
-      id: created.user.id,
-      full_name: name,
-      email,
-      phone: phone || null,
-      city: city || "Indore",
-      role: "organizer",
-      company_name: companyName || null,
-      is_managed: true,
-      managed_by: ctx.adminId,
-      internal_note: note || null,
-    });
+    // A database trigger on auth.users already inserts a bare profile row
+    // (role 'worker') the moment the auth user is created. Inserting here
+    // collided with it on the primary key, so every attempt failed with a
+    // 500 — and left the auth user behind, which made the retry report
+    // "already exists". Upsert takes ownership of that row instead.
+    const { error: profileErr } = await ctx.admin.from("profiles").upsert(
+      {
+        id: created.user.id,
+        full_name: name,
+        email,
+        phone: phone || null,
+        city: city || "Indore",
+        role: "organizer",
+        company_name: companyName || null,
+        is_managed: true,
+        managed_by: ctx.adminId,
+        internal_note: note || null,
+      },
+      { onConflict: "id" }
+    );
     if (profileErr) {
-      // Don't leave a half-created auth user behind
+      // Don't leave a half-created account behind — including the row the
+      // trigger made, or the next attempt hits "already exists".
+      await ctx.admin.from("profiles").delete().eq("id", created.user.id);
       await ctx.admin.auth.admin.deleteUser(created.user.id).catch(() => {});
       return Response.json({ error: profileErr.message }, { status: 500 });
     }
