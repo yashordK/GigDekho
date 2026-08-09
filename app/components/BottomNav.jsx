@@ -1,13 +1,11 @@
 import { NavLink } from 'react-router';
 import { Briefcase, User, Wallet, Home } from 'lucide-react';
 import { useAuth } from '~/context/AuthContext';
+import { useActiveView } from '~/hooks/useActiveView';
 
 export default function BottomNav() {
   const { profile } = useAuth();
-  const activeView = (typeof window !== 'undefined' ? localStorage.getItem('activeView') : null)
-    || profile?.role
-    || 'worker';
-  const isOrganizer = activeView === 'organizer';
+  const { isOrganizerView: isOrganizer } = useActiveView(profile?.role);
 
   const items = isOrganizer
     ? [

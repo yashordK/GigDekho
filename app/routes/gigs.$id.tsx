@@ -1,4 +1,4 @@
-import { useLoaderData, useParams, useNavigate, useLocation } from 'react-router';
+import { useLoaderData, useParams, useNavigate, useLocation, Link } from 'react-router';
 import { useState, useEffect } from 'react';
 import { supabase } from '~/lib/supabase.client';
 import { useAuth } from '~/context/AuthContext';
@@ -438,11 +438,19 @@ export default function GigDetailScreen() {
       )}
 
       <div className="bg-[#111111] z-40 py-4 px-4 lg:px-8 xl:px-12 w-full mx-auto flex items-center">
-         <span className="text-[11px] font-bold text-white/40 tracking-widest uppercase flex items-center">
-           Home <ChevronRight size={14} className="inline opacity-50 mx-1"/> 
-           Available Jobs <ChevronRight size={14} className="inline opacity-50 mx-1"/> 
-           <span className="text-white/80">{gig.role_type}</span>
-         </span>
+         {/* These were plain text — they looked like a trail out of the page
+             but nothing happened when you clicked them. */}
+         <nav aria-label="Breadcrumb" className="text-[11px] font-bold text-white/40 tracking-widest uppercase flex items-center flex-wrap">
+           <Link to="/" className="hover:text-white transition-colors">Home</Link>
+           <ChevronRight size={14} className="inline opacity-50 mx-1" />
+           <Link to="/worker/home" className="hover:text-white transition-colors">
+             {gig.gig_type === "internship" ? "Internships" : "Available Jobs"}
+           </Link>
+           <ChevronRight size={14} className="inline opacity-50 mx-1" />
+           <span className="text-white/80" aria-current="page">
+             {gig.custom_role ?? gig.role_type ?? gig.title}
+           </span>
+         </nav>
       </div>
 
       <div className="px-4 lg:px-8 xl:px-12 pb-8 w-full mx-auto">
