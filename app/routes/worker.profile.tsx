@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { supabase } from '~/lib/supabase.client';
 import { useAuth } from '~/context/AuthContext';
+import { useActiveView } from "~/hooks/useActiveView";
 import { MapPin, Star, Award, Lock, X, LogOut, Edit2, Camera, Check, GraduationCap } from 'lucide-react';
 import { useNavigate } from 'react-router';
 import BadgeRow, { levelRing } from '~/components/BadgeRow';
@@ -46,11 +47,9 @@ export default function ProfileScreen() {
   const navigate = useNavigate();
 
   // Render by ACTIVE VIEW (what the navs use), not the DB role — fixes the
-  // "switched to worker but still sees hirer profile" bug.
-  const activeView = (typeof window !== 'undefined' ? localStorage.getItem('activeView') : null)
-    || profile?.role
-    || 'worker';
-  const isOrganizerView = activeView === 'organizer';
+  // "switched to worker but still sees hirer profile" bug. Shared with the
+  // navs so this page can never disagree with the toggle in the header.
+  const { isOrganizerView } = useActiveView(profile?.role);
 
   const [loading, setLoading] = useState(true);
   const [stats, setStats] = useState({ completedGigs: 0, avgRating: 0, totalEarned: 0 });

@@ -39,14 +39,20 @@ export default function EditCoverModal({
   const save = async () => {
     setSaving(true);
     try {
-      const { error } = await supabase
+      // A refused update comes back with no error and no rows, so the row
+      // count is the only honest signal that anything actually changed.
+      const { data, error } = await supabase
         .from("gigs")
         .update({
           cover_mode: cover.cover_mode,
           cover_image_url: cover.cover_mode === "custom" ? cover.cover_image_url : null,
         })
-        .eq("id", gig.id);
+        .eq("id", gig.id)
+        .select("id");
       if (error) throw error;
+      if (!data || data.length === 0) {
+        throw new Error("You don't have permission to change this cover, or your session expired.");
+      }
       showToast("Cover image updated", "success");
       onSaved();
       onClose();

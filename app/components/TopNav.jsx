@@ -1,4 +1,5 @@
 import { NavLink, useNavigate } from 'react-router';
+import { useActiveView, setActiveView } from '~/hooks/useActiveView';
 import { useAuth } from '~/context/AuthContext';
 import { supabase } from '~/lib/supabase.client';
 import { formatRelativeDate } from '~/lib/utils';
@@ -25,10 +26,7 @@ export default function TopNav() {
   const dropdownRef = useRef(null);
   const notifRef = useRef(null);
 
-  const activeView = (typeof window !== 'undefined' ? localStorage.getItem('activeView') : null)
-    || profile?.role
-    || 'worker';
-  const isOrganizerView = activeView === 'organizer';
+  const { isOrganizerView } = useActiveView(profile?.role);
 
   useEffect(() => {
     function handleClickOutside(event) {
@@ -146,13 +144,9 @@ export default function TopNav() {
 
   const handleSwitchView = () => {
     setMenuOpen(false);
-    if (isOrganizerView) {
-      localStorage.setItem('activeView', 'worker');
-      navigate('/worker/home');
-    } else {
-      localStorage.setItem('activeView', 'organizer');
-      navigate('/organizer/home');
-    }
+    const next = isOrganizerView ? 'worker' : 'organizer';
+    setActiveView(next);
+    navigate(next === 'organizer' ? '/organizer/home' : '/worker/home');
   };
 
   const activeLinkClass  = 'border-b-2 border-[#F4511E] text-white';

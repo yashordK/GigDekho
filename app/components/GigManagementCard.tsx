@@ -1,9 +1,10 @@
 import { useState, useRef, useEffect } from "react";
 import { supabase } from "~/lib/supabase.client";
-import { Calendar, MapPin, MoreVertical, Phone, Star, CheckCircle2, XCircle, Info, Loader2, Megaphone, Image as ImageIcon } from "lucide-react";
+import { Calendar, MapPin, MoreVertical, Phone, Star, CheckCircle2, XCircle, Info, Loader2, Megaphone, Image as ImageIcon, Pencil } from "lucide-react";
 import { useAuth } from "~/context/AuthContext";
 import AnnounceModal from "./AnnounceModal";
 import EditCoverModal from "./EditCoverModal";
+import EditGigModal from "./EditGigModal";
 import ApplicantExportBar from "./ApplicantExportBar";
 
 interface WorkerApplication {
@@ -77,6 +78,7 @@ export default function GigManagementCard({
   const [attendedIds, setAttendedIds] = useState<Set<string>>(new Set());
   const [showAnnounce, setShowAnnounce] = useState(false);
   const [showCover, setShowCover] = useState(false);
+  const [showEdit, setShowEdit] = useState(false);
 
   const menuRef = useRef<HTMLDivElement>(null);
 
@@ -249,10 +251,10 @@ export default function GigManagementCard({
             <div className="absolute right-0 mt-1.5 w-44 bg-[#111111] border border-white/10 shadow-2xl rounded-xl py-1.5 z-40 animate-in fade-in slide-in-from-top-1">
               <button
                 type="button"
-                onClick={() => { setMenuOpen(false); setShowCover(true); }}
+                onClick={() => { setMenuOpen(false); setShowEdit(true); }}
                 className="w-full text-left px-4 py-2 text-xs font-bold text-white/70 hover:bg-white/5 flex items-center gap-1.5"
               >
-                <ImageIcon size={14} /> Cover image
+                <Pencil size={14} /> Edit details
               </button>
 
               <button
@@ -483,6 +485,14 @@ export default function GigManagementCard({
       </div>
 
       {/* Announcement composer */}
+      <EditGigModal
+        isOpen={showEdit}
+        onClose={() => setShowEdit(false)}
+        gig={gig}
+        onSaved={onActionSuccess}
+        showToast={showToast}
+      />
+
       <EditCoverModal
         isOpen={showCover}
         onClose={() => setShowCover(false)}

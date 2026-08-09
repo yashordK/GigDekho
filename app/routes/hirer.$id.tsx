@@ -1,4 +1,4 @@
-import { useLoaderData, useNavigate } from "react-router";
+import { useLoaderData, useNavigate, useLocation } from "react-router";
 import { createSupabaseServerClient } from "~/lib/supabase.server";
 import { Star, MapPin, ShieldCheck, ExternalLink, Calendar, Users, Award, IndianRupee, MessageSquare, ArrowLeft } from "lucide-react";
 import GigCard from "~/components/GigCard";
@@ -103,6 +103,7 @@ export const meta = ({ loaderData: data }: { loaderData: any }) => {
 export default function HirerProfileScreen() {
   const { profile, gigsCompleted, paymentRate, activeGigs, reviews, workersHired } = useLoaderData<typeof loader>();
   const navigate = useNavigate();
+  const location = useLocation();
 
   const name = profile.company_name ?? profile.full_name;
   const initials = name.charAt(0).toUpperCase();
@@ -121,8 +122,12 @@ export default function HirerProfileScreen() {
       <div className="max-w-6xl mx-auto px-6 lg:px-12 space-y-10">
         
         {/* Back navigation */}
+        {/* navigate(-1) does nothing when this page was opened directly —
+            a shared link, or the admin panel's "Profile" opening a new tab.
+            React Router marks that first entry with key "default". */}
         <button
-          onClick={() => navigate(-1)}
+          type="button"
+          onClick={() => (location.key === "default" ? navigate("/worker/home") : navigate(-1))}
           className="flex items-center gap-2 text-white/40 hover:text-white transition-all btn-tap cursor-pointer text-sm font-bold bg-transparent border-0"
         >
           <ArrowLeft size={16} /> Back

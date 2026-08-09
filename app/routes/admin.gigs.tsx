@@ -3,7 +3,9 @@ import { useLoaderData, useRevalidator, useSearchParams, Form } from "react-rout
 import type { LoaderFunctionArgs, ActionFunctionArgs } from "react-router";
 import { requireAdmin, logAdminAction } from "~/lib/admin.server";
 import { PageTitle, Card, Pill, EmptyState } from "~/components/AdminUI";
-import { Briefcase, Search, ExternalLink, XCircle, CheckCircle2, GraduationCap, Users } from "lucide-react";
+import { Briefcase, Search, ExternalLink, XCircle, CheckCircle2, GraduationCap, Users, Pencil } from "lucide-react";
+import EditGigModal from "~/components/EditGigModal";
+import Toast from "~/components/Toast";
 
 export async function loader({ request }: LoaderFunctionArgs) {
   const { admin } = await requireAdmin(request);
@@ -14,7 +16,7 @@ export async function loader({ request }: LoaderFunctionArgs) {
 
   let query = admin
     .from("gigs")
-    .select("id, title, gig_type, status, event_date, created_at, location_text, slots_total, slots_filled, pay_rate, duration_hrs, stipend_min, is_unpaid, organizer_id, profiles!gigs_organizer_id_fkey(full_name, company_name, is_managed)")
+    .select("id, title, description, gig_type, status, event_date, created_at, location_text, slots_total, slots_filled, pay_rate, duration_hrs, is_urgent, role_type, custom_role, work_mode, commitment, duration_months, stipend_min, stipend_max, is_unpaid, jd_url, preferences, application_deadline, organizer_id, profiles!gigs_organizer_id_fkey(full_name, company_name, is_managed)")
     .order("created_at", { ascending: false })
     .limit(80);
 
@@ -70,6 +72,8 @@ export default function AdminGigs() {
   const [params, setParams] = useSearchParams();
   const revalidator = useRevalidator();
   const [busy, setBusy] = useState(false);
+  const [editing, setEditing] = useState<any>(null);
+  const [toast, setToast] = useState<{ message: string; type: "success" | "error" | "info" } | null>(null);
 
   const setFilter = (key: string, value: string) => { params.set(key, value); setParams(params); };
 
@@ -120,6 +124,16 @@ export default function AdminGigs() {
         ))}
       </div>
 
+      {toast && <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />}
+
+      <EditGigModal
+        isOpen={Boolean(editing)}
+        onClose={() => setEditing(null)}
+        gig={editing}
+        onSaved={() => revalidator.revalidate()}
+        showToast={(message, type) => setToast({ message, type })}
+      />
+
       {gigs.length === 0 ? (
         <EmptyState icon={<Briefcase size={22} />} title="No listings match" hint="Try a different status or search term." />
       ) : (
@@ -149,6 +163,10 @@ export default function AdminGigs() {
                   </div>
 
                   <div className="flex flex-wrap gap-2 shrink-0">
+                    <button type="button" onClick={() => setEditing(g)}
+                      className="flex items-center gap-1.5 px-3.5 py-2 rounded-full border border-white/10 text-white/60 hover:text-white text-[11px] font-black uppercase tracking-wider transition-colors btn-tap">
+                      <Pencil size={12} /> Edit
+                    </button>
                     <a href={`/gigs/${g.id}`} target="_blank" rel="noopener noreferrer"
                       className="flex items-center gap-1.5 px-3.5 py-2 rounded-full border border-white/10 text-white/60 hover:text-white text-[11px] font-black uppercase tracking-wider transition-colors btn-tap">
                       <ExternalLink size={12} /> View
