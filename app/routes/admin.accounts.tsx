@@ -5,7 +5,7 @@ import { requireAdmin } from "~/lib/admin.server";
 import { PageTitle, Card, Pill, EmptyState } from "~/components/AdminUI";
 import PostGigModal from "~/components/PostGigModal";
 import Toast from "~/components/Toast";
-import { Building2, Plus, Mail, Send, CheckCircle2, X, Briefcase, ExternalLink } from "lucide-react";
+import { Building2, Plus, Mail, Send, CheckCircle2, X, Briefcase, ExternalLink, Trash2 } from "lucide-react";
 
 export async function loader({ request }: LoaderFunctionArgs) {
   const { admin } = await requireAdmin(request);
@@ -98,6 +98,21 @@ export default function AdminAccounts() {
     }
   };
 
+  const deleteAccount = async (account: any) => {
+    const label = account.company_name || account.full_name;
+    if (!confirm(`Delete ${label} (${account.email})?\n\nThis removes the account and their sign-in entirely. It can't be undone.`)) return;
+    setBusy(true);
+    try {
+      await submit("delete", { account_id: account.id });
+      showToast(`${label} deleted.`, "success");
+      revalidator.revalidate();
+    } catch (err: any) {
+      showToast(err.message, "error");
+    } finally {
+      setBusy(false);
+    }
+  };
+
   const inputCls = "w-full h-11 px-4 rounded-xl bg-[#111111] border border-white/10 text-white text-sm font-semibold placeholder:text-white/30 focus:outline-none focus:border-[#F4511E]";
   const labelCls = "block text-[11px] font-black text-white/60 uppercase tracking-wider mb-1.5";
 
@@ -176,6 +191,18 @@ export default function AdminAccounts() {
                 >
                   <ExternalLink size={12} /> Profile
                 </a>
+                {/* Only offered while it's still ours to delete — once they
+                    claim it, the account belongs to them. */}
+                {!a.claimed_at && (
+                  <button
+                    type="button"
+                    onClick={() => deleteAccount(a)}
+                    disabled={busy}
+                    className="flex items-center gap-1.5 text-[11px] font-black uppercase tracking-wider bg-[#111111] border border-red-500/25 text-red-400/80 hover:text-red-400 hover:border-red-500/50 px-3.5 py-2 rounded-full transition-colors btn-tap disabled:opacity-50"
+                  >
+                    <Trash2 size={12} /> Delete
+                  </button>
+                )}
               </div>
             </Card>
           ))}
