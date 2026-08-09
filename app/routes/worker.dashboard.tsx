@@ -7,6 +7,11 @@ import { formatRelativeDate } from '~/lib/utils';
 import SpotlightCategories from '~/components/SpotlightCategories';
 import { gigCoverUrl } from '~/lib/cover';
 
+export const meta = () => [
+  { title: "My gigs — GigDekho" },
+  { name: "robots", content: "noindex, nofollow" },
+];
+
 function reliabilityLabel(score: number) {
   if (score >= 90) return { label: 'Excellent', color: 'text-green-400', bg: 'bg-green-500/10 border-green-500/20' };
   if (score >= 70) return { label: 'Good',      color: 'text-blue-400',  bg: 'bg-blue-500/10 border-blue-500/20' };

@@ -11,6 +11,11 @@ import Toast from "~/components/Toast";
 import SpotlightCategories from "~/components/SpotlightCategories";
 import ProfileCompletionNudge from "~/components/ProfileCompletionNudge";
 
+export const meta = () => [
+  { title: "Hirer dashboard — GigDekho" },
+  { name: "robots", content: "noindex, nofollow" },
+];
+
 // Quick Start discovery — shows the hirer everything they can get done here.
 // Details stay hidden until they tap a chip; one more tap prefills the post form.
 interface DiscoverItem {

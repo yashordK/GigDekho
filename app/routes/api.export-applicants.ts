@@ -60,7 +60,14 @@ export async function loader({ request }: LoaderFunctionArgs) {
 
 // ── POST: email the hirer their live sheet link ────────────────────
 export const action = jsonRoute(async ({ request }: ActionFunctionArgs) => {
-  const fd = await request.formData();
+  // A malformed body is the caller's mistake, not a server fault — parsing it
+  // unguarded turned a bad request into a 500 in the error logs.
+  let fd: FormData;
+  try {
+    fd = await request.formData();
+  } catch {
+    return Response.json({ error: "Expected form data." }, { status: 400 });
+  }
   const gigId = (fd.get("gig_id") as string) ?? "";
   if (!gigId) return Response.json({ error: "Missing gig_id" }, { status: 400 });
 

@@ -5,8 +5,23 @@ import { useAuth } from '~/context/AuthContext';
 import AuthLeftPanel from '~/components/AuthLeftPanel';
 import SkillSelector from '~/components/SkillSelector';
 
+export const meta = () => [
+  { title: "Set up your profile — GigDekho" },
+  { name: "robots", content: "noindex, nofollow" },
+];
+
 export default function SetupProfileScreen() {
-  const [intent] = useState(() => localStorage.getItem('userIntent') || 'worker');
+  // Read on the client only. As a useState initialiser this ran during SSR,
+  // where `localStorage` doesn't exist — it threw and took the whole page
+  // down with a 500, in the middle of the signup flow. Defaulting to
+  // 'worker' also keeps the server and first client render identical, so
+  // there's no hydration mismatch.
+  const [intent, setIntent] = useState('worker');
+  useEffect(() => {
+    try {
+      setIntent(localStorage.getItem('userIntent') || 'worker');
+    } catch { /* private mode */ }
+  }, []);
   const [fullName, setFullName] = useState('');
   const [city] = useState('Indore');
   const [selectedSkills, setSelectedSkills] = useState<string[]>([]);

@@ -8,6 +8,10 @@ import ProfileCompletionNudge from '~/components/ProfileCompletionNudge';
 import { formatRelativeDate } from '~/lib/utils';
 import { Briefcase, RefreshCw, Zap, Users, SlidersHorizontal, ArrowDownAZ, Star, Wallet, Award, Gift, ChevronRight, Check } from 'lucide-react';
 
+export const meta = () => [
+  { title: "Browse gigs — GigDekho" },
+];
+
 const ROLE_FILTERS = ['All Roles', 'Waitstaff', 'Artist', 'Singer', 'Security', 'Promoter', 'Hostess', 'DJ', 'Dancer', 'Photographer'];
 
 const SORT_OPTIONS = [

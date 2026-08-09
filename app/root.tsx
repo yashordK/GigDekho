@@ -5,8 +5,10 @@ import {
   Scripts,
   ScrollRestoration,
   useRouteLoaderData,
+  isRouteErrorResponse,
 } from "react-router";
 import { AuthProvider } from "./context/AuthContext";
+import ErrorState from "./components/ErrorState";
 import AnalyticsTracker from "./components/AnalyticsTracker";
 import "./index.css";
 
@@ -90,4 +92,49 @@ export function Layout({ children }: { children: React.ReactNode }) {
 
 export default function Root() {
   return <Outlet />;
+}
+
+/**
+ * Catches anything thrown below it — a loader throwing a 404 Response (a gig
+ * id that no longer exists), or a genuine render/runtime crash. Without this
+ * the app fell back to React Router's built-in boundary: an unstyled white
+ * page with no title, on a site that is otherwise entirely dark.
+ *
+ * The message stays deliberately vague for real errors; the details go to the
+ * server log, not to the person who just hit the problem.
+ */
+export function ErrorBoundary({ error }: { error: unknown }) {
+  if (isRouteErrorResponse(error)) {
+    const notFound = error.status === 404;
+    return (
+      <ErrorState
+        variant={notFound ? "notFound" : "error"}
+        title={
+          notFound
+            ? "Page not found — GigDekho"
+            : `${error.status} ${error.statusText} — GigDekho`
+        }
+        heading={notFound ? "This page doesn't exist" : "Something went wrong"}
+        message={
+          notFound
+            ? "The link may be old, or the gig may have been filled and taken down."
+            : "That request couldn't be completed. Try again in a moment."
+        }
+        showPath={notFound}
+      />
+    );
+  }
+
+  if (import.meta.env.DEV) {
+    console.error(error);
+  }
+
+  return (
+    <ErrorState
+      variant="error"
+      title="Something went wrong — GigDekho"
+      heading="Something went wrong"
+      message="We hit an unexpected problem loading this page. Refreshing usually sorts it — if it keeps happening, let us know."
+    />
+  );
 }
