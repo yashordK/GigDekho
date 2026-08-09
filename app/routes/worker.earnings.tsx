@@ -7,6 +7,11 @@ import { formatRelativeDate } from '~/lib/utils';
 import WalletCard from '~/components/WalletCard';
 import SpotlightCategories from '~/components/SpotlightCategories';
 
+export const meta = () => [
+  { title: "Earnings — GigDekho" },
+  { name: "robots", content: "noindex, nofollow" },
+];
+
 const WEEKS_SHOWN = 8;
 
 export default function EarningsScreen() {

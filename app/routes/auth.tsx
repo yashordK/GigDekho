@@ -3,6 +3,11 @@ import { useAuth } from '~/context/AuthContext';
 import { useEffect, useState } from 'react';
 import AuthModal from '~/components/AuthModal';
 
+export const meta = () => [
+  { title: "Sign in — GigDekho" },
+  { name: "robots", content: "noindex, nofollow" },
+];
+
 export default function AuthScreen() {
   const navigate = useNavigate();
   const { user, profile, loading: authLoading } = useAuth();

@@ -10,6 +10,11 @@ import SkillSelector from '~/components/SkillSelector';
 import ThemeToggle from '~/components/ThemeToggle';
 import PortfolioPanel from '~/components/PortfolioPanel';
 
+export const meta = () => [
+  { title: "My profile — GigDekho" },
+  { name: "robots", content: "noindex, nofollow" },
+];
+
 // Badges tied to real milestones — computed from live stats, never faked
 function computeTrophies(completedGigs: number, hasFiveStar: boolean) {
   const earned: { id: string; title: string; icon: string; hint: string }[] = [];

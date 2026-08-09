@@ -9,6 +9,12 @@ import InternshipManagementCard from "~/components/InternshipManagementCard";
 import PostGigModal, { type GigTemplate } from "~/components/PostGigModal";
 import Toast from "~/components/Toast";
 import SpotlightCategories from "~/components/SpotlightCategories";
+import ProfileCompletionNudge from "~/components/ProfileCompletionNudge";
+
+export const meta = () => [
+  { title: "Hirer dashboard — GigDekho" },
+  { name: "robots", content: "noindex, nofollow" },
+];
 
 // Quick Start discovery — shows the hirer everything they can get done here.
 // Details stay hidden until they tap a chip; one more tap prefills the post form.
@@ -154,20 +160,30 @@ export default function OrganizerHomeScreen() {
       setProfile(profileData);
 
       // 2. My gigs (with payment state)
-      const { data: gigsData, error: gigsErr } = await supabase
-        .from("gigs")
-        .select(`
+      // cover_* arrive with migration 011; fall back so the dashboard
+      // still lists gigs if the deploy lands before the migration.
+      const gigFields = `
           id, title, role_type, custom_role, pay_rate, duration_hrs,
           event_date, location_text, is_urgent, slots_total, slots_filled,
-          status, created_at, gig_type, work_mode, commitment, duration_months,
-          stipend_min, stipend_max, is_unpaid, application_deadline,
+          status, created_at, organizer_id, gig_type, work_mode, commitment,
+          duration_months, stipend_min, stipend_max, is_unpaid,
+          application_deadline,
           gig_payments (
             id, advance_paid, advance_paid_at, final_paid, final_paid_at,
             payout_released, organizer_total, advance_amount, final_amount
           )
-        `)
-        .eq("organizer_id", user.id)
-        .order("event_date", { ascending: true });
+        `;
+      // `as any` on the select: the column list is built at runtime, so
+      // PostgREST's type inference has nothing to narrow against.
+      const selectGigs = (withCover: boolean) =>
+        (supabase.from("gigs") as any)
+          .select(withCover ? `cover_mode, cover_image_url, ${gigFields}` : gigFields)
+          .eq("organizer_id", user.id)
+          .order("event_date", { ascending: true }) as Promise<{ data: any[] | null; error: any }>;
+      let { data: gigsData, error: gigsErr } = await selectGigs(true);
+      if (gigsErr && /cover_mode|cover_image_url/.test(gigsErr.message ?? "")) {
+        ({ data: gigsData, error: gigsErr } = await selectGigs(false));
+      }
       if (gigsErr) throw gigsErr;
       setGigs(gigsData || []);
 
@@ -355,6 +371,10 @@ export default function OrganizerHomeScreen() {
         >
           Switch to Worker Mode
         </button>
+      </div>
+
+      <div className="px-6 xl:px-12 w-full mx-auto">
+        {user && <ProfileCompletionNudge isOrganizerView={true} />}
       </div>
 
       {/* ── Stats Bar ───────────────────────────────────────────────── */}

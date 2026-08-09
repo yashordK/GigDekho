@@ -1,19 +1,6 @@
 import { Clock, Calendar, Zap, MapPin, GraduationCap, Hourglass, Briefcase } from 'lucide-react';
 import { formatRelativeDate } from '~/lib/utils';
-
-const getImageUrl = (role) => {
-  const r = (role || '').toLowerCase();
-  let url = 'https://images.unsplash.com/photo-1511795409834-ef04bbd61622?w=400';
-  if (r.includes('wait') || r.includes('hostess')) url = 'https://images.unsplash.com/photo-1414235077428-338989a2e8c0?w=400';
-  else if (r.includes('sing') || r.includes('vocal')) url = 'https://images.unsplash.com/photo-1493225457124-a3eb161ffa5f?w=400';
-  else if (r.includes('dj') || r.includes('disc')) url = 'https://images.unsplash.com/photo-1571266028243-d220c6f3f07b?w=400';
-  else if (r.includes('art') || r.includes('sketch')) url = 'https://images.unsplash.com/photo-1513364776144-60967b0f800f?w=400';
-  else if (r.includes('secur') || r.includes('guard') || r.includes('bouncer')) url = 'https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=400';
-  else if (r.includes('danc')) url = 'https://images.unsplash.com/photo-1508700929628-666bc8bd84ea?w=400';
-  else if (r.includes('photo') || r.includes('camera')) url = 'https://images.unsplash.com/photo-1542038784456-1ea8e935640e?w=400';
-
-  return url + '&auto=format&fit=crop';
-};
+import { gigCoverUrl } from '~/lib/cover';
 
 const WORK_MODE = { onsite: 'On-site', hybrid: 'Hybrid', remote: 'Remote' };
 const COMMITMENT = { full_time: 'Full-time', part_time: 'Part-time' };
@@ -89,25 +76,30 @@ export default function GigCard({ gig, onClick }) {
   const totalEarning = pay_rate * duration_hrs;
   const remainingSpots = (slots_total || 0) - (slots_filled || 0);
   const dateFormatted = formatRelativeDate(event_date);
-  const imageUrl = getImageUrl(role_type);
+  const imageUrl = gigCoverUrl(gig, 400);
 
   return (
     <div
       onClick={onClick}
       className={`bg-[#1C1C1C] rounded-3xl shadow-sm hover:shadow-md border border-white/5 overflow-hidden cursor-pointer transition-all mb-4 btn-tap flex flex-col p-4 w-full`}
     >
-       {/* Large Embedded Image Area */}
-       <div className="relative h-48 w-full bg-slate-900 rounded-2xl overflow-hidden mb-4">
-         <img
-           src={imageUrl}
-           alt={role_type}
-           loading="lazy"
-           decoding="async"
-           className="w-full h-full object-cover opacity-80"
-         />
-         <div className="absolute inset-0 bg-gradient-to-t from-[#111111]/90 via-black/20 to-transparent"></div>
+       {/* Cover area — collapses to a compact badge strip when the hirer
+           chose to have no cover image */}
+       <div className={`relative w-full rounded-2xl overflow-hidden mb-4 ${imageUrl ? 'h-48 bg-slate-900' : 'h-auto'}`}>
+         {imageUrl && (
+           <>
+             <img
+               src={imageUrl}
+               alt=""
+               loading="lazy"
+               decoding="async"
+               className="w-full h-full object-cover opacity-80"
+             />
+             <div className="absolute inset-0 bg-gradient-to-t from-[#111111]/90 via-black/20 to-transparent"></div>
+           </>
+         )}
 
-         <div className="absolute top-4 left-4 flex gap-2">
+         <div className={imageUrl ? "absolute top-4 left-4 flex gap-2" : "flex gap-2 flex-wrap"}>
             {is_urgent && (
               <span className="bg-[#F4511E] text-white text-[10px] font-black uppercase tracking-widest px-3 py-1.5 rounded-full shadow-lg flex items-center">
                  <Zap size={10} className="mr-1" fill="currentColor"/> URGENT
@@ -121,7 +113,9 @@ export default function GigCard({ gig, onClick }) {
          </div>
 
          {remainingSpots > 0 && (
-           <div className="absolute top-4 right-4 bg-black/60 backdrop-blur-sm text-white text-[10px] font-bold tracking-wider px-2.5 py-1 rounded-md border border-white/10">
+           <div className={imageUrl
+             ? "absolute top-4 right-4 bg-black/60 backdrop-blur-sm text-white text-[10px] font-bold tracking-wider px-2.5 py-1 rounded-md border border-white/10"
+             : "inline-block bg-white/5 text-white/60 text-[10px] font-bold tracking-wider px-2.5 py-1 rounded-md border border-white/10"}>
              {remainingSpots} spot{remainingSpots !== 1 ? 's' : ''} left
            </div>
          )}

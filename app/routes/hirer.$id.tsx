@@ -84,7 +84,8 @@ export async function loader({ params, request }: { params: { id: string }; requ
   };
 }
 
-export const meta = ({ data }: { data: any }) => {
+// v8 renamed this arg from `data` to `loaderData` — see gigs.$id.tsx
+export const meta = ({ loaderData: data }: { loaderData: any }) => {
   if (!data?.profile) {
     return [{ title: "Profile Not Found — GigDekho" }];
   }

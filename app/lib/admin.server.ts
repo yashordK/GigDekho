@@ -21,10 +21,19 @@ export interface AdminContext {
  * Throws a Response (404, not 403) for non-admins so the panel's existence
  * isn't confirmed to people poking at URLs.
  */
+/**
+ * We deny non-admins with a 404 rather than a 403, so the admin surface
+ * doesn't confirm it exists. The body is JSON because these API routes are
+ * fetched and parsed by the admin UI — a plain-text "Not Found" would blow
+ * up in `res.json()`. Page routes ignore the body and render the branded
+ * 404 from the root ErrorBoundary, so this is safe for both.
+ */
+const notFound = () => Response.json({ error: "not_found" }, { status: 404 });
+
 export async function requireAdmin(request: Request): Promise<AdminContext> {
   const supabase = createSupabaseServerClient(request);
   const { data: { user } } = await supabase.auth.getUser();
-  if (!user) throw new Response("Not Found", { status: 404 });
+  if (!user) throw notFound();
 
   const admin = serviceClient();
   const { data: profile } = await admin
@@ -34,7 +43,7 @@ export async function requireAdmin(request: Request): Promise<AdminContext> {
     .single();
 
   if (!profile?.is_admin || profile.is_suspended) {
-    throw new Response("Not Found", { status: 404 });
+    throw notFound();
   }
 
   return { admin, adminId: profile.id, adminName: profile.full_name ?? "Admin" };

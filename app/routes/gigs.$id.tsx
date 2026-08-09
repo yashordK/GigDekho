@@ -7,55 +7,43 @@ import { formatRelativeDate } from '~/lib/utils';
 import { createSupabaseServerClient } from '~/lib/supabase.server';
 import { getMapsLoader } from "~/lib/maps";
 import GigThread from "~/components/GigThread";
+import { gigCoverUrl } from "~/lib/cover";
 import InternshipApplyModal from "~/components/InternshipApplyModal";
 import ReportModal from "~/components/ReportModal";
+
+const GIG_FIELDS = `
+  id, title, description, role_type, pay_rate, duration_hrs, event_date,
+  location_text, lat, lng, is_urgent, slots_total, slots_filled, status,
+  created_at, organizer_id, gig_type, work_mode, commitment, duration_months,
+  stipend_min, stipend_max, is_unpaid, jd_url, preferences,
+  application_deadline, custom_role,
+  profiles!gigs_organizer_id_fkey ( full_name, company_name, avg_rating, is_verified )
+`;
+const COVER_FIELDS = "cover_mode, cover_image_url,";
 
 export async function loader({ params, request }) {
   const supabaseServer = createSupabaseServerClient(request);
 
-  const { data: gig, error } = await supabaseServer
-    .from("gigs")
-    .select(`
-      id,
-      title,
-      description,
-      role_type,
-      pay_rate,
-      duration_hrs,
-      event_date,
-      location_text,
-      lat,
-      lng,
-      is_urgent,
-      slots_total,
-      slots_filled,
-      status,
-      created_at,
-      organizer_id,
-      gig_type,
-      work_mode,
-      commitment,
-      duration_months,
-      stipend_min,
-      stipend_max,
-      is_unpaid,
-      jd_url,
-      preferences,
-      application_deadline,
-      custom_role,
-      profiles!gigs_organizer_id_fkey (
-        full_name,
-        company_name,
-        avg_rating,
-        is_verified
-      )
-    `)
-    .eq("id", params.id)
-    .single();
+  const fetchGig = (withCover: boolean) =>
+    supabaseServer
+      .from("gigs")
+      .select(withCover ? COVER_FIELDS + GIG_FIELDS : GIG_FIELDS)
+      .eq("id", params.id)
+      .single();
 
-  if (error || !gig) {
+  let { data: gigRow, error } = await fetchGig(true);
+
+  // The cover columns arrive with migration 011. Until it's applied, asking
+  // for them fails the whole query — and a listing 404ing is far worse than
+  // one rendering with its default cover. Retry without them.
+  if (error && /cover_mode|cover_image_url/.test(error.message ?? "")) {
+    ({ data: gigRow, error } = await fetchGig(false));
+  }
+
+  if (error || !gigRow) {
     throw new Response("Gig not found", { status: 404 });
   }
+  const gig = gigRow as any;
 
   // Count of completed gigs by this organizer
   const { count: gigsHosted } = await supabaseServer
@@ -95,7 +83,10 @@ export function stipendText(gig: any) {
 const WORK_MODE_LABEL: Record<string, string> = { onsite: "On-site", hybrid: "Hybrid", remote: "Remote" };
 const COMMITMENT_LABEL: Record<string, string> = { full_time: "Full-time", part_time: "Part-time" };
 
-export const meta = ({ data }) => {
+// React Router v8 passes `loaderData`; the v7 name was `data`. Reading the
+// old name silently yields undefined, which sent every gig to the
+// "not found" title even though the page rendered fine.
+export const meta = ({ loaderData: data }: { loaderData: any }) => {
   if (!data?.gig) {
     return [{ title: "Gig Not Found — GigDekho" }];
   }
@@ -134,19 +125,6 @@ export const meta = ({ data }) => {
       content: gig.status === "open" ? "index, follow" : "noindex, nofollow",
     },
   ];
-};
-
-const getImageUrl = (role) => {
-  const r = (role || '').toLowerCase();
-  let url = 'https://images.unsplash.com/photo-1511795409834-ef04bbd61622?w=1200';
-  if (r.includes('wait') || r.includes('hostess')) url = 'https://images.unsplash.com/photo-1414235077428-338989a2e8c0?w=1200';
-  else if (r.includes('sing') || r.includes('vocal')) url = 'https://images.unsplash.com/photo-1493225457124-a3eb161ffa5f?w=1200';
-  else if (r.includes('dj') || r.includes('disc')) url = 'https://images.unsplash.com/photo-1571266028243-d220c6f3f07b?w=1200';
-  else if (r.includes('art') || r.includes('sketch')) url = 'https://images.unsplash.com/photo-1542038784456-1ea8e935640e?w=1200';
-  else if (r.includes('secur') || r.includes('guard') || r.includes('bouncer')) url = 'https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=1200';
-  else if (r.includes('danc')) url = 'https://images.unsplash.com/photo-1508700929628-666bc8bd84ea?w=1200';
-  else if (r.includes('photo') || r.includes('camera')) url = 'https://images.unsplash.com/photo-1542038784456-1ea8e935640e?w=1200';
-  return url + '&auto=format&fit=crop';
 };
 
 export default function GigDetailScreen() {
@@ -361,7 +339,7 @@ export default function GigDetailScreen() {
   }
 
   const payTotal = gig.pay_rate * gig.duration_hrs;
-  const imageUrl = getImageUrl(gig.role_type);
+  const imageUrl = gigCoverUrl(gig, 1200);
   const isInternship = gig.gig_type === 'internship';
   const deadlinePassed = gig.application_deadline && new Date(gig.application_deadline) < new Date();
 
@@ -469,11 +447,13 @@ export default function GigDetailScreen() {
 
       <div className="px-4 lg:px-8 xl:px-12 pb-8 w-full mx-auto">
         
-        {/* Full width hero image */}
-        <div className="w-full h-[240px] lg:h-[320px] rounded-3xl overflow-hidden mb-8 lg:mb-10 shadow-sm relative">
-           <img src={imageUrl} className="w-full h-full object-cover" alt={gig.role_type} />
-           <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-transparent"></div>
-        </div>
+        {/* Full width hero image — omitted entirely when the hirer opted out */}
+        {imageUrl && (
+          <div className="w-full h-[240px] lg:h-[320px] rounded-3xl overflow-hidden mb-8 lg:mb-10 shadow-sm relative">
+             <img src={imageUrl} className="w-full h-full object-cover" alt="" />
+             <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-transparent"></div>
+          </div>
+        )}
 
         <div className="lg:grid lg:grid-cols-[60%_40%] lg:gap-12 items-start">
            
