@@ -83,7 +83,10 @@ export function stipendText(gig: any) {
 const WORK_MODE_LABEL: Record<string, string> = { onsite: "On-site", hybrid: "Hybrid", remote: "Remote" };
 const COMMITMENT_LABEL: Record<string, string> = { full_time: "Full-time", part_time: "Part-time" };
 
-export const meta = ({ data }) => {
+// React Router v8 passes `loaderData`; the v7 name was `data`. Reading the
+// old name silently yields undefined, which sent every gig to the
+// "not found" title even though the page rendered fine.
+export const meta = ({ loaderData: data }: { loaderData: any }) => {
   if (!data?.gig) {
     return [{ title: "Gig Not Found — GigDekho" }];
   }
