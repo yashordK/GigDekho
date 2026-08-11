@@ -96,7 +96,8 @@ export default function EditProfileModal({
           </div>
           <div>
             <label htmlFor="ep-phone" className="block text-[11px] font-black text-white/60 uppercase tracking-wider mb-1.5">Phone</label>
-            <input id="ep-phone" type="tel" placeholder="+91 98xxxxxx00" value={form.phone} onChange={e => set('phone', e.target.value)} className={inputCls} />
+            <input id="ep-phone" type="tel"
+                autoComplete="tel" placeholder="+91 98xxxxxx00" value={form.phone} onChange={e => set('phone', e.target.value)} className={inputCls} />
             <p className="text-[10px] font-medium text-white/30 mt-1">Only shared with {isOrganizerView ? 'workers you confirm' : 'hirers who confirm you'}.</p>
           </div>
           {isOrganizerView && (

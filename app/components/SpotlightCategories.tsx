@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Flashlight } from 'lucide-react';
 
 // Category cards hidden in the hero — the cursor's torch reveals them,
@@ -19,18 +19,50 @@ const CARDS = [
   'Anchor/MC', 'Dancer', 'Magician', 'Comedian',
 ];
 
+/** Clear space kept between a card and the hero's real content. */
+const SAFE_PADDING = 24;
+
 /**
- * Drop inside a `relative overflow-hidden` hero. Renders an evenly-spaced grid
- * of small glowing category cards, masked by a torch-shaped spotlight that
- * follows the cursor (the cursor itself becomes a torch over empty hero space).
- * On touch devices the spotlight slowly drifts on its own.
+ * The taxonomy alone only fills a narrow band of a tall hero, so the torch
+ * finds nothing above or below it. Repeating it fills the space; the rotation
+ * offsets keep any two copies of a label about a screen apart, so a single
+ * 88px beam never shows the same word twice.
+ */
+const rotate = <T,>(arr: T[], by: number) => [...arr.slice(by), ...arr.slice(0, by)];
+const FIELD = [...CARDS, ...rotate(CARDS, 17), ...rotate(CARDS, 34)];
+
+/**
+ * Drop inside a `relative overflow-hidden` hero. Renders a grid of small
+ * glowing category cards, masked by a torch-shaped spotlight following the
+ * cursor.
+ *
+ * Two rules it enforces:
+ *
+ *  - Pointer devices only. On touch it used to drift around on its own via
+ *    requestAnimationFrame, which read as restless rather than playful and
+ *    burned battery for decoration. It simply doesn't render there now.
+ *  - Cards never sit under the headline or buttons. Anything marked
+ *    `data-torch-safe` is measured after layout and any card overlapping it
+ *    (plus padding) is hidden, so the reveal happens around the content
+ *    instead of through it.
  */
 export default function SpotlightCategories() {
   const layerRef = useRef<HTMLDivElement>(null);
   const torchRef = useRef<HTMLDivElement>(null);
-  const rafRef = useRef<number>(0);
+  const [enabled, setEnabled] = useState(false);
+
+  // Decide on the client only — matchMedia doesn't exist during SSR, and
+  // starting false means server and first client render always agree.
+  useEffect(() => {
+    const mq = window.matchMedia('(hover: hover) and (pointer: fine)');
+    const apply = () => setEnabled(mq.matches);
+    apply();
+    mq.addEventListener('change', apply);
+    return () => mq.removeEventListener('change', apply);
+  }, []);
 
   useEffect(() => {
+    if (!enabled) return;
     const layer = layerRef.current;
     const torch = torchRef.current;
     const host = layer?.parentElement;
@@ -39,68 +71,116 @@ export default function SpotlightCategories() {
     const setSpot = (x: number, y: number) => {
       layer.style.setProperty('--sx', `${x}px`);
       layer.style.setProperty('--sy', `${y}px`);
-      if (torch) {
-        torch.style.transform = `translate(${x}px, ${y}px)`;
+      if (torch) torch.style.transform = `translate(${x}px, ${y}px)`;
+    };
+
+    /**
+     * The rectangles cards must stay out of.
+     *
+     * Measuring the marked elements' own boxes reserved far too much: a
+     * centred headline is a full-width block whose text only occupies the
+     * middle, so it blanked the whole hero and left cards stranded in two
+     * thin gutters. Ranges give the actual line boxes of the text, and
+     * interactive elements contribute their real box, so the exclusion hugs
+     * the ink instead of the layout.
+     */
+    const safeRects = () => {
+      const out: DOMRect[] = [];
+      for (const el of Array.from(host.querySelectorAll('[data-torch-safe]'))) {
+        for (const b of Array.from(el.querySelectorAll('button, a, input, select, textarea'))) {
+          out.push(b.getBoundingClientRect());
+        }
+        const walker = document.createTreeWalker(el, NodeFilter.SHOW_TEXT);
+        let n: Node | null;
+        while ((n = walker.nextNode())) {
+          if (!n.nodeValue || !n.nodeValue.trim()) continue;
+          const range = document.createRange();
+          range.selectNodeContents(n);
+          for (const r of Array.from(range.getClientRects())) {
+            if (r.width > 2 && r.height > 2) out.push(r);
+          }
+        }
+      }
+      return out;
+    };
+
+    // Hide any card that would sit on top of the hero's content.
+    const clearSafeZones = () => {
+      const hostRect = host.getBoundingClientRect();
+      const zones = safeRects().map((r) => ({
+        left: r.left - hostRect.left - SAFE_PADDING,
+        right: r.right - hostRect.left + SAFE_PADDING,
+        top: r.top - hostRect.top - SAFE_PADDING,
+        bottom: r.bottom - hostRect.top + SAFE_PADDING,
+      }));
+      for (const el of Array.from(layer.querySelectorAll<HTMLElement>('[data-card]'))) {
+        el.style.visibility = 'visible';
+        const r = el.getBoundingClientRect();
+        const c = {
+          left: r.left - hostRect.left, right: r.right - hostRect.left,
+          top: r.top - hostRect.top, bottom: r.bottom - hostRect.top,
+        };
+        const hits = zones.some(
+          (z) => c.left < z.right && c.right > z.left && c.top < z.bottom && c.bottom > z.top
+        );
+        if (hits) el.style.visibility = 'hidden';
       }
     };
 
-    const hasHover = window.matchMedia('(hover: hover)').matches;
+    host.classList.add('torch-host');
+    clearSafeZones();
 
-    if (hasHover) {
-      host.classList.add('torch-host');
-      const onMove = (e: MouseEvent) => {
-        const rect = host.getBoundingClientRect();
-        setSpot(e.clientX - rect.left, e.clientY - rect.top);
-        // Over buttons/links the normal pointer returns — hide the torch there
-        const interactive = (e.target as Element | null)?.closest?.('button, a, input, [role="button"]');
-        if (torch) torch.style.opacity = interactive ? '0' : '1';
-      };
-      const onLeave = () => {
-        setSpot(-500, -500);
-        if (torch) torch.style.opacity = '0';
-      };
-      host.addEventListener('mousemove', onMove);
-      host.addEventListener('mouseleave', onLeave);
+    const ro = new ResizeObserver(clearSafeZones);
+    ro.observe(host);
+
+    const onMove = (e: MouseEvent) => {
+      const rect = host.getBoundingClientRect();
+      setSpot(e.clientX - rect.left, e.clientY - rect.top);
+      // Over buttons/links the normal pointer returns — hide the torch there
+      const interactive = (e.target as Element | null)?.closest?.('button, a, input, [role="button"]');
+      if (torch) torch.style.opacity = interactive ? '0' : '1';
+    };
+    const onLeave = () => {
       setSpot(-500, -500);
       if (torch) torch.style.opacity = '0';
-      return () => {
-        host.classList.remove('torch-host');
-        host.removeEventListener('mousemove', onMove);
-        host.removeEventListener('mouseleave', onLeave);
-      };
-    }
-
-    // Touch / no-hover: auto-drifting spotlight on a slow lissajous path (no torch icon)
-    if (torch) torch.style.display = 'none';
-    const start = performance.now();
-    const drift = (now: number) => {
-      const t = (now - start) / 1000;
-      const { width, height } = host.getBoundingClientRect();
-      const x = width * (0.5 + 0.42 * Math.sin(t * 0.35));
-      const y = height * (0.5 + 0.38 * Math.sin(t * 0.23 + 1.3));
-      setSpot(x, y);
-      rafRef.current = requestAnimationFrame(drift);
     };
-    rafRef.current = requestAnimationFrame(drift);
-    return () => cancelAnimationFrame(rafRef.current);
-  }, []);
 
-  // Slightly tighter beam than v1 (was 110px)
+    host.addEventListener('mousemove', onMove);
+    host.addEventListener('mouseleave', onLeave);
+    setSpot(-500, -500);
+    if (torch) torch.style.opacity = '0';
+
+    return () => {
+      host.classList.remove('torch-host');
+      host.removeEventListener('mousemove', onMove);
+      host.removeEventListener('mouseleave', onLeave);
+      ro.disconnect();
+    };
+  }, [enabled]);
+
+  if (!enabled) return null;
+
   const mask = 'radial-gradient(circle 88px at var(--sx, -500px) var(--sy, -500px), black 0%, black 55%, transparent 100%)';
 
   return (
     <>
-      {/* Masked card grid */}
+      {/* Masked card grid. Wider horizontal gaps push more cards onto the next
+          line and tighter vertical gaps keep those lines close, so it reads as
+          a field of cards rather than a few far-apart rows. */}
       <div
         ref={layerRef}
         aria-hidden="true"
         className="absolute inset-0 z-[5] pointer-events-none select-none p-4 lg:p-6 overflow-hidden"
         style={{ WebkitMaskImage: mask, maskImage: mask }}
       >
-        <div className="w-full h-full flex flex-wrap items-center justify-center content-between gap-2 lg:gap-2.5">
-          {CARDS.map((label) => (
+        <div
+          className="w-full h-full flex flex-wrap items-center justify-center content-center"
+          style={{ columnGap: '22px', rowGap: '10px' }}
+        >
+          {FIELD.map((label, i) => (
             <span
-              key={label}
+              key={`${label}-${i}`}
+              data-card
               className="px-2.5 py-1.5 rounded-lg whitespace-nowrap font-bold uppercase tracking-wider"
               style={{
                 fontSize: '9px',
@@ -124,7 +204,6 @@ export default function SpotlightCategories() {
         className="absolute top-0 left-0 z-[6] pointer-events-none transition-opacity duration-150"
         style={{ opacity: 0, willChange: 'transform' }}
       >
-        {/* soft light bloom at the tip */}
         <span
           className="absolute rounded-full"
           style={{
@@ -132,7 +211,6 @@ export default function SpotlightCategories() {
             background: 'radial-gradient(circle, rgba(255,214,170,0.9) 0%, rgba(244,81,30,0.35) 45%, transparent 70%)',
           }}
         />
-        {/* torch body, handle trailing down-right from the tip */}
         <Flashlight
           size={26}
           strokeWidth={2.2}

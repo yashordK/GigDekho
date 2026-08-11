@@ -436,9 +436,9 @@ export default function GigDetailScreen() {
          {/* These were plain text — they looked like a trail out of the page
              but nothing happened when you clicked them. */}
          <nav aria-label="Breadcrumb" className="text-[11px] font-bold text-white/40 tracking-widest uppercase flex items-center flex-wrap">
-           <Link to="/" className="hover:text-white transition-colors">Home</Link>
+           <Link prefetch="intent" to="/" className="hover:text-white transition-colors">Home</Link>
            <ChevronRight size={14} className="inline opacity-50 mx-1" />
-           <Link to="/worker/home" className="hover:text-white transition-colors">
+           <Link prefetch="intent" to="/worker/home" className="hover:text-white transition-colors">
              {gig.gig_type === "internship" ? "Internships" : "Available Jobs"}
            </Link>
            <ChevronRight size={14} className="inline opacity-50 mx-1" />

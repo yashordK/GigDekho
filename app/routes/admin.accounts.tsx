@@ -239,14 +239,14 @@ export default function AdminAccounts() {
               </div>
               <div>
                 <label htmlFor="ma-email" className={labelCls}>Their email *</label>
-                <input id="ma-email" type="email" placeholder="owner@business.com" value={form.email} required
+                <input id="ma-email" type="email" autoComplete="email" placeholder="owner@business.com" value={form.email} required
                   onChange={(e) => setForm({ ...form, email: e.target.value })} className={inputCls} />
                 <p className="text-[10px] font-medium text-white/25 mt-1">This is how they'll sign in and take over the account.</p>
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label htmlFor="ma-phone" className={labelCls}>Phone</label>
-                  <input id="ma-phone" type="tel" value={form.phone}
+                  <input id="ma-phone" type="tel" autoComplete="tel" value={form.phone}
                     onChange={(e) => setForm({ ...form, phone: e.target.value })} className={inputCls} />
                 </div>
                 <div>

@@ -171,17 +171,17 @@ export default function AdminOverview() {
           <span className="text-sm font-bold text-white">Needs your attention</span>
           <div className="flex flex-wrap gap-2 ml-auto">
             {d.queues.openReports > 0 && (
-              <Link to="/admin/reports" className="flex items-center gap-1.5 text-[11px] font-black bg-[#111111] border border-white/10 hover:border-[#F4511E]/50 px-3 py-2 rounded-full transition-colors btn-tap">
+              <Link prefetch="intent" to="/admin/reports" className="flex items-center gap-1.5 text-[11px] font-black bg-[#111111] border border-white/10 hover:border-[#F4511E]/50 px-3 py-2 rounded-full transition-colors btn-tap">
                 <Flag size={12} className="text-red-400" /> {d.queues.openReports} open report{d.queues.openReports !== 1 && "s"}
               </Link>
             )}
             {d.queues.pendingDocs > 0 && (
-              <Link to="/admin/verifications" className="flex items-center gap-1.5 text-[11px] font-black bg-[#111111] border border-white/10 hover:border-[#F4511E]/50 px-3 py-2 rounded-full transition-colors btn-tap">
+              <Link prefetch="intent" to="/admin/verifications" className="flex items-center gap-1.5 text-[11px] font-black bg-[#111111] border border-white/10 hover:border-[#F4511E]/50 px-3 py-2 rounded-full transition-colors btn-tap">
                 <FileCheck size={12} className="text-blue-400" /> {d.queues.pendingDocs} to verify
               </Link>
             )}
             {d.queues.pendingPayoutCount > 0 && (
-              <Link to="/admin/payouts" className="flex items-center gap-1.5 text-[11px] font-black bg-[#111111] border border-white/10 hover:border-[#F4511E]/50 px-3 py-2 rounded-full transition-colors btn-tap">
+              <Link prefetch="intent" to="/admin/payouts" className="flex items-center gap-1.5 text-[11px] font-black bg-[#111111] border border-white/10 hover:border-[#F4511E]/50 px-3 py-2 rounded-full transition-colors btn-tap">
                 <Banknote size={12} className="text-green-400" /> {d.queues.pendingPayoutCount} payout{d.queues.pendingPayoutCount !== 1 && "s"} ({inr(d.money.pendingPayoutValue)})
               </Link>
             )}
@@ -329,7 +329,7 @@ export default function AdminOverview() {
           ) : (
             <div className="space-y-2.5">
               {d.recentReports.map((r: any) => (
-                <Link key={r.id} to="/admin/reports" className="flex items-center justify-between gap-3 bg-[#111111] rounded-xl px-3.5 py-2.5 border border-white/5 hover:border-[#F4511E]/40 transition-colors">
+                <Link prefetch="intent" key={r.id} to="/admin/reports" className="flex items-center justify-between gap-3 bg-[#111111] rounded-xl px-3.5 py-2.5 border border-white/5 hover:border-[#F4511E]/40 transition-colors">
                   <div className="min-w-0">
                     <p className="text-xs font-bold text-white truncate">{r.subject || r.category}</p>
                     <p className="text-[10px] font-semibold text-white/35">

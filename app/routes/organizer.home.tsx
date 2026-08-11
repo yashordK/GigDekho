@@ -307,26 +307,26 @@ export default function OrganizerHomeScreen() {
         <SpotlightCategories />
         <div className="absolute top-0 right-[20%] w-[250px] h-[250px] floating-glass-rect rotate-12 z-0 hidden lg:block opacity-40"></div>
 
-        <div className="relative z-10 flex items-center gap-2 mb-3 bg-[#1C1C1C] px-3.5 py-1.5 rounded-full border border-white/10 shadow-sm">
+        <div data-torch-safe className="relative z-10 flex items-center gap-2 mb-3 bg-[#1C1C1C] px-3.5 py-1.5 rounded-full border border-white/10 shadow-sm">
           <span className="text-white font-bold text-sm">Welcome back, {displayName}</span>
           {profile?.is_verified && <ShieldCheck size={16} className="text-[#F4511E]" />}
         </div>
-        <h1 className="text-3xl lg:text-5xl font-black text-white mb-3 tracking-tight relative z-10 drop-shadow-md">
+        <h1 data-torch-safe className="text-3xl lg:text-5xl font-black text-white mb-3 tracking-tight relative z-10 drop-shadow-md">
           Need people? Post a gig.
         </h1>
-        <p className="text-white/60 font-medium text-sm lg:text-base max-w-md relative z-10 mb-7">
+        <p data-torch-safe className="text-white/60 font-medium text-sm lg:text-base max-w-md relative z-10 mb-7">
           Workers in Indore apply within minutes. First come, first confirmed.
         </p>
 
         <button
           onClick={() => openPostModal()}
-          className="relative z-10 btn-tap flex items-center gap-2 bg-[#F4511E] hover:bg-[#D84315] text-white px-10 py-4 rounded-full shadow-xl shadow-orange-500/25 font-black tracking-widest text-sm uppercase cursor-pointer hover:scale-105 transition-all mb-6"
+          data-torch-safe className="relative z-10 btn-tap flex items-center gap-2 bg-[#F4511E] hover:bg-[#D84315] text-white px-10 py-4 rounded-full shadow-xl shadow-orange-500/25 font-black tracking-widest text-sm uppercase cursor-pointer hover:scale-105 transition-all mb-6"
         >
           <Plus size={20} /> Post a Gig
         </button>
 
         {/* Quick Start discovery — tap a chip to see what it covers, tap again to post */}
-        <div className="relative z-10 w-full max-w-2xl">
+        <div data-torch-safe className="relative z-10 w-full max-w-2xl">
           <p className="text-[10px] font-black text-white/40 uppercase tracking-widest mb-2">Quick start · everything you can get done here</p>
           <div className="flex flex-wrap items-center justify-center gap-2">
             {DISCOVER_ITEMS.map((t) => (

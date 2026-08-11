@@ -25,7 +25,7 @@ export default function BottomNav() {
         {items.map((item) => {
           const Icon = item.icon;
           return (
-            <NavLink
+            <NavLink prefetch="intent"
               key={item.id}
               to={item.path}
               end={item.path === '/worker/home' || item.path === '/organizer/home'}
