@@ -274,11 +274,6 @@ export default function GigDetailScreen() {
           await fetchData();
           return;
         }
-        if (result.error === "id_verification_required") {
-          showToast("Verify your ID first — it takes 2 minutes on your profile.", true);
-          setTimeout(() => navigate('/worker/profile'), 1800);
-          return;
-        }
         if (result.error === "account_suspended") {
           showToast("Your account is suspended. Contact support for help.", true);
           return;

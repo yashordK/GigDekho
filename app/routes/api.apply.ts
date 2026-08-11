@@ -15,17 +15,15 @@ export const action = jsonRoute(async ({ request }: ActionFunctionArgs) => {
 
   const admin = serviceClient();
 
-  // ID verification is required before a worker's first (and every) application
+  // Verification is NOT required to apply. It stays a trust signal hirers can
+  // see and weigh — gating the application itself just meant nobody applied.
   const { data: workerProfile } = await admin
     .from("profiles")
-    .select("id_verified, is_suspended")
+    .select("is_suspended")
     .eq("id", user.id)
     .single();
   if (workerProfile?.is_suspended) {
     return Response.json({ error: "account_suspended" }, { status: 403 });
-  }
-  if (!workerProfile?.id_verified) {
-    return Response.json({ error: "id_verification_required" }, { status: 403 });
   }
 
   // Validate the gig is still joinable ('open' or 'filled' — filled gigs go to waitlist)
