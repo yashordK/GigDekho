@@ -7,6 +7,7 @@ import {
   useRouteLoaderData,
   isRouteErrorResponse,
 } from "react-router";
+import { Analytics } from "@vercel/analytics/react";
 import { AuthProvider } from "./context/AuthContext";
 import ErrorState from "./components/ErrorState";
 import AnalyticsTracker from "./components/AnalyticsTracker";
@@ -85,6 +86,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
         </AuthProvider>
         <ScrollRestoration />
         <Scripts />
+        <Analytics />
       </body>
     </html>
   );
