@@ -12,8 +12,6 @@ export interface CompletionStep {
   benefit: string;
   /** Where tapping it should take them */
   href: string;
-  /** Blocks them from doing the core action until finished */
-  blocking?: boolean;
 }
 
 export function workerSteps(profile: any, extras: { skillCount?: number } = {}): CompletionStep[] {
@@ -22,10 +20,10 @@ export function workerSteps(profile: any, extras: { skillCount?: number } = {}):
       id: "id_verified",
       label: "Verify your ID",
       hint: "Upload your Aadhaar — reviewed within a few days",
-      benefit: "Required before you can apply to any gig",
+      // Not a gate on applying — hirers see the badge and pick accordingly.
+      benefit: "Hirers pick verified workers first, especially for paid shifts",
       href: "/worker/profile",
       done: Boolean(profile?.id_verified),
-      blocking: true,
     },
     {
       id: "photo",

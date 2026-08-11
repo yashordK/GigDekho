@@ -11,7 +11,7 @@ interface DocRow {
 }
 
 const DOC_META: Record<string, { label: string; icon: React.ReactNode; hint: string }> = {
-  aadhaar:      { label: 'Aadhaar (ID Verification)', icon: <ShieldCheck size={16} />, hint: 'Required before you can apply to gigs.' },
+  aadhaar:      { label: 'Aadhaar (ID Verification)', icon: <ShieldCheck size={16} />, hint: 'Optional — but hirers pick verified workers first.' },
   student_id:   { label: 'College ID (Student Verification)', icon: <GraduationCap size={16} />, hint: 'Unlocks student-only Perks.' },
   gst:          { label: 'GST Certificate (Verified Business)', icon: <Building2 size={16} />, hint: 'Upgrades you to a Verified Business.' },
   shop_license: { label: 'Shop Establishment License', icon: <Building2 size={16} />, hint: 'Alternative to GST for Verified Business.' },

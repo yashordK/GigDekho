@@ -65,8 +65,6 @@ export default function ProfileCompletionNudge({
     navigate(completion.nextStep?.href ?? "/worker/profile");
   };
 
-  const blocking = completion.steps.find((s) => s.blocking && !s.done);
-
   return (
     <>
       {/* One-time modal */}
@@ -88,16 +86,12 @@ export default function ProfileCompletionNudge({
             </div>
 
             <h2 className="text-xl font-black text-white tracking-tight mb-2">
-              {blocking
-                ? "One step before you can apply"
-                : `You're ${completion.percent}% set up`}
+              You're {completion.percent}% set up
             </h2>
             <p className="text-sm font-medium text-white/50 leading-relaxed mb-5">
-              {blocking
-                ? "Verifying your ID is what lets hirers trust who's turning up — it's required before your first application."
-                : isOrganizerView
-                  ? "A complete profile gets noticeably more applicants. It takes about two minutes."
-                  : "A complete profile gets you picked more often. It takes about two minutes."}
+              {isOrganizerView
+                ? "A complete profile gets noticeably more applicants. It takes about two minutes."
+                : "A complete profile gets you picked more often. It takes about two minutes."}
             </p>
 
             <div className="space-y-2 mb-6">
@@ -116,11 +110,6 @@ export default function ProfileCompletionNudge({
                   <div className="min-w-0">
                     <p className={`text-xs font-bold ${s.done ? "text-white/50 line-through" : "text-white"}`}>
                       {s.label}
-                      {s.blocking && !s.done && (
-                        <span className="ml-2 text-[9px] font-black uppercase tracking-wider text-[#F4511E] bg-[#F4511E]/10 border border-[#F4511E]/25 px-1.5 py-0.5 rounded-full">
-                          Required
-                        </span>
-                      )}
                     </p>
                     {!s.done && (
                       <p className="text-[11px] font-medium text-white/40 leading-relaxed mt-0.5">{s.benefit}</p>
@@ -135,7 +124,7 @@ export default function ProfileCompletionNudge({
               onClick={goFinish}
               className="w-full py-3.5 bg-[#F4511E] hover:bg-[#D84315] text-white rounded-xl font-black text-sm btn-tap transition-colors flex items-center justify-center gap-2"
             >
-              {blocking ? "Verify my ID" : "Finish my profile"} <ArrowRight size={15} />
+              Finish my profile <ArrowRight size={15} />
             </button>
             <button
               type="button"
@@ -161,7 +150,7 @@ export default function ProfileCompletionNudge({
           <div className="min-w-0 flex-1">
             <div className="flex items-center gap-2 mb-1.5">
               <p className="text-sm font-black text-white">
-                {blocking ? "Verify your ID to start applying" : "Finish your profile"}
+                Finish your profile
               </p>
               <span className="text-[10px] font-black text-white/40">
                 {completion.done}/{completion.total}
