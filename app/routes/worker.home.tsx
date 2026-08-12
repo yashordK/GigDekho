@@ -139,7 +139,9 @@ export default function HomeScreen() {
 
       const open = gigsData || [];
       const totalSum = open.reduce((acc, gig) => acc + (gig.pay_rate * gig.duration_hrs), 0);
-      const topPay = open.reduce((max, gig) => Math.max(max, gig.pay_rate), 0);
+      // Highest total a single gig pays, not the hourly rate — an hourly
+      // figure undersells the same work.
+      const topPay = open.reduce((max, gig) => Math.max(max, (gig.pay_rate || 0) * (gig.duration_hrs || 0)), 0);
 
       setStats({
         live: open.length,
@@ -248,8 +250,8 @@ export default function HomeScreen() {
                 <span className="text-2xl font-black text-white tracking-tight">{stats.live}</span>
              </div>
              <div className="glass-panel p-4 rounded-2xl flex flex-col items-center justify-center text-center">
-                <span className="text-white/60 text-[10px] uppercase font-black tracking-widest mb-1">Top Pay</span>
-                <span className="text-2xl font-black text-[#F4511E] tracking-tight">₹{stats.topPay >= 1000 ? (stats.topPay/1000).toFixed(1)+'k' : stats.topPay}<span className="text-xs font-bold text-white/40">/hr</span></span>
+                <span className="text-white/60 text-[10px] uppercase font-black tracking-widest mb-1">Top Payout</span>
+                <span className="text-2xl font-black text-[#F4511E] tracking-tight">₹{stats.topPay >= 1000 ? (stats.topPay/1000).toFixed(1)+'k' : stats.topPay}</span>
              </div>
              <div className="glass-panel p-4 rounded-2xl flex flex-col items-center justify-center text-center">
                 <span className="text-white/60 text-[10px] uppercase font-black tracking-widest mb-1">Hired Today</span>

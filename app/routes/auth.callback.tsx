@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router";
 import { supabase } from "~/lib/supabase.client";
+import { consumeAuthFromUrl } from "~/lib/auth-url";
 
 /**
  * OAuth / magic-link landing page.
@@ -53,15 +54,21 @@ export default function AuthCallback() {
       }
     };
 
-    // The provider may report a failure straight back in the URL
-    const url = new URL(window.location.href);
-    const providerError =
-      url.searchParams.get("error_description") || url.searchParams.get("error");
-    if (providerError) {
-      setErrorText(decodeURIComponent(providerError));
+    const failWith = (message: string) => {
+      if (settled) return;
+      settled = true;
+      setErrorText(message);
       setTimeout(() => navigate("/auth", { replace: true }), 3500);
-      return;
-    }
+    };
+
+    // Confirm-signup and magic links come back with the tokens in the hash
+    // (implicit flow); the browser client only watches for a PKCE `?code=`,
+    // so those links would otherwise sit here until the timeout. OAuth still
+    // resolves through the listener below.
+    consumeAuthFromUrl(supabase).then((res) => {
+      if (res.status === "error") failWith(res.message);
+      // 'session' is picked up by onAuthStateChange / getSession below
+    });
 
     // Catch the session whenever the automatic exchange completes…
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
