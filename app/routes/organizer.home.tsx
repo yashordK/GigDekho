@@ -296,7 +296,7 @@ export default function OrganizerHomeScreen() {
   const displayName = profile?.company_name || profile?.full_name || "Hirer";
 
   return (
-    <div className="pb-24 lg:pb-12 bg-[#111111] min-h-screen pt-4">
+    <div className="bg-[#111111] min-h-screen pt-4">
       {toast && (
         <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />
       )}

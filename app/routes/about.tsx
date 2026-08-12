@@ -124,7 +124,7 @@ const FAQ_CATEGORIES: { category: string; faqs: { q: string; a: string }[] }[] =
 
 export default function AboutScreen() {
   return (
-    <main id="main-content" className="bg-[#111111] min-h-screen text-white/90 pb-24 pt-24 lg:pt-28">
+    <div className="bg-[#111111] min-h-screen text-white/90 pt-24 lg:pt-28">
       <div className="max-w-3xl mx-auto px-6 space-y-14">
 
         {/* About */}
@@ -228,6 +228,6 @@ export default function AboutScreen() {
         </section>
 
       </div>
-    </main>
+    </div>
   );
 }

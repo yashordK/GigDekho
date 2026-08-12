@@ -204,7 +204,7 @@ export default function HomeScreen() {
   const perk = nextPerk(completedCount);
 
   return (
-    <main id="main-content" className="pb-24 lg:pb-12 bg-background min-h-screen">
+    <div className="bg-background min-h-screen">
 
       {/* Edge to Edge Faded Hero */}
       <div className="relative w-full pt-20 lg:pt-32 pb-24 lg:pb-36 hero-gradient-overlay flex flex-col items-center justify-center text-center px-4 overflow-hidden">
@@ -291,7 +291,7 @@ export default function HomeScreen() {
 
       <div className="px-4 xl:px-12 w-full mx-auto pt-10">
         {user && <ProfileCompletionNudge isOrganizerView={false} />}
-        <div className="lg:grid lg:grid-cols-[65%_35%] lg:gap-10 items-start pb-12">
+        <div className="lg:grid lg:grid-cols-[65%_35%] lg:gap-10 items-start pb-2 lg:pb-12">
 
         {/* Left Column (Gigs) */}
         <section aria-label="Available Gigs" className="w-full" id="available-jobs">
@@ -685,6 +685,6 @@ export default function HomeScreen() {
 
         </div>
       </div>
-    </main>
+    </div>
   );
 }
