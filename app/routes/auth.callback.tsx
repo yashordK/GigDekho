@@ -28,9 +28,22 @@ export default function AuthCallback() {
       try {
         const { data: profile } = await supabase
           .from("profiles")
-          .select("id, role, full_name")
+          .select("id, role, full_name, is_managed, claimed_at")
           .eq("id", session.user.id)
           .maybeSingle();
+
+        // First time the real owner signs into an account we set up for them,
+        // it stops being ours. Nothing wrote this before, so the admin panel
+        // showed every managed account as "Unclaimed" forever — and the
+        // delete button is gated on exactly this field, which meant a hirer's
+        // live account could still be deleted after they took it over.
+        if (profile?.is_managed && !profile.claimed_at) {
+          await supabase
+            .from("profiles")
+            .update({ claimed_at: new Date().toISOString() })
+            .eq("id", session.user.id)
+            .is("claimed_at", null);
+        }
 
         if (!profile || !profile.full_name) {
           navigate("/setup-profile", { replace: true });
