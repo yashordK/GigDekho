@@ -76,7 +76,9 @@ CREATE TABLE IF NOT EXISTS gig_attendance (
   gig_day_id uuid NOT NULL REFERENCES gig_days(id) ON DELETE CASCADE,
   worker_id uuid NOT NULL REFERENCES profiles(id) ON DELETE CASCADE,
 
-  -- worker side
+  -- Worker side. The selfie is taken at check-in, not at dispute time — so
+  -- the proof is captured at the venue rather than reconstructed hours later,
+  -- and a report simply points at the photo already on file.
   worker_marked_at timestamptz,
   worker_selfie_url text,
 
@@ -84,6 +86,11 @@ CREATE TABLE IF NOT EXISTS gig_attendance (
   confirmed_at timestamptz,
   confirmed_by uuid REFERENCES profiles(id) ON DELETE SET NULL,
   checked_out_at timestamptz,
+
+  -- Set when the hirer confirms: were they there on time, or late? Kept
+  -- separate from attendance itself so lateness informs reliability without
+  -- costing someone the day's pay.
+  punctuality text CHECK (punctuality IS NULL OR punctuality = ANY (ARRAY['on_time','late'])),
 
   status text NOT NULL DEFAULT 'pending'
     CHECK (status = ANY (ARRAY['pending','worker_marked','confirmed','disputed','absent','excused'])),
@@ -95,7 +102,12 @@ CREATE TABLE IF NOT EXISTS gig_attendance (
   resolved_at timestamptz,
 
   created_at timestamptz DEFAULT now(),
-  UNIQUE (application_id, gig_day_id)
+  UNIQUE (application_id, gig_day_id),
+
+  -- A check-in without a photo is just a tap. The proof has to exist at the
+  -- moment they claim to be at the venue.
+  CONSTRAINT attendance_checkin_needs_selfie
+    CHECK (worker_marked_at IS NULL OR worker_selfie_url IS NOT NULL)
 );
 CREATE INDEX IF NOT EXISTS gig_attendance_app_idx ON gig_attendance(application_id);
 CREATE INDEX IF NOT EXISTS gig_attendance_worker_idx ON gig_attendance(worker_id);
