@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useLoaderData, useRevalidator, useSearchParams, Form } from "react-router";
+import { useLoaderData, useRevalidator, useSearchParams, Form , Link } from "react-router";
 import type { LoaderFunctionArgs, ActionFunctionArgs } from "react-router";
 import { requireAdmin, logAdminAction } from "~/lib/admin.server";
 import { PageTitle, Card, Pill, EmptyState } from "~/components/AdminUI";
@@ -156,7 +156,7 @@ export default function AdminGigs() {
                       {new Date(g.event_date).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })}
                     </p>
                     <p className="text-[11px] font-semibold text-white/30 mt-0.5 flex items-center gap-3">
-                      <span className="flex items-center gap-1"><Users size={10} /> {applied[g.id] ?? 0} applied</span>
+                      <Link to={`/admin/gigs/${g.id}`} className="flex items-center gap-1 hover:text-[#F4511E] transition-colors underline decoration-white/20 underline-offset-4"><Users size={10} /> {applied[g.id] ?? 0} applied</Link>
                       {!isIntern && <span>{g.slots_filled}/{g.slots_total} filled · ₹{g.pay_rate}/hr</span>}
                       {isIntern && <span>{g.is_unpaid ? "Unpaid" : g.stipend_min ? `₹${g.stipend_min}/mo` : "—"}</span>}
                     </p>

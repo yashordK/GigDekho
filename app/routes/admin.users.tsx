@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useLoaderData, useRevalidator, Form, useSearchParams } from "react-router";
+import { useLoaderData, useRevalidator, Form, useSearchParams , Link } from "react-router";
 import type { LoaderFunctionArgs, ActionFunctionArgs } from "react-router";
 import { requireAdmin, logAdminAction } from "~/lib/admin.server";
 import { PageTitle, Card, Pill, EmptyState } from "~/components/AdminUI";
@@ -168,7 +168,12 @@ export default function AdminUsers() {
               <div className="flex flex-wrap items-start justify-between gap-3 mb-4">
                 <div className="min-w-0">
                   <div className="flex flex-wrap items-center gap-2 mb-1">
-                    <h3 className="font-black text-white">{u.full_name || "Unnamed"}</h3>
+                    <Link
+                      to={`/admin/users/${u.id}`}
+                      className="font-black text-white hover:text-[#F4511E] transition-colors underline decoration-white/20 underline-offset-4"
+                    >
+                      {u.full_name || "Unnamed"}
+                    </Link>
                     {u.is_admin && <Pill tone="orange">Admin</Pill>}
                     {u.is_managed && <Pill tone="purple">Managed</Pill>}
                     {u.is_suspended && <Pill tone="red">Suspended</Pill>}
