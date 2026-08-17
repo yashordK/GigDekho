@@ -58,12 +58,27 @@ export const action = jsonRoute(async ({ request }: ActionFunctionArgs) => {
   //    • decrementing gig.slots_filled
   //    • promoting the next pending (waitlisted) applicant
   //    • re-opening gig status if it was 'filled'
-  await admin.from("applications").update({
-    status: "cancelled",
-    cancelled_at: new Date().toISOString(),
-    cancellation_reason: reason,
-    cancellation_penalty: penalty,
-  }).eq("id", appId);
+  // The result was discarded, so a failed cancel still answered 200: the
+  // worker was told they'd cancelled while the row stayed 'accepted', the
+  // slot stayed consumed and the hirer kept counting on them.
+  const { data: cancelled, error: cancelErr } = await admin
+    .from("applications")
+    .update({
+      status: "cancelled",
+      cancelled_at: new Date().toISOString(),
+      cancellation_reason: reason,
+      cancellation_penalty: penalty,
+    })
+    .eq("id", appId)
+    .select("id");
+
+  if (cancelErr || !cancelled || cancelled.length === 0) {
+    console.error("[api.cancel] update failed", cancelErr);
+    return Response.json(
+      { error: cancelErr?.message ?? "Could not cancel this application. Please try again." },
+      { status: 500 }
+    );
+  }
 
   // 4. Apply reliability penalty (only for accepted cancellations)
   if (penalty > 0 && app.status === "accepted") {
