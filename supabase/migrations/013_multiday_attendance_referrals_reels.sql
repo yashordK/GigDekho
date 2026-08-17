@@ -50,7 +50,11 @@ CREATE POLICY "Organizer or admin writes gig days" ON gig_days
 INSERT INTO gig_days (gig_id, day_number, day_date, starts_at, ends_at, duration_hrs)
 SELECT g.id, 1, (g.event_date AT TIME ZONE 'Asia/Kolkata')::date,
        (g.event_date AT TIME ZONE 'Asia/Kolkata')::time,
-       ((g.event_date AT TIME ZONE 'Asia/Kolkata') + make_interval(hours => COALESCE(g.duration_hrs, 0)))::time,
+       -- minutes, not hours: make_interval's hours argument is an integer and
+       -- duration_hrs is fractional, so half-hour gigs would have been
+       -- rejected outright.
+       ((g.event_date AT TIME ZONE 'Asia/Kolkata')
+         + make_interval(mins => (COALESCE(g.duration_hrs, 0) * 60)::int))::time,
        GREATEST(COALESCE(g.duration_hrs, 0), 0.5)
 FROM gigs g
 WHERE g.gig_type = 'event'
