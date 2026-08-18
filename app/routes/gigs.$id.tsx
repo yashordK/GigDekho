@@ -436,9 +436,9 @@ export default function GigDetailScreen() {
          {/* These were plain text — they looked like a trail out of the page
              but nothing happened when you clicked them. */}
          <nav aria-label="Breadcrumb" className="text-[11px] font-bold text-white/40 tracking-widest uppercase flex items-center flex-wrap">
-           <Link to="/" className="hover:text-white transition-colors">Home</Link>
+           <Link prefetch="intent" to="/" className="hover:text-white transition-colors">Home</Link>
            <ChevronRight size={14} className="inline opacity-50 mx-1" />
-           <Link to="/worker/home" className="hover:text-white transition-colors">
+           <Link prefetch="intent" to="/worker/home" className="hover:text-white transition-colors">
              {gig.gig_type === "internship" ? "Internships" : "Available Jobs"}
            </Link>
            <ChevronRight size={14} className="inline opacity-50 mx-1" />
@@ -696,10 +696,14 @@ export default function GigDetailScreen() {
                      <p className="text-[10px] font-black text-white/40 uppercase tracking-widest mb-1">Total Project Payout</p>
                      <h2 className="text-[44px] font-black text-[#F4511E] tracking-tight mb-8 leading-none">₹{payTotal}</h2>
 
+                     {/* The hourly breakdown used to sit here. A per-hour figure
+                         reads small next to the total for the same work, so we
+                         lead with what they actually take home and show the
+                         time it takes, not the rate. */}
                      <div className="space-y-4 mb-6">
                        <div className="flex justify-between items-center pb-2">
-                         <span className="text-[13px] font-bold text-white/50">Hourly Rate ({gig.duration_hrs}hrs)</span>
-                         <span className="text-[15px] font-bold text-white">₹{gig.pay_rate}/hr</span>
+                         <span className="text-[13px] font-bold text-white/50">Duration</span>
+                         <span className="text-[15px] font-bold text-white">{gig.duration_hrs} hours</span>
                        </div>
                      </div>
 

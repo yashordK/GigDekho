@@ -74,7 +74,7 @@ export default function AdminLayout() {
             const Icon = item.icon;
             const count = item.badge ? counts[item.badge] : 0;
             return (
-              <NavLink
+              <NavLink prefetch="intent"
                 key={item.to}
                 to={item.to}
                 end={item.end}

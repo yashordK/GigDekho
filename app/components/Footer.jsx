@@ -20,10 +20,10 @@ export default function Footer() {
           <div>
             <h3 className="text-white font-bold mb-6">Quick Links</h3>
             <ul className="space-y-4 text-sm font-medium">
-              <li><Link to="/worker/home" className="hover:text-[#F4511E] transition-colors">Browse Gigs</Link></li>
-              <li><Link to="/auth?mode=worker" className="hover:text-[#F4511E] transition-colors">Join as Worker</Link></li>
-              <li><Link to="/auth?mode=organizer" className="hover:text-[#F4511E] transition-colors">Hire People</Link></li>
-              <li><Link to="/about" className="hover:text-[#F4511E] transition-colors">About Us</Link></li>
+              <li><Link prefetch="intent" to="/worker/home" className="hover:text-[#F4511E] transition-colors">Browse Gigs</Link></li>
+              <li><Link prefetch="intent" to="/auth?mode=worker" className="hover:text-[#F4511E] transition-colors">Join as Worker</Link></li>
+              <li><Link prefetch="intent" to="/auth?mode=organizer" className="hover:text-[#F4511E] transition-colors">Hire People</Link></li>
+              <li><Link prefetch="intent" to="/about" className="hover:text-[#F4511E] transition-colors">About Us</Link></li>
             </ul>
           </div>
 
@@ -31,10 +31,10 @@ export default function Footer() {
           <div>
             <h3 className="text-white font-bold mb-6">Support</h3>
             <ul className="space-y-4 text-sm font-medium">
-              <li><Link to="/about#faq" className="hover:text-[#F4511E] transition-colors">FAQ</Link></li>
-              <li><Link to="/about#trust" className="hover:text-[#F4511E] transition-colors">Trust & Safety</Link></li>
-              <li><Link to="/about#terms" className="hover:text-[#F4511E] transition-colors">Terms of Service</Link></li>
-              <li><Link to="/about#privacy" className="hover:text-[#F4511E] transition-colors">Privacy Policy</Link></li>
+              <li><Link prefetch="intent" to="/about#faq" className="hover:text-[#F4511E] transition-colors">FAQ</Link></li>
+              <li><Link prefetch="intent" to="/about#trust" className="hover:text-[#F4511E] transition-colors">Trust & Safety</Link></li>
+              <li><Link prefetch="intent" to="/about#terms" className="hover:text-[#F4511E] transition-colors">Terms of Service</Link></li>
+              <li><Link prefetch="intent" to="/about#privacy" className="hover:text-[#F4511E] transition-colors">Privacy Policy</Link></li>
             </ul>
           </div>
 

@@ -124,7 +124,7 @@ const FAQ_CATEGORIES: { category: string; faqs: { q: string; a: string }[] }[] =
 
 export default function AboutScreen() {
   return (
-    <main id="main-content" className="bg-[#111111] min-h-screen text-white/90 pb-24 pt-24 lg:pt-28">
+    <div className="bg-[#111111] min-h-screen text-white/90 pt-24 lg:pt-28">
       <div className="max-w-3xl mx-auto px-6 space-y-14">
 
         {/* About */}
@@ -144,10 +144,10 @@ export default function AboutScreen() {
             post a gig and get verified local workers in minutes.
           </p>
           <div className="flex flex-wrap gap-3 pt-2">
-            <Link to="/worker/home" className="bg-[#F4511E] hover:bg-[#D84315] text-white font-bold px-6 py-3 rounded-full text-sm transition-colors btn-tap">
+            <Link prefetch="intent" to="/worker/home" className="bg-[#F4511E] hover:bg-[#D84315] text-white font-bold px-6 py-3 rounded-full text-sm transition-colors btn-tap">
               Find Work
             </Link>
-            <Link to="/auth?mode=organizer" className="border border-white/20 hover:border-white text-white font-bold px-6 py-3 rounded-full text-sm transition-colors btn-tap">
+            <Link prefetch="intent" to="/auth?mode=organizer" className="border border-white/20 hover:border-white text-white font-bold px-6 py-3 rounded-full text-sm transition-colors btn-tap">
               Hire People
             </Link>
           </div>
@@ -228,6 +228,6 @@ export default function AboutScreen() {
         </section>
 
       </div>
-    </main>
+    </div>
   );
 }

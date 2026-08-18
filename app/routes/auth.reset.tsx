@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router';
 import { supabase } from '~/lib/supabase.client';
+import { consumeAuthFromUrl } from '~/lib/auth-url';
 import { KeyRound, Eye, EyeOff, CheckCircle2, AlertCircle } from 'lucide-react';
 
 type Stage = 'verifying' | 'form' | 'done' | 'invalid';
@@ -18,18 +19,37 @@ export default function ResetPasswordScreen() {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
 
+  const [invalidReason, setInvalidReason] = useState(
+    'Reset links only work once and expire quickly. Request a fresh one from the sign-in screen.'
+  );
+
   useEffect(() => {
-    // Same rule as /auth/callback: the browser client consumes the ?code= and
-    // the PKCE verifier by itself, so exchanging it again here would fail with
-    // "PKCE code verifier not found in storage". Just wait for the recovery
-    // session it establishes.
     let settled = false;
     const ready = () => {
       if (settled) return;
       settled = true;
+      // Drop the tokens from the address bar via the router. A raw
+      // history.replaceState gets overwritten when React Router re-syncs its
+      // own history state, which left a live access_token on screen.
+      navigate('/auth/reset', { replace: true });
       setStage('form');
     };
+    const fail = (message: string) => {
+      if (settled) return;
+      settled = true;
+      setInvalidReason(message);
+      setStage('invalid');
+    };
 
+    // Recovery mails land here with the tokens in the URL hash. The browser
+    // client only watches for a PKCE `?code=`, so without this the page waited
+    // for a session that was never coming and called a valid link expired.
+    consumeAuthFromUrl(supabase).then((res) => {
+      if (res.status === 'session') ready();
+      else if (res.status === 'error') fail(res.message);
+    });
+
+    // PKCE links (and an already-live session) still resolve this way.
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       if (session) ready();
     });
@@ -37,17 +57,16 @@ export default function ResetPasswordScreen() {
       if (session) ready();
     });
 
-    const timeout = setTimeout(() => {
-      if (settled) return;
-      settled = true;
-      setStage('invalid');
-    }, 12000);
+    const timeout = setTimeout(
+      () => fail('That link could not be verified. Reset links are single-use and expire quickly — request a fresh one.'),
+      12000
+    );
 
     return () => {
       subscription.unsubscribe();
       clearTimeout(timeout);
     };
-  }, []);
+  }, [navigate]);
 
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -96,7 +115,7 @@ export default function ResetPasswordScreen() {
               <AlertCircle size={28} />
             </div>
             <h2 className="text-lg font-black text-white mb-2">Link expired or invalid</h2>
-            <p className="text-white/50 text-xs font-semibold mb-6">Reset links only work once and expire quickly. Request a fresh one from the sign-in screen.</p>
+            <p className="text-white/50 text-xs font-semibold mb-6">{invalidReason}</p>
             <button
               type="button"
               onClick={() => navigate('/auth')}

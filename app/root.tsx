@@ -9,6 +9,7 @@ import {
 } from "react-router";
 import { AuthProvider } from "./context/AuthContext";
 import ErrorState from "./components/ErrorState";
+import RouteProgress from "./components/RouteProgress";
 import AnalyticsTracker from "./components/AnalyticsTracker";
 import "./index.css";
 
@@ -80,6 +81,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
           Skip to main content
         </a>
         <AuthProvider>
+          <RouteProgress />
           <AnalyticsTracker />
           {children}
         </AuthProvider>

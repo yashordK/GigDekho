@@ -79,7 +79,7 @@ export default function OrganizerPreviewScreen() {
         <section className="relative hero-gradient-overlay overflow-hidden text-center px-6 pt-16 pb-20">
           <SpotlightCategories />
           <div className="absolute top-10 right-[10%] w-[280px] h-[280px] floating-glass-rect rotate-12 hidden lg:block opacity-40" />
-          <div className="relative z-10 max-w-3xl mx-auto">
+          <div data-torch-safe className="relative z-10 max-w-3xl mx-auto">
             <div className="inline-block bg-[#1C1C1C] px-4 py-1.5 rounded-full border border-white/10 mb-5">
               <span className="text-white/80 font-bold text-xs">For events, businesses & celebrations in Indore</span>
             </div>

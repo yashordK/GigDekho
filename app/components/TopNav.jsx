@@ -168,25 +168,25 @@ export default function TopNav() {
         {user && (
           <div className="hidden lg:flex space-x-8 items-center h-full absolute left-1/2 -translate-x-1/2">
             {isOrganizerView ? (
-              <NavLink to="/organizer/home" end className={({ isActive }) =>
+              <NavLink prefetch="intent" to="/organizer/home" end className={({ isActive }) =>
                 `text-sm font-bold px-1 py-1 transition-all ${isActive ? activeLinkClass : defaultLinkClass}`
               }>Home</NavLink>
             ) : (
               <>
-                <NavLink to="/worker/home" end className={({ isActive }) =>
+                <NavLink prefetch="intent" to="/worker/home" end className={({ isActive }) =>
                   `text-sm font-bold px-1 py-1 transition-all ${isActive ? activeLinkClass : defaultLinkClass}`
                 }>Home</NavLink>
 
-                <NavLink to="/worker/dashboard" className={({ isActive }) =>
+                <NavLink prefetch="intent" to="/worker/dashboard" className={({ isActive }) =>
                   `text-sm font-bold px-1 py-1 transition-all ${isActive ? activeLinkClass : defaultLinkClass}`
                 }>My Gigs</NavLink>
 
-                <NavLink to="/worker/earnings" className={({ isActive }) =>
+                <NavLink prefetch="intent" to="/worker/earnings" className={({ isActive }) =>
                   `text-sm font-bold px-1 py-1 transition-all ${isActive ? activeLinkClass : defaultLinkClass}`
                 }>Earnings</NavLink>
               </>
             )}
-            <NavLink to="/about" className={({ isActive }) =>
+            <NavLink prefetch="intent" to="/about" className={({ isActive }) =>
               `text-sm font-bold px-1 py-1 transition-all ${isActive ? activeLinkClass : defaultLinkClass}`
             }>About Us</NavLink>
           </div>

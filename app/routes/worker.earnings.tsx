@@ -79,7 +79,7 @@ export default function EarningsScreen() {
   const hasAnyWeeklyData = weekly.some(w => w.total > 0);
 
   return (
-    <div className="pb-24 lg:pb-12 bg-background min-h-screen">
+    <div className="bg-background min-h-screen">
 
       {/* Edge to Edge Earnings Header */}
       <div className="relative w-full pt-12 pb-20 hero-gradient-overlay flex flex-col items-center justify-center text-center px-4 overflow-hidden mb-8">

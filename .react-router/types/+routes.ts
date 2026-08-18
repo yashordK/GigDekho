@@ -54,8 +54,18 @@ type Pages = {
   "/admin/users": {
     params: {};
   };
+  "/admin/users/:id": {
+    params: {
+      "id": string;
+    };
+  };
   "/admin/gigs": {
     params: {};
+  };
+  "/admin/gigs/:id": {
+    params: {
+      "id": string;
+    };
   };
   "/admin/accounts": {
     params: {};
@@ -136,7 +146,7 @@ type Pages = {
 type RouteFiles = {
   "root.tsx": {
     id: "root";
-    page: "/" | "/auth" | "/auth/callback" | "/auth/reset" | "/setup-profile" | "/organizer/preview" | "/gigs/:id" | "/hirer/:id" | "/admin" | "/admin/reports" | "/admin/verifications" | "/admin/payouts" | "/admin/users" | "/admin/gigs" | "/admin/accounts" | "/admin/settings" | "/api/apply" | "/api/cancel" | "/api/mark-attendance" | "/api/pay" | "/api/announce" | "/api/qa" | "/api/apply-internship" | "/api/internship-applicants" | "/api/export-applicants" | "/api/track" | "/api/report" | "/api/admin/accounts" | "/api/bank" | "/api/withdraw" | "/api/cron/reminders" | "/worker/home" | "/about" | "/worker/dashboard" | "/worker/earnings" | "/worker/profile" | "/organizer/home" | "/*";
+    page: "/" | "/auth" | "/auth/callback" | "/auth/reset" | "/setup-profile" | "/organizer/preview" | "/gigs/:id" | "/hirer/:id" | "/admin" | "/admin/reports" | "/admin/verifications" | "/admin/payouts" | "/admin/users" | "/admin/users/:id" | "/admin/gigs" | "/admin/gigs/:id" | "/admin/accounts" | "/admin/settings" | "/api/apply" | "/api/cancel" | "/api/mark-attendance" | "/api/pay" | "/api/announce" | "/api/qa" | "/api/apply-internship" | "/api/internship-applicants" | "/api/export-applicants" | "/api/track" | "/api/report" | "/api/admin/accounts" | "/api/bank" | "/api/withdraw" | "/api/cron/reminders" | "/worker/home" | "/about" | "/worker/dashboard" | "/worker/earnings" | "/worker/profile" | "/organizer/home" | "/*";
   };
   "routes/home.tsx": {
     id: "routes/home";
@@ -172,7 +182,7 @@ type RouteFiles = {
   };
   "routes/admin.tsx": {
     id: "routes/admin";
-    page: "/admin" | "/admin/reports" | "/admin/verifications" | "/admin/payouts" | "/admin/users" | "/admin/gigs" | "/admin/accounts" | "/admin/settings";
+    page: "/admin" | "/admin/reports" | "/admin/verifications" | "/admin/payouts" | "/admin/users" | "/admin/users/:id" | "/admin/gigs" | "/admin/gigs/:id" | "/admin/accounts" | "/admin/settings";
   };
   "routes/admin._index.tsx": {
     id: "routes/admin._index";
@@ -194,9 +204,17 @@ type RouteFiles = {
     id: "routes/admin.users";
     page: "/admin/users";
   };
+  "routes/admin.users.$id.tsx": {
+    id: "routes/admin.users.$id";
+    page: "/admin/users/:id";
+  };
   "routes/admin.gigs.tsx": {
     id: "routes/admin.gigs";
     page: "/admin/gigs";
+  };
+  "routes/admin.gigs.$id.tsx": {
+    id: "routes/admin.gigs.$id";
+    page: "/admin/gigs/:id";
   };
   "routes/admin.accounts.tsx": {
     id: "routes/admin.accounts";
@@ -320,7 +338,9 @@ type RouteModules = {
   "routes/admin.verifications": typeof import("./app/routes/admin.verifications.tsx");
   "routes/admin.payouts": typeof import("./app/routes/admin.payouts.tsx");
   "routes/admin.users": typeof import("./app/routes/admin.users.tsx");
+  "routes/admin.users.$id": typeof import("./app/routes/admin.users.$id.tsx");
   "routes/admin.gigs": typeof import("./app/routes/admin.gigs.tsx");
+  "routes/admin.gigs.$id": typeof import("./app/routes/admin.gigs.$id.tsx");
   "routes/admin.accounts": typeof import("./app/routes/admin.accounts.tsx");
   "routes/admin.settings": typeof import("./app/routes/admin.settings.tsx");
   "routes/api.apply": typeof import("./app/routes/api.apply.ts");

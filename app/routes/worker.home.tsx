@@ -10,6 +10,11 @@ import { Briefcase, RefreshCw, Zap, Users, SlidersHorizontal, ArrowDownAZ, Star,
 
 export const meta = () => [
   { title: "Browse gigs — GigDekho" },
+  {
+    name: "description",
+    content:
+      "Browse short-term gigs and internships across Indore — event staffing, promotions, delivery, tutoring and skilled project work. Apply in one tap and get paid to your wallet.",
+  },
 ];
 
 const ROLE_FILTERS = ['All Roles', 'Waitstaff', 'Artist', 'Singer', 'Security', 'Promoter', 'Hostess', 'DJ', 'Dancer', 'Photographer'];
@@ -87,40 +92,56 @@ export default function HomeScreen() {
     setError('');
     try {
       const nowIso = new Date().toISOString();
-      const { data: gigsData, error: fetchError } = await supabase
-        .from('gigs')
-        .select('*')
-        .eq('status', 'open')
-        .gt('event_date', nowIso)
-        .order('is_urgent', { ascending: false })
-        .order('event_date', { ascending: true });
+      const startOfDay = new Date();
+      startOfDay.setHours(0, 0, 0, 0);
 
+      // Only the columns the feed actually renders. `select('*')` pulled every
+      // column of every open gig — descriptions, coordinates, JD links — and
+      // was the single slowest request on the page.
+      const FEED_FIELDS = `
+        id, title, role_type, custom_role, location_text, pay_rate, duration_hrs,
+        event_date, is_urgent, slots_total, slots_filled, status, gig_type,
+        work_mode, commitment, duration_months, stipend_min, stipend_max,
+        is_unpaid, application_deadline, cover_mode, cover_image_url
+      `;
+
+      // Run together rather than one after another — they don't depend on
+      // each other, and awaiting in sequence made the page wait for the sum.
+      const [gigsRes, hiredRes] = await Promise.all([
+        supabase
+          .from('gigs')
+          .select(FEED_FIELDS)
+          .eq('status', 'open')
+          .gt('event_date', nowIso)
+          .order('is_urgent', { ascending: false })
+          .order('event_date', { ascending: true }),
+        supabase
+          .from('applications')
+          .select('id', { count: 'exact', head: true })
+          .gte('applied_at', startOfDay.toISOString()),
+      ]);
+
+      const { data: gigsData, error: fetchError } = gigsRes;
+      const { count: hiredCount } = hiredRes;
       if (fetchError) throw fetchError;
       setGigs(gigsData || []);
 
-      // Hired today — applications created since local midnight
-      const startOfDay = new Date();
-      startOfDay.setHours(0, 0, 0, 0);
-      const { count: hiredCount } = await supabase
-        .from('applications')
-        .select('*', { count: 'exact', head: true })
-        .gte('applied_at', startOfDay.toISOString());
-
-      // Trending — most-filled urgent/upcoming gigs
-      const { data: trendingData } = await supabase
-        .from('gigs')
-        .select('*')
-        .eq('status', 'open')
-        .gt('event_date', nowIso)
-        .order('is_urgent', { ascending: false })
-        .order('slots_filled', { ascending: false })
-        .order('event_date', { ascending: true })
-        .limit(3);
-      setTrendingGigs(trendingData || []);
+      // Trending was a third request for rows we already have — same filter,
+      // different sort. Derive it instead of asking the database twice.
+      const trendingData = [...(gigsData || [])]
+        .sort((a: any, b: any) =>
+          (Number(b.is_urgent) - Number(a.is_urgent)) ||
+          (b.slots_filled - a.slots_filled) ||
+          (new Date(a.event_date).getTime() - new Date(b.event_date).getTime())
+        )
+        .slice(0, 3);
+      setTrendingGigs(trendingData);
 
       const open = gigsData || [];
       const totalSum = open.reduce((acc, gig) => acc + (gig.pay_rate * gig.duration_hrs), 0);
-      const topPay = open.reduce((max, gig) => Math.max(max, gig.pay_rate), 0);
+      // Highest total a single gig pays, not the hourly rate — an hourly
+      // figure undersells the same work.
+      const topPay = open.reduce((max, gig) => Math.max(max, (gig.pay_rate || 0) * (gig.duration_hrs || 0)), 0);
 
       setStats({
         live: open.length,
@@ -183,7 +204,7 @@ export default function HomeScreen() {
   const perk = nextPerk(completedCount);
 
   return (
-    <main id="main-content" className="pb-24 lg:pb-12 bg-background min-h-screen">
+    <div className="bg-background min-h-screen">
 
       {/* Edge to Edge Faded Hero */}
       <div className="relative w-full pt-20 lg:pt-32 pb-24 lg:pb-36 hero-gradient-overlay flex flex-col items-center justify-center text-center px-4 overflow-hidden">
@@ -193,7 +214,7 @@ export default function HomeScreen() {
         <div className="absolute top-10 left-[15%] w-[250px] h-[500px] floating-glass-rect -rotate-12 z-0 hidden lg:block opacity-60"></div>
         <div className="absolute top-20 right-[15%] w-[300px] h-[600px] floating-glass-rect rotate-12 z-0 hidden lg:block opacity-60"></div>
 
-        <div className="relative z-10 max-w-4xl mx-auto w-full">
+        <div data-torch-safe className="relative z-10 max-w-4xl mx-auto w-full">
           {user && (
             <div className="relative z-10 text-white/80 font-bold text-sm mb-3">
               Welcome, {profile?.full_name || 'Worker'}
@@ -229,8 +250,8 @@ export default function HomeScreen() {
                 <span className="text-2xl font-black text-white tracking-tight">{stats.live}</span>
              </div>
              <div className="glass-panel p-4 rounded-2xl flex flex-col items-center justify-center text-center">
-                <span className="text-white/60 text-[10px] uppercase font-black tracking-widest mb-1">Top Pay</span>
-                <span className="text-2xl font-black text-[#F4511E] tracking-tight">₹{stats.topPay >= 1000 ? (stats.topPay/1000).toFixed(1)+'k' : stats.topPay}<span className="text-xs font-bold text-white/40">/hr</span></span>
+                <span className="text-white/60 text-[10px] uppercase font-black tracking-widest mb-1">Top Payout</span>
+                <span className="text-2xl font-black text-[#F4511E] tracking-tight">₹{stats.topPay >= 1000 ? (stats.topPay/1000).toFixed(1)+'k' : stats.topPay}</span>
              </div>
              <div className="glass-panel p-4 rounded-2xl flex flex-col items-center justify-center text-center">
                 <span className="text-white/60 text-[10px] uppercase font-black tracking-widest mb-1">Hired Today</span>
@@ -270,7 +291,7 @@ export default function HomeScreen() {
 
       <div className="px-4 xl:px-12 w-full mx-auto pt-10">
         {user && <ProfileCompletionNudge isOrganizerView={false} />}
-        <div className="lg:grid lg:grid-cols-[65%_35%] lg:gap-10 items-start pb-12">
+        <div className="lg:grid lg:grid-cols-[65%_35%] lg:gap-10 items-start pb-2 lg:pb-12">
 
         {/* Left Column (Gigs) */}
         <section aria-label="Available Gigs" className="w-full" id="available-jobs">
@@ -336,7 +357,7 @@ export default function HomeScreen() {
                   className={`flex-1 sm:flex-none sm:px-6 py-2 text-xs font-black rounded-full transition-all btn-tap min-h-0 ${
                     feedTab === t.id ? 'bg-[#F4511E] text-white shadow-md' : 'text-white/50 hover:text-white'
                   }`}
-                  style={{ minHeight: '38px' }}
+                  style={{ minHeight: '44px' }}
                 >
                   {t.label}
                 </button>
@@ -664,6 +685,6 @@ export default function HomeScreen() {
 
         </div>
       </div>
-    </main>
+    </div>
   );
 }

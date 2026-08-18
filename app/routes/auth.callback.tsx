@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router";
 import { supabase } from "~/lib/supabase.client";
+import { consumeAuthFromUrl } from "~/lib/auth-url";
 
 /**
  * OAuth / magic-link landing page.
@@ -27,9 +28,22 @@ export default function AuthCallback() {
       try {
         const { data: profile } = await supabase
           .from("profiles")
-          .select("id, role, full_name")
+          .select("id, role, full_name, is_managed, claimed_at")
           .eq("id", session.user.id)
           .maybeSingle();
+
+        // First time the real owner signs into an account we set up for them,
+        // it stops being ours. Nothing wrote this before, so the admin panel
+        // showed every managed account as "Unclaimed" forever — and the
+        // delete button is gated on exactly this field, which meant a hirer's
+        // live account could still be deleted after they took it over.
+        if (profile?.is_managed && !profile.claimed_at) {
+          await supabase
+            .from("profiles")
+            .update({ claimed_at: new Date().toISOString() })
+            .eq("id", session.user.id)
+            .is("claimed_at", null);
+        }
 
         if (!profile || !profile.full_name) {
           navigate("/setup-profile", { replace: true });
@@ -53,15 +67,21 @@ export default function AuthCallback() {
       }
     };
 
-    // The provider may report a failure straight back in the URL
-    const url = new URL(window.location.href);
-    const providerError =
-      url.searchParams.get("error_description") || url.searchParams.get("error");
-    if (providerError) {
-      setErrorText(decodeURIComponent(providerError));
+    const failWith = (message: string) => {
+      if (settled) return;
+      settled = true;
+      setErrorText(message);
       setTimeout(() => navigate("/auth", { replace: true }), 3500);
-      return;
-    }
+    };
+
+    // Confirm-signup and magic links come back with the tokens in the hash
+    // (implicit flow); the browser client only watches for a PKCE `?code=`,
+    // so those links would otherwise sit here until the timeout. OAuth still
+    // resolves through the listener below.
+    consumeAuthFromUrl(supabase).then((res) => {
+      if (res.status === "error") failWith(res.message);
+      // 'session' is picked up by onAuthStateChange / getSession below
+    });
 
     // Catch the session whenever the automatic exchange completes…
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {

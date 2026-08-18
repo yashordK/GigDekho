@@ -140,7 +140,7 @@ export default function DashboardScreen() {
   const rel = reliabilityLabel(reliabilityScore);
 
   return (
-    <div className="pb-24 lg:pb-12 bg-[#111111] min-h-screen pt-4">
+    <div className="bg-[#111111] min-h-screen pt-4">
 
       {/* Cancel Modal */}
       {cancelModal && (
@@ -192,19 +192,19 @@ export default function DashboardScreen() {
         <SpotlightCategories />
         <div className="absolute top-0 right-[20%] w-[250px] h-[250px] floating-glass-rect rotate-12 z-0 hidden lg:block opacity-40" />
 
-        <h1 className="text-4xl lg:text-5xl font-black text-white mb-3 tracking-tight relative z-10 drop-shadow-md">My Gigs</h1>
-        <p className="text-white/60 font-medium text-base lg:text-lg mb-4 max-w-md relative z-10 leading-relaxed">
+        <h1 data-torch-safe className="text-4xl lg:text-5xl font-black text-white mb-3 tracking-tight relative z-10 drop-shadow-md">My Gigs</h1>
+        <p data-torch-safe className="text-white/60 font-medium text-base lg:text-lg mb-4 max-w-md relative z-10 leading-relaxed">
           Track your ongoing applications and review past events.
         </p>
 
         {/* Reliability Score */}
-        <div className={`relative z-10 inline-flex items-center gap-2 px-4 py-2 rounded-full border text-sm font-black mb-6 ${rel.bg} ${rel.color}`}>
+        <div data-torch-safe className={`relative z-10 inline-flex items-center gap-2 px-4 py-2 rounded-full border text-sm font-black mb-6 ${rel.bg} ${rel.color}`}>
           <Shield size={14} />
           Reliability {reliabilityScore}/100 — {rel.label}
         </div>
 
         {/* Tabs */}
-        <div className="flex bg-[#1C1C1C] border border-white/10 p-1.5 rounded-full w-full lg:w-[400px] shadow-lg relative z-10 overflow-x-auto hide-scrollbar">
+        <div data-torch-safe className="flex bg-[#1C1C1C] border border-white/10 p-1.5 rounded-full w-full lg:w-[400px] shadow-lg relative z-10 overflow-x-auto hide-scrollbar">
           <button
             onClick={() => setTab('active')}
             className={`flex-1 min-w-[120px] min-h-[44px] py-1.5 text-sm font-bold rounded-full transition-all btn-tap ${tab === 'active' ? 'bg-[#F4511E] text-white shadow-md' : 'text-white/60 hover:text-white flex items-center justify-center'}`}
