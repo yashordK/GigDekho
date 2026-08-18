@@ -16,8 +16,12 @@ export async function loader({ request }: LoaderFunctionArgs) {
 
   // ── 48-hour reminders ──────────────────────────────────────────────────────
   try {
-    const win47 = new Date(now.getTime() + 47 * 3600000).toISOString();
-    const win49 = new Date(now.getTime() + 49 * 3600000).toISOString();
+    // Day-wide buckets, not a two-hour slot. Vercel Hobby allows one cron run
+    // a day with up to 59 minutes of jitter, so a narrow window is missed far
+    // more often than it is hit. 36-60h means "the gig is two days away" and
+    // catches every accepted application exactly once, whenever the run lands.
+    const win47 = new Date(now.getTime() + 36 * 3600000).toISOString();
+    const win49 = new Date(now.getTime() + 60 * 3600000).toISOString();
 
     const { data: apps } = await admin
       .from("applications")
@@ -44,8 +48,10 @@ export async function loader({ request }: LoaderFunctionArgs) {
 
   // ── 24-hour reminders ────────────────────────────────────────────────
   try {
-    const win23 = new Date(now.getTime() + 23 * 3600000).toISOString();
-    const win25 = new Date(now.getTime() + 25 * 3600000).toISOString();
+    // "The gig is tomorrow" — 12-36h, adjacent to the 48h bucket above with
+    // no overlap, so nobody receives both on the same run.
+    const win23 = new Date(now.getTime() + 12 * 3600000).toISOString();
+    const win25 = new Date(now.getTime() + 36 * 3600000).toISOString();
 
     const { data: apps } = await admin
       .from("applications")
@@ -72,6 +78,11 @@ export async function loader({ request }: LoaderFunctionArgs) {
 
   // ── 6-hour reminders ───────────────────────────────────────────────────────
   try {
+    // Genuinely impossible on a once-daily cron — a 6-hour window only gets
+    // hit if the run happens to land in it. Kept narrow on purpose: it fires
+    // properly when the hourly GitHub Actions schedule is enabled, and simply
+    // no-ops on the days the Vercel run misses it rather than mailing someone
+    // "6 hours to go" a day early.
     const win5 = new Date(now.getTime() + 5 * 3600000).toISOString();
     const win7 = new Date(now.getTime() + 7 * 3600000).toISOString();
 

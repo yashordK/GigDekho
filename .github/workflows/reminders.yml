@@ -1,0 +1,45 @@
+# Hourly reminder trigger.
+#
+# Vercel Hobby allows one cron run per day with up to 59 minutes of jitter,
+# which is enough for the 48h and 24h reminders (their windows are a day wide)
+# but cannot serve the 6-hour one. GitHub Actions gives us an hourly trigger
+# for free, so the endpoint gets called often enough for every window.
+#
+# The Vercel cron stays in place as a safety net: if Actions is disabled or
+# delayed, the daily run still sends the 48h and 24h reminders.
+#
+# Setup: add a repository secret named CRON_SECRET with the same value as the
+# CRON_SECRET environment variable in Vercel. Without it this workflow is a
+# no-op — the endpoint fails closed.
+
+name: Send gig reminders
+
+on:
+  schedule:
+    # Every hour, on the hour (UTC). Actions schedules are best-effort and can
+    # run a few minutes late, which is fine for reminders.
+    - cron: "0 * * * *"
+  workflow_dispatch: # lets you fire one by hand from the Actions tab
+
+jobs:
+  remind:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Call the reminders endpoint
+        env:
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+        run: |
+          if [ -z "$CRON_SECRET" ]; then
+            echo "CRON_SECRET is not set — skipping. Add it in Settings > Secrets > Actions."
+            exit 0
+          fi
+          response=$(curl -sS -w "\n%{http_code}" \
+            -H "Authorization: Bearer $CRON_SECRET" \
+            https://www.gigdekho.com/api/cron/reminders)
+          body=$(echo "$response" | sed '$d')
+          code=$(echo "$response" | tail -n1)
+          echo "HTTP $code"
+          echo "$body"
+          # Fail loudly so a broken endpoint shows up in the Actions tab
+          # instead of silently never sending anyone a reminder.
+          [ "$code" = "200" ]
