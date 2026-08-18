@@ -150,6 +150,35 @@ export function reminder48hEmail(
   };
 }
 
+export function reminder24hEmail(
+  workerName: string,
+  gig: { title: string; event_date: string; location_text: string; pay_rate: number; duration_hrs: number }
+) {
+  const totalPay = gig.pay_rate * gig.duration_hrs;
+  const eventDate = new Date(gig.event_date).toLocaleString("en-IN", {
+    dateStyle: "full",
+    timeStyle: "short",
+    timeZone: "Asia/Kolkata",
+  });
+  return {
+    subject: `Only 24 hours to go — ${gig.title}`,
+    html: `
+      <div style="font-family:sans-serif;max-width:480px;margin:0 auto;background:#111111;color:#ffffff;padding:24px;border-radius:12px;">
+        <div style="color:#F4511E;font-size:24px;font-weight:bold;margin-bottom:4px;">GigDekho</div>
+        <h2>Only 24 hours to go</h2>
+        <p>Hi ${workerName}, your gig is tomorrow. Here are the details one more time.</p>
+        <div style="background:#1C1C1C;border-radius:8px;padding:16px;margin:16px 0;">
+          <div style="font-size:18px;font-weight:bold;margin-bottom:8px;">${gig.title}</div>
+          <div style="color:#9ca3af;font-size:14px;">${eventDate}</div>
+          <div style="color:#9ca3af;font-size:14px;">${gig.location_text}</div>
+          <div style="color:#F4511E;font-size:18px;font-weight:bold;margin-top:12px;">₹${totalPay} total</div>
+        </div>
+        <p style="color:#9ca3af;font-size:13px;">Plan to reach a little early, and carry a photo ID. Cancelling now affects your reliability score, so tell the hirer straight away if something has come up.</p>
+        <a href="https://gigdekho.com/worker/dashboard" style="display:inline-block;background:#F4511E;color:#fff;padding:12px 24px;border-radius:8px;text-decoration:none;font-weight:bold;">View Dashboard</a>
+      </div>`,
+  };
+}
+
 export function reminder6hEmail(
   workerName: string,
   gig: { title: string; event_date: string; location_text: string; pay_rate: number; duration_hrs: number }

@@ -1,6 +1,6 @@
 import { type LoaderFunctionArgs } from "react-router";
 import { serviceClient } from "~/lib/service-client.server";
-import { sendEmail, reminder48hEmail, reminder6hEmail, noShowPenaltyEmail } from "~/lib/email.server";
+import { sendEmail, reminder48hEmail, reminder24hEmail, reminder6hEmail, noShowPenaltyEmail } from "~/lib/email.server";
 
 export async function loader({ request }: LoaderFunctionArgs) {
   // Vercel cron sends Authorization: Bearer <CRON_SECRET>
@@ -12,7 +12,7 @@ export async function loader({ request }: LoaderFunctionArgs) {
 
   const admin = serviceClient();
   const now = new Date();
-  const results = { reminders48h: 0, reminders6h: 0, noShows: 0, errors: [] as string[] };
+  const results = { reminders48h: 0, reminders24h: 0, reminders6h: 0, noShows: 0, errors: [] as string[] };
 
   // ── 48-hour reminders ──────────────────────────────────────────────────────
   try {
@@ -40,6 +40,34 @@ export async function loader({ request }: LoaderFunctionArgs) {
     }
   } catch (e: any) {
     results.errors.push(`48h: ${e.message}`);
+  }
+
+  // ── 24-hour reminders ────────────────────────────────────────────────
+  try {
+    const win23 = new Date(now.getTime() + 23 * 3600000).toISOString();
+    const win25 = new Date(now.getTime() + 25 * 3600000).toISOString();
+
+    const { data: apps } = await admin
+      .from("applications")
+      .select("id, worker_id, profiles(full_name), gigs(title, event_date, location_text, pay_rate, duration_hrs)")
+      .eq("status", "accepted")
+      .eq("reminder_24h_sent", false)
+      .gte("gigs.event_date", win23)
+      .lte("gigs.event_date", win25);
+
+    for (const app of apps ?? []) {
+      const gig = app.gigs as any;
+      const prof = app.profiles as any;
+      if (!gig || !prof) continue;
+      const { data: au } = await admin.auth.admin.getUserById(app.worker_id);
+      if (au?.user?.email) {
+        await sendEmail({ to: au.user.email, ...reminder24hEmail(prof.full_name || "there", gig) });
+      }
+      await admin.from("applications").update({ reminder_24h_sent: true }).eq("id", app.id);
+      results.reminders24h++;
+    }
+  } catch (e: any) {
+    results.errors.push(`24h: ${e.message}`);
   }
 
   // ── 6-hour reminders ───────────────────────────────────────────────────────
