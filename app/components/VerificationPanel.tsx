@@ -50,28 +50,112 @@ export default function VerificationPanel({
   // Latest submission per doc type decides the shown status
   const latestFor = (type: string) => docs.find(d => d.doc_type === type);
 
+  /**
+   * Which document the picker was opened for.
+   *
+   * This used to live only in a ref. Mobile browsers routinely tear the page
+   * down while the native file picker is open and rebuild it on return, which
+   * reset the ref to null — so the change event fired with a real file, the
+   * handler hit `if (!file || !type) return`, and nothing happened at all. No
+   * error, no upload, just the page jumping to the hidden input at the bottom.
+   * sessionStorage survives that round trip.
+   */
+  const PENDING_KEY = 'gd-pending-doc-type';
+
   const startUpload = (type: string) => {
     pendingTypeRef.current = type;
+    try { sessionStorage.setItem(PENDING_KEY, type); } catch { /* private mode */ }
     fileInputRef.current?.click();
   };
 
+  /**
+   * Shrink a photo before upload.
+   *
+   * A phone camera produces 3-8 MB images, so the old 5 MB gate rejected most
+   * of them outright — that is why uploading from a phone "didn't work". Going
+   * through a canvas also re-encodes whatever the camera produced (HEIC on
+   * iOS) into a JPEG the reviewer can actually open.
+   */
+  const shrinkImage = (file: File): Promise<Blob> =>
+    new Promise((resolve, reject) => {
+      const url = URL.createObjectURL(file);
+      const img = new Image();
+      img.onload = () => {
+        URL.revokeObjectURL(url);
+        const MAX = 1800; // plenty to read an ID off
+        const scale = Math.min(1, MAX / Math.max(img.width, img.height));
+        const canvas = document.createElement('canvas');
+        canvas.width = Math.round(img.width * scale);
+        canvas.height = Math.round(img.height * scale);
+        const ctx = canvas.getContext('2d');
+        if (!ctx) return reject(new Error('Could not process the image.'));
+        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+        canvas.toBlob(
+          (blob) => (blob ? resolve(blob) : reject(new Error('Could not process the image.'))),
+          'image/jpeg',
+          0.85
+        );
+      };
+      img.onerror = () => {
+        URL.revokeObjectURL(url);
+        reject(new Error("That image couldn't be read. Try a different photo."));
+      };
+      img.src = url;
+    });
+
   const handleFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    const type = pendingTypeRef.current;
+    let type = pendingTypeRef.current;
+    if (!type) {
+      try { type = sessionStorage.getItem(PENDING_KEY); } catch { /* private mode */ }
+    }
     e.target.value = '';
-    if (!file || !type) return;
-    if (file.size > 5 * 1024 * 1024) {
-      setError('File too large — max 5 MB.');
+    if (!file) return;
+    if (!type) {
+      setError("Something went wrong picking that file. Tap Upload and choose it again.");
+      return;
+    }
+    try { sessionStorage.removeItem(PENDING_KEY); } catch { /* ignore */ }
+
+    const isImage = file.type.startsWith('image/');
+    // PDFs can't be shrunk here, so they keep a hard cap. Images are resized
+    // below rather than refused.
+    if (!isImage && file.size > 10 * 1024 * 1024) {
+      setError('That file is too large — please keep PDFs under 10 MB.');
       return;
     }
     setError('');
     setUploadingType(type);
     try {
-      const ext = file.name.split('.').pop() || 'jpg';
-      const path = `${userId}/${type}-${Date.now()}.${ext}`;
+      let body: File | Blob = file;
+      let ext = 'jpg';
+      let contentType = file.type || 'application/octet-stream';
+
+      if (isImage) {
+        try {
+          body = await shrinkImage(file);
+          ext = 'jpg';
+          contentType = 'image/jpeg';
+        } catch {
+          // Fall back to the original if the canvas can't handle it, but only
+          // when it's small enough to go up as-is.
+          if (file.size > 10 * 1024 * 1024) {
+            throw new Error('That photo is too large. Try again with a smaller one.');
+          }
+          body = file;
+          ext = (file.name.includes('.') ? file.name.split('.').pop() : '') || 'jpg';
+          contentType = file.type || 'image/jpeg';
+        }
+      } else {
+        // Camera and file-picker names are unreliable — only trust a real
+        // extension, otherwise take it from the MIME type.
+        ext = (file.name.includes('.') ? file.name.split('.').pop() : '') || (file.type === 'application/pdf' ? 'pdf' : 'bin');
+      }
+
+      const path = `${userId}/${type}-${Date.now()}.${ext.toLowerCase()}`;
       const { error: upErr } = await supabase.storage
         .from('verification-docs')
-        .upload(path, file, { upsert: false });
+        .upload(path, body, { upsert: false, contentType });
       if (upErr) throw upErr;
 
       const { error: insErr } = await supabase.from('verification_documents').insert({
@@ -103,8 +187,9 @@ export default function VerificationPanel({
         ref={fileInputRef}
         type="file"
         accept="image/*,.pdf"
-        className="hidden"
         aria-hidden="true"
+        tabIndex={-1}
+        style={{ position: 'absolute', width: 1, height: 1, opacity: 0, pointerEvents: 'none' }}
         onChange={handleFile}
       />
 

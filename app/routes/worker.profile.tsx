@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { supabase } from '~/lib/supabase.client';
 import { useAuth } from '~/context/AuthContext';
 import { useActiveView } from "~/hooks/useActiveView";
-import { MapPin, Star, Award, Lock, X, LogOut, Edit2, Camera, Check, GraduationCap } from 'lucide-react';
+import { MapPin, Star, Award, Lock, X, LogOut, Edit2, Camera, Check, GraduationCap, Phone } from 'lucide-react';
 import { useNavigate } from 'react-router';
 import BadgeRow, { levelRing } from '~/components/BadgeRow';
 import VerificationPanel from '~/components/VerificationPanel';
@@ -221,6 +221,31 @@ export default function ProfileScreen() {
 
   return (
     <div className="pb-24 lg:pb-12 bg-[#111111] min-h-screen relative lg:px-12 lg:pt-10 lg:max-w-7xl lg:mx-auto pt-16">
+
+      {/* A phone number is the one thing a hirer genuinely can't work without,
+          and the only way to add it was a 32px pencil beside the name — so
+          people were told to add one and couldn't find where. This puts it in
+          front of them, and disappears the moment it's filled in. */}
+      {profile && !profile.phone && (
+        <div className="mx-4 lg:mx-0 mb-4 bg-[#F4511E]/10 border border-[#F4511E]/30 rounded-2xl p-4 flex flex-wrap items-center gap-3">
+          <div className="w-10 h-10 rounded-xl bg-[#F4511E]/15 border border-[#F4511E]/25 text-[#F4511E] flex items-center justify-center shrink-0">
+            <Phone size={18} />
+          </div>
+          <div className="min-w-0 flex-1">
+            <p className="text-sm font-black text-white">Add your phone number</p>
+            <p className="text-[11px] font-medium text-white/50 leading-relaxed">
+              Hirers need it to reach you about timings on the day. It's only shared with a hirer once you're confirmed.
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={() => setShowEditModal(true)}
+            className="bg-[#F4511E] hover:bg-[#D84315] text-white px-5 py-2.5 rounded-xl text-xs font-black uppercase tracking-wider btn-tap transition-colors shrink-0"
+          >
+            Add number
+          </button>
+        </div>
+      )}
 
       <EditProfileModal
         isOpen={showEditModal}
