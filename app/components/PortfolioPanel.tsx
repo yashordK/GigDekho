@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect } from 'react';
 import { supabase } from '~/lib/supabase.client';
 import { Link2, FileText, Upload, Trash2, ExternalLink, Plus } from 'lucide-react';
 
@@ -20,7 +20,6 @@ export default function PortfolioPanel({ userId, readOnly = false }: { userId: s
   const [linkLabel, setLinkLabel] = useState('');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
-  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const fetchItems = async () => {
     const { data } = await supabase
@@ -127,15 +126,24 @@ export default function PortfolioPanel({ userId, readOnly = false }: { userId: s
             >
               <Link2 size={12} /> Add Link
             </button>
-            <button
-              type="button"
-              onClick={() => fileInputRef.current?.click()}
-              disabled={busy}
-              className="flex items-center gap-1 text-[11px] font-black text-white bg-[#F4511E] px-3 py-1.5 rounded-full hover:bg-[#D84315] transition-colors btn-tap disabled:opacity-50 min-h-0"
+            {/* A real input behind its own label, for the same reason as the
+                verification panel: a phone discards the page while the native
+                picker is open, so an input opened with .click() comes back
+                empty and its change event never fires. This is why uploading a
+                resume from a phone did nothing at all. */}
+            <label
+              className={`flex items-center gap-1 text-[11px] font-black text-white bg-[#F4511E] px-3 py-1.5 rounded-full hover:bg-[#D84315] transition-colors btn-tap cursor-pointer min-h-0 ${busy ? 'opacity-50 pointer-events-none' : ''}`}
               style={{ minHeight: '32px' }}
             >
+              <input
+                type="file"
+                accept="image/*,application/pdf,.doc,.docx"
+                className="sr-only"
+                disabled={busy}
+                onChange={handleFile}
+              />
               <Upload size={12} /> {busy ? 'Working…' : 'Upload File'}
-            </button>
+            </label>
           </div>
         )}
       </div>
@@ -144,15 +152,6 @@ export default function PortfolioPanel({ userId, readOnly = false }: { userId: s
           ? 'Work samples and documents shared by this worker.'
           : 'Share links to your work and upload your resume or proof of work — hirers see these on your profile.'}
       </p>
-
-      <input
-        ref={fileInputRef}
-        type="file"
-        accept="image/*,.pdf,.doc,.docx"
-        className="hidden"
-        aria-hidden="true"
-        onChange={handleFile}
-      />
 
       {error && (
         <div className="mb-3 p-3 bg-red-500/10 border border-red-500/20 text-red-400 rounded-xl text-xs font-semibold">{error}</div>

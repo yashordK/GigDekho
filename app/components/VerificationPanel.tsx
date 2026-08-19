@@ -45,6 +45,19 @@ export default function VerificationPanel({
 
   useEffect(() => { fetchDocs(); }, [userId]);
 
+  // A phone can swap the page out mid-upload; the insert still lands but the
+  // component that would have re-rendered is gone, so the row only appeared
+  // after a manual refresh. Re-read whenever the tab comes back to the front.
+  useEffect(() => {
+    const onVisible = () => { if (document.visibilityState === 'visible') fetchDocs(); };
+    document.addEventListener('visibilitychange', onVisible);
+    window.addEventListener('focus', onVisible);
+    return () => {
+      document.removeEventListener('visibilitychange', onVisible);
+      window.removeEventListener('focus', onVisible);
+    };
+  }, [userId]);
+
   // Latest submission per doc type decides the shown status
   const latestFor = (type: string) => docs.find(d => d.doc_type === type);
 
