@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '~/lib/supabase.client';
+import { traceUpload, readUploadTrace } from '~/lib/upload-trace';
 import { Link2, FileText, Upload, Trash2, ExternalLink, Plus } from 'lucide-react';
 
 interface PortfolioItem {
@@ -62,6 +63,7 @@ export default function PortfolioPanel({ userId, readOnly = false }: { userId: s
 
   const handleFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
+    traceUpload('portfolio change fired', file ? `${file.name || 'unnamed'} ${(file.size/1048576).toFixed(2)}MB ${file.type || 'no mime'}` : 'NO FILE');
     e.target.value = '';
     if (!file) return;
     if (file.size > 10 * 1024 * 1024) {

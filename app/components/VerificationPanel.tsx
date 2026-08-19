@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '~/lib/supabase.client';
+import { traceUpload, readUploadTrace, clearUploadTrace } from '~/lib/upload-trace';
 import { ShieldCheck, GraduationCap, Building2, Upload, Clock, XCircle, CheckCircle2 } from 'lucide-react';
 
 interface DocRow {
@@ -33,6 +34,7 @@ export default function VerificationPanel({
   const [docs, setDocs] = useState<DocRow[]>([]);
   const [uploadingType, setUploadingType] = useState<string | null>(null);
   const [error, setError] = useState('');
+  const [trace, setTrace] = useState<string[]>([]);
 
   const fetchDocs = async () => {
     const { data } = await supabase
@@ -43,13 +45,15 @@ export default function VerificationPanel({
     setDocs(data || []);
   };
 
-  useEffect(() => { fetchDocs(); }, [userId]);
+  useEffect(() => { fetchDocs(); setTrace(readUploadTrace()); }, [userId]);
 
   // A phone can swap the page out mid-upload; the insert still lands but the
   // component that would have re-rendered is gone, so the row only appeared
   // after a manual refresh. Re-read whenever the tab comes back to the front.
   useEffect(() => {
-    const onVisible = () => { if (document.visibilityState === 'visible') fetchDocs(); };
+    const onVisible = () => {
+      if (document.visibilityState === 'visible') { fetchDocs(); setTrace(readUploadTrace()); }
+    };
     document.addEventListener('visibilitychange', onVisible);
     window.addEventListener('focus', onVisible);
     return () => {
@@ -98,8 +102,9 @@ export default function VerificationPanel({
 
   const handleFile = async (e: React.ChangeEvent<HTMLInputElement>, type: string) => {
     const file = e.target.files?.[0];
+    traceUpload('change fired', `${type}, ${file ? `${file.name || 'unnamed'} ${(file.size / 1048576).toFixed(2)}MB ${file.type || 'no mime'}` : 'NO FILE'}`);
     e.target.value = '';
-    if (!file || !type) return;
+    if (!file || !type) { traceUpload('aborted', 'no file or type'); return; }
 
     const isImage = file.type.startsWith('image/');
     // PDFs can't be shrunk here, so they keep a hard cap. Images are resized
@@ -137,10 +142,12 @@ export default function VerificationPanel({
       }
 
       const path = `${userId}/${type}-${Date.now()}.${ext.toLowerCase()}`;
+      traceUpload('uploading to storage', path);
       const { error: upErr } = await supabase.storage
         .from('verification-docs')
         .upload(path, body, { upsert: false, contentType });
-      if (upErr) throw upErr;
+      if (upErr) { traceUpload('storage FAILED', upErr.message); throw upErr; }
+      traceUpload('storage ok');
 
       const { error: insErr } = await supabase.from('verification_documents').insert({
         user_id: userId,
@@ -148,15 +155,18 @@ export default function VerificationPanel({
         file_path: path,
         status: 'pending',
       });
-      if (insErr) throw insErr;
+      if (insErr) { traceUpload('row insert FAILED', insErr.message); throw insErr; }
+      traceUpload('row inserted — done');
 
       await fetchDocs();
       onStatusChange?.();
     } catch (err: any) {
       console.error(err);
+      traceUpload('threw', err?.message ?? String(err));
       setError(err.message || 'Upload failed. Try again.');
     } finally {
       setUploadingType(null);
+      setTrace(readUploadTrace());
     }
   };
 
@@ -170,6 +180,22 @@ export default function VerificationPanel({
       {error && (
         <div className="mb-4 p-3 bg-red-500/10 border border-red-500/20 text-red-400 rounded-xl text-xs font-semibold">
           {error}
+        </div>
+      )}
+
+      {trace.length > 0 && (
+        <div className="mb-4 bg-[#111111] border border-white/10 rounded-xl p-3">
+          <div className="flex items-center justify-between mb-2">
+            <p className="text-[10px] font-black text-white/50 uppercase tracking-widest">Upload log</p>
+            <button type="button" onClick={() => { clearUploadTrace(); setTrace([]); }}
+              className="text-[10px] font-bold text-white/40 hover:text-white btn-tap">clear</button>
+          </div>
+          {trace.map((line, i) => (
+            <p key={i} className="text-[10px] font-mono text-white/50 leading-relaxed break-all">{line}</p>
+          ))}
+          <p className="text-[10px] font-medium text-white/30 mt-2">
+            If an upload didn't work, send this list to us — it shows exactly where it stopped.
+          </p>
         </div>
       )}
 
