@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect } from 'react';
 import { supabase } from '~/lib/supabase.client';
 import { ShieldCheck, GraduationCap, Building2, Upload, Clock, XCircle, CheckCircle2 } from 'lucide-react';
 
@@ -33,8 +33,6 @@ export default function VerificationPanel({
   const [docs, setDocs] = useState<DocRow[]>([]);
   const [uploadingType, setUploadingType] = useState<string | null>(null);
   const [error, setError] = useState('');
-  const fileInputRef = useRef<HTMLInputElement>(null);
-  const pendingTypeRef = useRef<string | null>(null);
 
   const fetchDocs = async () => {
     const { data } = await supabase
@@ -49,24 +47,6 @@ export default function VerificationPanel({
 
   // Latest submission per doc type decides the shown status
   const latestFor = (type: string) => docs.find(d => d.doc_type === type);
-
-  /**
-   * Which document the picker was opened for.
-   *
-   * This used to live only in a ref. Mobile browsers routinely tear the page
-   * down while the native file picker is open and rebuild it on return, which
-   * reset the ref to null — so the change event fired with a real file, the
-   * handler hit `if (!file || !type) return`, and nothing happened at all. No
-   * error, no upload, just the page jumping to the hidden input at the bottom.
-   * sessionStorage survives that round trip.
-   */
-  const PENDING_KEY = 'gd-pending-doc-type';
-
-  const startUpload = (type: string) => {
-    pendingTypeRef.current = type;
-    try { sessionStorage.setItem(PENDING_KEY, type); } catch { /* private mode */ }
-    fileInputRef.current?.click();
-  };
 
   /**
    * Shrink a photo before upload.
@@ -103,19 +83,10 @@ export default function VerificationPanel({
       img.src = url;
     });
 
-  const handleFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFile = async (e: React.ChangeEvent<HTMLInputElement>, type: string) => {
     const file = e.target.files?.[0];
-    let type = pendingTypeRef.current;
-    if (!type) {
-      try { type = sessionStorage.getItem(PENDING_KEY); } catch { /* private mode */ }
-    }
     e.target.value = '';
-    if (!file) return;
-    if (!type) {
-      setError("Something went wrong picking that file. Tap Upload and choose it again.");
-      return;
-    }
-    try { sessionStorage.removeItem(PENDING_KEY); } catch { /* ignore */ }
+    if (!file || !type) return;
 
     const isImage = file.type.startsWith('image/');
     // PDFs can't be shrunk here, so they keep a hard cap. Images are resized
@@ -183,16 +154,6 @@ export default function VerificationPanel({
         Documents are reviewed manually by the GigDekho team — usually within a few days.
       </p>
 
-      <input
-        ref={fileInputRef}
-        type="file"
-        accept="image/*,.pdf"
-        aria-hidden="true"
-        tabIndex={-1}
-        style={{ position: 'absolute', width: 1, height: 1, opacity: 0, pointerEvents: 'none' }}
-        onChange={handleFile}
-      />
-
       {error && (
         <div className="mb-4 p-3 bg-red-500/10 border border-red-500/20 text-red-400 rounded-xl text-xs font-semibold">
           {error}
@@ -226,18 +187,37 @@ export default function VerificationPanel({
                   <Clock size={12} className="animate-pulse" /> In Review
                 </span>
               ) : (
-                <button
-                  type="button"
-                  onClick={() => startUpload(type)}
-                  disabled={uploadingType === type}
-                  className={`flex items-center gap-1.5 text-[11px] font-black uppercase tracking-wider px-4 py-2 rounded-full transition-colors btn-tap disabled:opacity-50 ${
+                /* A real input per row, driven by its own label — no
+                   JS-triggered click, no shared hidden input, no ref holding
+                   which type is pending.
+
+                   The old version opened one hidden input via .click() and
+                   remembered the type in a ref. On a phone the browser often
+                   discards the page while the native picker is open and
+                   restores it on return: the input came back empty, no change
+                   event ever fired, and nothing happened at all — no error,
+                   no network call, nothing in the console. It worked roughly
+                   one time in five, whenever the page happened to survive.
+                   A labelled input carries its own file and its own type, so
+                   there is no state left to lose. */
+                <label
+                  className={`flex items-center gap-1.5 text-[11px] font-black uppercase tracking-wider px-4 py-2 rounded-full transition-colors btn-tap cursor-pointer ${
+                    uploadingType === type ? 'opacity-50 pointer-events-none' : ''
+                  } ${
                     doc?.status === 'rejected'
                       ? 'bg-red-500/10 text-red-400 border border-red-500/30 hover:bg-red-500/20'
                       : 'bg-[#F4511E] text-white hover:bg-[#D84315]'
                   }`}
                 >
+                  <input
+                    type="file"
+                    accept="image/*,application/pdf"
+                    className="sr-only"
+                    disabled={uploadingType === type}
+                    onChange={(e) => handleFile(e, type)}
+                  />
                   {doc?.status === 'rejected' ? <><XCircle size={12} /> Re-upload</> : <><Upload size={12} /> {uploadingType === type ? 'Uploading…' : 'Upload'}</>}
-                </button>
+                </label>
               )}
             </div>
           );
