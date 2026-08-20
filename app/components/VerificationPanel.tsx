@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '~/lib/supabase.client';
 import { traceUpload, readUploadTrace, clearUploadTrace } from '~/lib/upload-trace';
-import { ShieldCheck, GraduationCap, Building2, Upload, Clock, XCircle, CheckCircle2 } from 'lucide-react';
+import { ShieldCheck, GraduationCap, Building2, Upload, Clock, XCircle, CheckCircle2, FileCheck } from 'lucide-react';
 
 interface DocRow {
   id: string;
@@ -19,8 +19,22 @@ const DOC_META: Record<string, { label: string; icon: React.ReactNode; hint: str
 };
 
 /**
- * Document upload + status panel. `docTypes` controls which rows show
- * (worker: aadhaar [+ student_id if student]; hirer: aadhaar, gst, shop_license).
+ * Document upload + status panel.
+ *
+ * Uploading is deliberately TWO steps — choose the file, then tap Submit:
+ *
+ *   1. Choosing a file does no work at all. On a phone the OS often discards
+ *      the page while the native picker is open; every upload that hung off
+ *      the change event died there, silently, because the handler belonged to
+ *      a page that no longer existed. Now the change handler only shows the
+ *      filename, so there is nothing to lose.
+ *   2. The upload runs when Submit is tapped — a fresh gesture on a live,
+ *      fully-restored page.
+ *
+ * Each row is also a REAL html form posting to /api/upload-doc. When
+ * JavaScript is healthy we intercept submit and upload from the browser
+ * (which lets us shrink photos first); if it isn't, the native multipart POST
+ * still goes through and the server does the same job.
  */
 export default function VerificationPanel({
   userId,
@@ -34,6 +48,8 @@ export default function VerificationPanel({
   const [docs, setDocs] = useState<DocRow[]>([]);
   const [uploadingType, setUploadingType] = useState<string | null>(null);
   const [error, setError] = useState('');
+  const [notice, setNotice] = useState('');
+  const [picked, setPicked] = useState<Record<string, string>>({});
   const [trace, setTrace] = useState<string[]>([]);
 
   const fetchDocs = async () => {
@@ -45,11 +61,23 @@ export default function VerificationPanel({
     setDocs(data || []);
   };
 
-  useEffect(() => { fetchDocs(); setTrace(readUploadTrace()); }, [userId]);
+  useEffect(() => {
+    fetchDocs();
+    setTrace(readUploadTrace());
+    // Feedback from the no-JS server fallback, which redirects back here.
+    try {
+      const q = new URLSearchParams(window.location.search);
+      if (q.get('uploaded')) setNotice('Document submitted — it is now in review.');
+      if (q.get('upload_error')) setError(q.get('upload_error') || 'Upload failed. Try again.');
+      if (q.get('uploaded') || q.get('upload_error')) {
+        q.delete('uploaded'); q.delete('upload_error');
+        window.history.replaceState({}, '', window.location.pathname + (q.toString() ? `?${q}` : ''));
+      }
+    } catch { /* ignore */ }
+  }, [userId]);
 
-  // A phone can swap the page out mid-upload; the insert still lands but the
-  // component that would have re-rendered is gone, so the row only appeared
-  // after a manual refresh. Re-read whenever the tab comes back to the front.
+  // A phone can swap the page out mid-upload; the row may land while the page
+  // is away. Re-read whenever the tab comes back to the front.
   useEffect(() => {
     const onVisible = () => {
       if (document.visibilityState === 'visible') { fetchDocs(); setTrace(readUploadTrace()); }
@@ -65,14 +93,7 @@ export default function VerificationPanel({
   // Latest submission per doc type decides the shown status
   const latestFor = (type: string) => docs.find(d => d.doc_type === type);
 
-  /**
-   * Shrink a photo before upload.
-   *
-   * A phone camera produces 3-8 MB images, so the old 5 MB gate rejected most
-   * of them outright — that is why uploading from a phone "didn't work". Going
-   * through a canvas also re-encodes whatever the camera produced (HEIC on
-   * iOS) into a JPEG the reviewer can actually open.
-   */
+  /** Shrink a photo before upload — phone cameras produce 3-8 MB images. */
   const shrinkImage = (file: File): Promise<Blob> =>
     new Promise((resolve, reject) => {
       const url = URL.createObjectURL(file);
@@ -100,20 +121,37 @@ export default function VerificationPanel({
       img.src = url;
     });
 
-  const handleFile = async (e: React.ChangeEvent<HTMLInputElement>, type: string) => {
-    const file = e.target.files?.[0];
-    traceUpload('change fired', `${type}, ${file ? `${file.name || 'unnamed'} ${(file.size / 1048576).toFixed(2)}MB ${file.type || 'no mime'}` : 'NO FILE'}`);
-    e.target.value = '';
-    if (!file || !type) { traceUpload('aborted', 'no file or type'); return; }
+  /** Step 1: choosing a file only records its name. Never any async work here. */
+  const onPick = (type: string, e: React.ChangeEvent<HTMLInputElement>) => {
+    const f = e.target.files?.[0];
+    traceUpload('picked', `${type}: ${f ? `${f.name || 'unnamed'} ${(f.size / 1048576).toFixed(2)}MB` : 'nothing'}`);
+    setPicked(p => ({ ...p, [type]: f ? (f.name || 'selected file') : '' }));
+    setError('');
+    setNotice('');
+  };
+
+  /** Step 2: the actual upload, from an explicit Submit tap on a live page. */
+  const onSubmit = async (type: string, e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault(); // JS path takes over; without JS the form posts natively
+    const form = e.currentTarget;
+    const input = form.elements.namedItem('file') as HTMLInputElement | null;
+    const file = input?.files?.[0];
+    traceUpload('submit tapped', `${type}: ${file ? `${file.name || 'unnamed'} ${(file.size / 1048576).toFixed(2)}MB ${file.type || 'no mime'}` : 'NO FILE IN FORM'}`);
+
+    if (!file) {
+      setError('Choose a file first, then tap Submit.');
+      setPicked(p => ({ ...p, [type]: '' }));
+      return;
+    }
 
     const isImage = file.type.startsWith('image/');
-    // PDFs can't be shrunk here, so they keep a hard cap. Images are resized
-    // below rather than refused.
     if (!isImage && file.size > 10 * 1024 * 1024) {
       setError('That file is too large — please keep PDFs under 10 MB.');
       return;
     }
+
     setError('');
+    setNotice('');
     setUploadingType(type);
     try {
       let body: File | Blob = file;
@@ -123,11 +161,8 @@ export default function VerificationPanel({
       if (isImage) {
         try {
           body = await shrinkImage(file);
-          ext = 'jpg';
           contentType = 'image/jpeg';
         } catch {
-          // Fall back to the original if the canvas can't handle it, but only
-          // when it's small enough to go up as-is.
           if (file.size > 10 * 1024 * 1024) {
             throw new Error('That photo is too large. Try again with a smaller one.');
           }
@@ -136,8 +171,6 @@ export default function VerificationPanel({
           contentType = file.type || 'image/jpeg';
         }
       } else {
-        // Camera and file-picker names are unreliable — only trust a real
-        // extension, otherwise take it from the MIME type.
         ext = (file.name.includes('.') ? file.name.split('.').pop() : '') || (file.type === 'application/pdf' ? 'pdf' : 'bin');
       }
 
@@ -158,6 +191,9 @@ export default function VerificationPanel({
       if (insErr) { traceUpload('row insert FAILED', insErr.message); throw insErr; }
       traceUpload('row inserted — done');
 
+      form.reset();
+      setPicked(p => ({ ...p, [type]: '' }));
+      setNotice('Document submitted — it is now in review.');
       await fetchDocs();
       onStatusChange?.();
     } catch (err: any) {
@@ -182,6 +218,11 @@ export default function VerificationPanel({
           {error}
         </div>
       )}
+      {notice && (
+        <div className="mb-4 p-3 bg-green-500/10 border border-green-500/20 text-green-400 rounded-xl text-xs font-semibold flex items-center gap-1.5">
+          <FileCheck size={14} className="shrink-0" /> {notice}
+        </div>
+      )}
 
       {trace.length > 0 && (
         <div className="mb-4 bg-[#111111] border border-white/10 rounded-xl p-3">
@@ -203,60 +244,76 @@ export default function VerificationPanel({
         {docTypes.map(type => {
           const meta = DOC_META[type];
           const doc = latestFor(type);
+          const busy = uploadingType === type;
           return (
-            <div key={type} className="bg-[#111111] rounded-2xl p-4 border border-white/5 flex items-center justify-between gap-3 flex-wrap">
-              <div className="flex items-center gap-3 min-w-0">
-                <div className="w-9 h-9 rounded-xl bg-[#F4511E]/10 text-[#F4511E] flex items-center justify-center shrink-0">
-                  {meta.icon}
+            <div key={type} className="bg-[#111111] rounded-2xl p-4 border border-white/5">
+              <div className="flex items-center justify-between gap-3 flex-wrap">
+                <div className="flex items-center gap-3 min-w-0">
+                  <div className="w-9 h-9 rounded-xl bg-[#F4511E]/10 text-[#F4511E] flex items-center justify-center shrink-0">
+                    {meta.icon}
+                  </div>
+                  <div className="min-w-0">
+                    <p className="font-bold text-white text-sm">{meta.label}</p>
+                    <p className="text-[11px] font-medium text-white/40">{doc?.status === 'rejected' && doc.rejection_reason
+                      ? <span className="text-red-400">Rejected: {doc.rejection_reason}</span>
+                      : meta.hint}</p>
+                  </div>
                 </div>
-                <div className="min-w-0">
-                  <p className="font-bold text-white text-sm">{meta.label}</p>
-                  <p className="text-[11px] font-medium text-white/40">{doc?.status === 'rejected' && doc.rejection_reason
-                    ? <span className="text-red-400">Rejected: {doc.rejection_reason}</span>
-                    : meta.hint}</p>
-                </div>
+
+                {doc?.status === 'approved' ? (
+                  <span className="flex items-center gap-1.5 text-[10px] font-black uppercase tracking-wider text-green-400 bg-green-500/10 border border-green-500/20 px-3 py-1.5 rounded-full">
+                    <CheckCircle2 size={12} /> Approved
+                  </span>
+                ) : doc?.status === 'pending' ? (
+                  <span className="flex items-center gap-1.5 text-[10px] font-black uppercase tracking-wider text-yellow-400 bg-yellow-500/10 border border-yellow-500/20 px-3 py-1.5 rounded-full">
+                    <Clock size={12} className="animate-pulse" /> In Review
+                  </span>
+                ) : (
+                  <form
+                    method="post"
+                    action="/api/upload-doc"
+                    encType="multipart/form-data"
+                    onSubmit={(e) => onSubmit(type, e)}
+                    className="flex items-center gap-2 flex-wrap"
+                  >
+                    <input type="hidden" name="doc_type" value={type} />
+                    <input type="hidden" name="redirect_to" value="/worker/profile" />
+                    <label
+                      className={`flex items-center gap-1.5 text-[11px] font-black uppercase tracking-wider px-4 py-2 rounded-full transition-colors btn-tap cursor-pointer ${busy ? 'opacity-50 pointer-events-none' : ''} ${
+                        doc?.status === 'rejected'
+                          ? 'bg-red-500/10 text-red-400 border border-red-500/30 hover:bg-red-500/20'
+                          : picked[type]
+                            ? 'bg-[#111111] text-white/70 border border-white/15 hover:text-white'
+                            : 'bg-[#F4511E] text-white hover:bg-[#D84315]'
+                      }`}
+                    >
+                      <input
+                        type="file"
+                        name="file"
+                        accept="image/*,application/pdf"
+                        className="sr-only"
+                        disabled={busy}
+                        onChange={(e) => onPick(type, e)}
+                      />
+                      <Upload size={12} />
+                      {picked[type] ? 'Change' : doc?.status === 'rejected' ? 'Re-upload' : 'Choose file'}
+                    </label>
+                    {picked[type] && (
+                      <button
+                        type="submit"
+                        disabled={busy}
+                        className="flex items-center gap-1.5 text-[11px] font-black uppercase tracking-wider px-4 py-2 rounded-full bg-[#F4511E] text-white hover:bg-[#D84315] transition-colors btn-tap disabled:opacity-50"
+                      >
+                        {busy ? 'Uploading…' : 'Submit'}
+                      </button>
+                    )}
+                  </form>
+                )}
               </div>
-
-              {doc?.status === 'approved' ? (
-                <span className="flex items-center gap-1.5 text-[10px] font-black uppercase tracking-wider text-green-400 bg-green-500/10 border border-green-500/20 px-3 py-1.5 rounded-full">
-                  <CheckCircle2 size={12} /> Approved
-                </span>
-              ) : doc?.status === 'pending' ? (
-                <span className="flex items-center gap-1.5 text-[10px] font-black uppercase tracking-wider text-yellow-400 bg-yellow-500/10 border border-yellow-500/20 px-3 py-1.5 rounded-full">
-                  <Clock size={12} className="animate-pulse" /> In Review
-                </span>
-              ) : (
-                /* A real input per row, driven by its own label — no
-                   JS-triggered click, no shared hidden input, no ref holding
-                   which type is pending.
-
-                   The old version opened one hidden input via .click() and
-                   remembered the type in a ref. On a phone the browser often
-                   discards the page while the native picker is open and
-                   restores it on return: the input came back empty, no change
-                   event ever fired, and nothing happened at all — no error,
-                   no network call, nothing in the console. It worked roughly
-                   one time in five, whenever the page happened to survive.
-                   A labelled input carries its own file and its own type, so
-                   there is no state left to lose. */
-                <label
-                  className={`flex items-center gap-1.5 text-[11px] font-black uppercase tracking-wider px-4 py-2 rounded-full transition-colors btn-tap cursor-pointer ${
-                    uploadingType === type ? 'opacity-50 pointer-events-none' : ''
-                  } ${
-                    doc?.status === 'rejected'
-                      ? 'bg-red-500/10 text-red-400 border border-red-500/30 hover:bg-red-500/20'
-                      : 'bg-[#F4511E] text-white hover:bg-[#D84315]'
-                  }`}
-                >
-                  <input
-                    type="file"
-                    accept="image/*,application/pdf"
-                    className="sr-only"
-                    disabled={uploadingType === type}
-                    onChange={(e) => handleFile(e, type)}
-                  />
-                  {doc?.status === 'rejected' ? <><XCircle size={12} /> Re-upload</> : <><Upload size={12} /> {uploadingType === type ? 'Uploading…' : 'Upload'}</>}
-                </label>
+              {picked[type] && !busy && (
+                <p className="text-[11px] font-semibold text-white/45 mt-2 break-all">
+                  Selected: {picked[type]} — tap <span className="text-[#F4511E]">Submit</span> to upload it.
+                </p>
               )}
             </div>
           );

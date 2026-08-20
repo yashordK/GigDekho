@@ -115,6 +115,9 @@ type Pages = {
   "/api/withdraw": {
     params: {};
   };
+  "/api/upload-doc": {
+    params: {};
+  };
   "/api/cron/reminders": {
     params: {};
   };
@@ -146,7 +149,7 @@ type Pages = {
 type RouteFiles = {
   "root.tsx": {
     id: "root";
-    page: "/" | "/auth" | "/auth/callback" | "/auth/reset" | "/setup-profile" | "/organizer/preview" | "/gigs/:id" | "/hirer/:id" | "/admin" | "/admin/reports" | "/admin/verifications" | "/admin/payouts" | "/admin/users" | "/admin/users/:id" | "/admin/gigs" | "/admin/gigs/:id" | "/admin/accounts" | "/admin/settings" | "/api/apply" | "/api/cancel" | "/api/mark-attendance" | "/api/pay" | "/api/announce" | "/api/qa" | "/api/apply-internship" | "/api/internship-applicants" | "/api/export-applicants" | "/api/track" | "/api/report" | "/api/admin/accounts" | "/api/bank" | "/api/withdraw" | "/api/cron/reminders" | "/worker/home" | "/about" | "/worker/dashboard" | "/worker/earnings" | "/worker/profile" | "/organizer/home" | "/*";
+    page: "/" | "/auth" | "/auth/callback" | "/auth/reset" | "/setup-profile" | "/organizer/preview" | "/gigs/:id" | "/hirer/:id" | "/admin" | "/admin/reports" | "/admin/verifications" | "/admin/payouts" | "/admin/users" | "/admin/users/:id" | "/admin/gigs" | "/admin/gigs/:id" | "/admin/accounts" | "/admin/settings" | "/api/apply" | "/api/cancel" | "/api/mark-attendance" | "/api/pay" | "/api/announce" | "/api/qa" | "/api/apply-internship" | "/api/internship-applicants" | "/api/export-applicants" | "/api/track" | "/api/report" | "/api/admin/accounts" | "/api/bank" | "/api/withdraw" | "/api/upload-doc" | "/api/cron/reminders" | "/worker/home" | "/about" | "/worker/dashboard" | "/worker/earnings" | "/worker/profile" | "/organizer/home" | "/*";
   };
   "routes/home.tsx": {
     id: "routes/home";
@@ -280,6 +283,10 @@ type RouteFiles = {
     id: "routes/api.withdraw";
     page: "/api/withdraw";
   };
+  "routes/api.upload-doc.ts": {
+    id: "routes/api.upload-doc";
+    page: "/api/upload-doc";
+  };
   "routes/api.cron.reminders.ts": {
     id: "routes/api.cron.reminders";
     page: "/api/cron/reminders";
@@ -357,6 +364,7 @@ type RouteModules = {
   "routes/api.admin.accounts": typeof import("./app/routes/api.admin.accounts.ts");
   "routes/api.bank": typeof import("./app/routes/api.bank.ts");
   "routes/api.withdraw": typeof import("./app/routes/api.withdraw.ts");
+  "routes/api.upload-doc": typeof import("./app/routes/api.upload-doc.ts");
   "routes/api.cron.reminders": typeof import("./app/routes/api.cron.reminders.ts");
   "routes/public-layout": typeof import("./app/routes/public-layout.tsx");
   "routes/worker.home": typeof import("./app/routes/worker.home.tsx");

@@ -20,6 +20,7 @@ export default function PortfolioPanel({ userId, readOnly = false }: { userId: s
   const [linkUrl, setLinkUrl] = useState('');
   const [linkLabel, setLinkLabel] = useState('');
   const [busy, setBusy] = useState(false);
+  const [pickedName, setPickedName] = useState('');
   const [error, setError] = useState('');
 
   const fetchItems = async () => {
@@ -61,11 +62,26 @@ export default function PortfolioPanel({ userId, readOnly = false }: { userId: s
     }
   };
 
-  const handleFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    traceUpload('portfolio change fired', file ? `${file.name || 'unnamed'} ${(file.size/1048576).toFixed(2)}MB ${file.type || 'no mime'}` : 'NO FILE');
-    e.target.value = '';
-    if (!file) return;
+  /** Choosing a file does nothing but show its name — see VerificationPanel
+      for why no work may ever hang off the change event on a phone. */
+  const onPick = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const f = e.target.files?.[0];
+    traceUpload('portfolio picked', f ? `${f.name || 'unnamed'} ${(f.size/1048576).toFixed(2)}MB` : 'nothing');
+    setPickedName(f ? (f.name || 'selected file') : '');
+    setError('');
+  };
+
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault(); // JS path; without JS the form posts to /api/upload-doc
+    const form = e.currentTarget;
+    const input = form.elements.namedItem('file') as HTMLInputElement | null;
+    const file = input?.files?.[0];
+    traceUpload('portfolio submit', file ? `${file.name || 'unnamed'} ${(file.size/1048576).toFixed(2)}MB ${file.type || 'no mime'}` : 'NO FILE IN FORM');
+    if (!file) {
+      setError('Choose a file first, then tap Submit.');
+      setPickedName('');
+      return;
+    }
     if (file.size > 10 * 1024 * 1024) {
       setError('File too large — max 10 MB.');
       return;
@@ -85,8 +101,12 @@ export default function PortfolioPanel({ userId, readOnly = false }: { userId: s
         label: file.name.slice(0, 60),
       });
       if (insErr) throw insErr;
+      traceUpload('portfolio done');
+      form.reset();
+      setPickedName('');
       await fetchItems();
     } catch (err: any) {
+      traceUpload('portfolio threw', err?.message ?? String(err));
       setError(err.message || 'Upload failed.');
     } finally {
       setBusy(false);
@@ -128,24 +148,40 @@ export default function PortfolioPanel({ userId, readOnly = false }: { userId: s
             >
               <Link2 size={12} /> Add Link
             </button>
-            {/* A real input behind its own label, for the same reason as the
-                verification panel: a phone discards the page while the native
-                picker is open, so an input opened with .click() comes back
-                empty and its change event never fires. This is why uploading a
-                resume from a phone did nothing at all. */}
-            <label
-              className={`flex items-center gap-1 text-[11px] font-black text-white bg-[#F4511E] px-3 py-1.5 rounded-full hover:bg-[#D84315] transition-colors btn-tap cursor-pointer min-h-0 ${busy ? 'opacity-50 pointer-events-none' : ''}`}
-              style={{ minHeight: '32px' }}
+            <form
+              method="post"
+              action="/api/upload-doc"
+              encType="multipart/form-data"
+              onSubmit={handleSubmit}
+              className="flex items-center gap-2 flex-wrap"
             >
-              <input
-                type="file"
-                accept="image/*,application/pdf,.doc,.docx"
-                className="sr-only"
-                disabled={busy}
-                onChange={handleFile}
-              />
-              <Upload size={12} /> {busy ? 'Working…' : 'Upload File'}
-            </label>
+              <input type="hidden" name="doc_type" value="portfolio" />
+              <input type="hidden" name="redirect_to" value="/worker/profile" />
+              <label
+                className={`flex items-center gap-1 text-[11px] font-black px-3 py-1.5 rounded-full transition-colors btn-tap cursor-pointer min-h-0 ${busy ? 'opacity-50 pointer-events-none' : ''} ${pickedName ? 'bg-[#111111] text-white/70 border border-white/15 hover:text-white' : 'bg-[#F4511E] text-white hover:bg-[#D84315]'}`}
+                style={{ minHeight: '32px' }}
+              >
+                <input
+                  type="file"
+                  name="file"
+                  accept="image/*,application/pdf,.doc,.docx"
+                  className="sr-only"
+                  disabled={busy}
+                  onChange={onPick}
+                />
+                <Upload size={12} /> {pickedName ? 'Change' : 'Choose File'}
+              </label>
+              {pickedName && (
+                <button
+                  type="submit"
+                  disabled={busy}
+                  className="flex items-center gap-1 text-[11px] font-black text-white bg-[#F4511E] px-3 py-1.5 rounded-full hover:bg-[#D84315] transition-colors btn-tap disabled:opacity-50 min-h-0"
+                  style={{ minHeight: '32px' }}
+                >
+                  {busy ? 'Uploading…' : 'Submit'}
+                </button>
+              )}
+            </form>
           </div>
         )}
       </div>
@@ -154,6 +190,11 @@ export default function PortfolioPanel({ userId, readOnly = false }: { userId: s
           ? 'Work samples and documents shared by this worker.'
           : 'Share links to your work and upload your resume or proof of work — hirers see these on your profile.'}
       </p>
+      {pickedName && !busy && (
+        <p className="text-[11px] font-semibold text-white/45 mb-3 break-all">
+          Selected: {pickedName} — tap <span className="text-[#F4511E]">Submit</span> to upload it.
+        </p>
+      )}
 
       {error && (
         <div className="mb-3 p-3 bg-red-500/10 border border-red-500/20 text-red-400 rounded-xl text-xs font-semibold">{error}</div>

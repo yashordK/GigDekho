@@ -42,6 +42,7 @@ export default [
   route("api/admin/accounts", "routes/api.admin.accounts.ts"),
   route("api/bank", "routes/api.bank.ts"),
   route("api/withdraw", "routes/api.withdraw.ts"),
+  route("api/upload-doc", "routes/api.upload-doc.ts"),
   route("api/cron/reminders", "routes/api.cron.reminders.ts"),
 
   // Public app pages — nav chrome, no auth wall
