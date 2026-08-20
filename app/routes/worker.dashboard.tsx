@@ -53,7 +53,7 @@ export default function DashboardScreen() {
       fetchApplications();
       fetchReliabilityScore();
     }
-  }, [user]);
+  }, [user?.id]);
 
   const fetchReliabilityScore = async () => {
     if (!user) return;

@@ -64,18 +64,31 @@ export default function ProfileScreen() {
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
   const [savingStudent, setSavingStudent] = useState(false);
   const avatarInputRef = useRef<HTMLInputElement>(null);
+  // Flips after the first successful load and never flips back.
+  const hasLoadedRef = useRef(false);
 
   const handleSwitchView = (toOrganizer: boolean) => {
     localStorage.setItem('activeView', toOrganizer ? 'organizer' : 'worker');
     navigate(toOrganizer ? '/organizer/home' : '/worker/home');
   };
 
+  // Depend on the user's ID, not the user object. Supabase hands back a fresh
+  // object on every token refresh — which happens each time a tab becomes
+  // visible — so depending on the object re-ran this on every return to the
+  // page, for the same signed-in person.
   useEffect(() => {
     if (user) fetchData();
-  }, [user, isOrganizerView]);
+  }, [user?.id, isOrganizerView]);
 
   const fetchData = async () => {
-    setLoading(true);
+    // Only blank the page on the very first load. Re-fetching used to set
+    // loading true again, and `if (loading) return <Spinner/>` below replaced
+    // the whole page — unmounting the verification and portfolio panels along
+    // with the file input holding a file the user had just chosen in the
+    // native picker. That is why uploading from a phone did nothing at all,
+    // with no error and nothing in any log: the component that would have
+    // handled the file no longer existed by the time the picker returned.
+    if (!hasLoadedRef.current) setLoading(true);
     try {
       if (isOrganizerView) {
         const { data: gigsData, count: gigsCount } = await supabase
@@ -142,6 +155,7 @@ export default function ProfileScreen() {
     } catch (err) {
       console.error(err);
     } finally {
+      hasLoadedRef.current = true;
       setLoading(false);
     }
   };

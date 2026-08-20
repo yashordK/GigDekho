@@ -26,7 +26,7 @@ export default function EarningsScreen() {
     if (user) {
       fetchCompletedGigs();
     }
-  }, [user]);
+  }, [user?.id]);
 
   const fetchCompletedGigs = async () => {
     setLoading(true);

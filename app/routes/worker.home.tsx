@@ -85,7 +85,7 @@ export default function HomeScreen() {
         console.error('Fetch worker activity error:', err);
       }
     })();
-  }, [user]);
+  }, [user?.id]);
 
   const fetchData = async () => {
     setLoading(true);

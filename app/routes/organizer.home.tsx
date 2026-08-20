@@ -140,7 +140,7 @@ export default function OrganizerHomeScreen() {
     if (!authLoading && !user) {
       navigate("/auth?mode=organizer");
     }
-  }, [user, authLoading]);
+  }, [user?.id, authLoading]);
 
   useEffect(() => {
     fetchSkillCategories().then(setCategories);
