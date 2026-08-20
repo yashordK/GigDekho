@@ -36,6 +36,10 @@ const DOC_META: Record<string, { label: string; icon: React.ReactNode; hint: str
  * (which lets us shrink photos first); if it isn't, the native multipart POST
  * still goes through and the server does the same job.
  */
+/** Bumped by hand. If a device doesn't show this, it is running an old
+ *  cached bundle — which is a different problem from the upload failing. */
+const PANEL_BUILD = 'upload-v3 (choose-then-submit)';
+
 export default function VerificationPanel({
   userId,
   docTypes,
@@ -51,6 +55,7 @@ export default function VerificationPanel({
   const [notice, setNotice] = useState('');
   const [picked, setPicked] = useState<Record<string, string>>({});
   const [trace, setTrace] = useState<string[]>([]);
+  const [env, setEnv] = useState('');
 
   const fetchDocs = async () => {
     const { data } = await supabase
@@ -64,6 +69,13 @@ export default function VerificationPanel({
   useEffect(() => {
     fetchDocs();
     setTrace(readUploadTrace());
+    // Report what the device is actually running, and whether a stale service
+    // worker was controlling this page.
+    try {
+      const sw = 'serviceWorker' in navigator && navigator.serviceWorker.controller ? 'SW ACTIVE' : 'no SW';
+      const killed = sessionStorage.getItem('gd-sw-killed') === '1' ? ', old SW removed' : '';
+      setEnv(`${PANEL_BUILD} · ${sw}${killed}`);
+    } catch { setEnv(PANEL_BUILD); }
     // Feedback from the no-JS server fallback, which redirects back here.
     try {
       const q = new URLSearchParams(window.location.search);
@@ -224,13 +236,16 @@ export default function VerificationPanel({
         </div>
       )}
 
-      {trace.length > 0 && (
+      {(trace.length > 0 || env) && (
         <div className="mb-4 bg-[#111111] border border-white/10 rounded-xl p-3">
           <div className="flex items-center justify-between mb-2">
             <p className="text-[10px] font-black text-white/50 uppercase tracking-widest">Upload log</p>
             <button type="button" onClick={() => { clearUploadTrace(); setTrace([]); }}
               className="text-[10px] font-bold text-white/40 hover:text-white btn-tap">clear</button>
           </div>
+          {env && (
+            <p className="text-[10px] font-mono text-[#F4511E]/70 leading-relaxed break-all mb-1">{env}</p>
+          )}
           {trace.map((line, i) => (
             <p key={i} className="text-[10px] font-mono text-white/50 leading-relaxed break-all">{line}</p>
           ))}

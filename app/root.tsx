@@ -51,6 +51,19 @@ export function Layout({ children }: { children: React.ReactNode }) {
         <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet" />
         {/* Apply saved theme before first paint to avoid a flash of dark */}
         <script dangerouslySetInnerHTML={{ __html: "try{if(localStorage.getItem('gd-theme')==='light')document.documentElement.classList.add('light')}catch(e){}" }} />
+        {/* Kill any service worker left over from an earlier build.
+            The old one cached every same-origin request cache-first under a
+            name that never changed, so devices that installed it kept serving
+            stale assets forever — a phone could sit on a months-old bundle
+            while desktop, which never installed it, tracked deploys correctly.
+            Nothing registers a worker any more, but a registration outlives
+            the code that created it, so it has to be revoked explicitly. */}
+        <script
+          dangerouslySetInnerHTML={{
+            __html:
+              "if('serviceWorker'in navigator){navigator.serviceWorker.getRegistrations().then(function(rs){if(!rs.length)return;var had=false;rs.forEach(function(r){had=true;r.unregister()});if(had){try{sessionStorage.setItem('gd-sw-killed','1')}catch(e){}if(window.caches&&caches.keys){caches.keys().then(function(ks){return Promise.all(ks.map(function(k){return caches.delete(k)}))}).then(function(){location.reload()})}else{location.reload()}}}).catch(function(){})}",
+          }}
+        />
         {/* Global gm_authFailure handler — must exist before Maps script loads */}
         <script dangerouslySetInnerHTML={{ __html: "window.gm_authFailure=function(){window.__MAPS_AUTH_FAILED__=true;};" }} />
         {mapsKey ? (
