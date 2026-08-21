@@ -1,6 +1,5 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '~/lib/supabase.client';
-import { traceUpload, readUploadTrace } from '~/lib/upload-trace';
 import { Link2, FileText, Upload, Trash2, ExternalLink, Plus } from 'lucide-react';
 
 interface PortfolioItem {
@@ -66,7 +65,6 @@ export default function PortfolioPanel({ userId, readOnly = false }: { userId: s
       for why no work may ever hang off the change event on a phone. */
   const onPick = (e: React.ChangeEvent<HTMLInputElement>) => {
     const f = e.target.files?.[0];
-    traceUpload('portfolio picked', f ? `${f.name || 'unnamed'} ${(f.size/1048576).toFixed(2)}MB` : 'nothing');
     setPickedName(f ? (f.name || 'selected file') : '');
     setError('');
   };
@@ -76,7 +74,6 @@ export default function PortfolioPanel({ userId, readOnly = false }: { userId: s
     const form = e.currentTarget;
     const input = form.elements.namedItem('file') as HTMLInputElement | null;
     const file = input?.files?.[0];
-    traceUpload('portfolio submit', file ? `${file.name || 'unnamed'} ${(file.size/1048576).toFixed(2)}MB ${file.type || 'no mime'}` : 'NO FILE IN FORM');
     if (!file) {
       setError('Choose a file first, then tap Submit.');
       setPickedName('');
@@ -101,12 +98,10 @@ export default function PortfolioPanel({ userId, readOnly = false }: { userId: s
         label: file.name.slice(0, 60),
       });
       if (insErr) throw insErr;
-      traceUpload('portfolio done');
       form.reset();
       setPickedName('');
       await fetchItems();
     } catch (err: any) {
-      traceUpload('portfolio threw', err?.message ?? String(err));
       setError(err.message || 'Upload failed.');
     } finally {
       setBusy(false);

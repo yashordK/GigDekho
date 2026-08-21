@@ -1,6 +1,5 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '~/lib/supabase.client';
-import { traceUpload, readUploadTrace, clearUploadTrace } from '~/lib/upload-trace';
 import { ShieldCheck, GraduationCap, Building2, Upload, Clock, XCircle, CheckCircle2, FileCheck } from 'lucide-react';
 
 interface DocRow {
@@ -36,10 +35,6 @@ const DOC_META: Record<string, { label: string; icon: React.ReactNode; hint: str
  * (which lets us shrink photos first); if it isn't, the native multipart POST
  * still goes through and the server does the same job.
  */
-/** Bumped by hand. If a device doesn't show this, it is running an old
- *  cached bundle — which is a different problem from the upload failing. */
-const PANEL_BUILD = 'upload-v3 (choose-then-submit)';
-
 export default function VerificationPanel({
   userId,
   docTypes,
@@ -54,8 +49,6 @@ export default function VerificationPanel({
   const [error, setError] = useState('');
   const [notice, setNotice] = useState('');
   const [picked, setPicked] = useState<Record<string, string>>({});
-  const [trace, setTrace] = useState<string[]>([]);
-  const [env, setEnv] = useState('');
 
   const fetchDocs = async () => {
     const { data } = await supabase
@@ -68,14 +61,6 @@ export default function VerificationPanel({
 
   useEffect(() => {
     fetchDocs();
-    setTrace(readUploadTrace());
-    // Report what the device is actually running, and whether a stale service
-    // worker was controlling this page.
-    try {
-      const sw = 'serviceWorker' in navigator && navigator.serviceWorker.controller ? 'SW ACTIVE' : 'no SW';
-      const killed = sessionStorage.getItem('gd-sw-killed') === '1' ? ', old SW removed' : '';
-      setEnv(`${PANEL_BUILD} · ${sw}${killed}`);
-    } catch { setEnv(PANEL_BUILD); }
     // Feedback from the no-JS server fallback, which redirects back here.
     try {
       const q = new URLSearchParams(window.location.search);
@@ -92,7 +77,7 @@ export default function VerificationPanel({
   // is away. Re-read whenever the tab comes back to the front.
   useEffect(() => {
     const onVisible = () => {
-      if (document.visibilityState === 'visible') { fetchDocs(); setTrace(readUploadTrace()); }
+      if (document.visibilityState === 'visible') fetchDocs();
     };
     document.addEventListener('visibilitychange', onVisible);
     window.addEventListener('focus', onVisible);
@@ -136,7 +121,6 @@ export default function VerificationPanel({
   /** Step 1: choosing a file only records its name. Never any async work here. */
   const onPick = (type: string, e: React.ChangeEvent<HTMLInputElement>) => {
     const f = e.target.files?.[0];
-    traceUpload('picked', `${type}: ${f ? `${f.name || 'unnamed'} ${(f.size / 1048576).toFixed(2)}MB` : 'nothing'}`);
     setPicked(p => ({ ...p, [type]: f ? (f.name || 'selected file') : '' }));
     setError('');
     setNotice('');
@@ -148,7 +132,6 @@ export default function VerificationPanel({
     const form = e.currentTarget;
     const input = form.elements.namedItem('file') as HTMLInputElement | null;
     const file = input?.files?.[0];
-    traceUpload('submit tapped', `${type}: ${file ? `${file.name || 'unnamed'} ${(file.size / 1048576).toFixed(2)}MB ${file.type || 'no mime'}` : 'NO FILE IN FORM'}`);
 
     if (!file) {
       setError('Choose a file first, then tap Submit.');
@@ -187,12 +170,10 @@ export default function VerificationPanel({
       }
 
       const path = `${userId}/${type}-${Date.now()}.${ext.toLowerCase()}`;
-      traceUpload('uploading to storage', path);
       const { error: upErr } = await supabase.storage
         .from('verification-docs')
         .upload(path, body, { upsert: false, contentType });
-      if (upErr) { traceUpload('storage FAILED', upErr.message); throw upErr; }
-      traceUpload('storage ok');
+      if (upErr) throw upErr;
 
       const { error: insErr } = await supabase.from('verification_documents').insert({
         user_id: userId,
@@ -200,8 +181,7 @@ export default function VerificationPanel({
         file_path: path,
         status: 'pending',
       });
-      if (insErr) { traceUpload('row insert FAILED', insErr.message); throw insErr; }
-      traceUpload('row inserted — done');
+      if (insErr) throw insErr;
 
       form.reset();
       setPicked(p => ({ ...p, [type]: '' }));
@@ -210,11 +190,9 @@ export default function VerificationPanel({
       onStatusChange?.();
     } catch (err: any) {
       console.error(err);
-      traceUpload('threw', err?.message ?? String(err));
       setError(err.message || 'Upload failed. Try again.');
     } finally {
       setUploadingType(null);
-      setTrace(readUploadTrace());
     }
   };
 
@@ -236,24 +214,6 @@ export default function VerificationPanel({
         </div>
       )}
 
-      {(trace.length > 0 || env) && (
-        <div className="mb-4 bg-[#111111] border border-white/10 rounded-xl p-3">
-          <div className="flex items-center justify-between mb-2">
-            <p className="text-[10px] font-black text-white/50 uppercase tracking-widest">Upload log</p>
-            <button type="button" onClick={() => { clearUploadTrace(); setTrace([]); }}
-              className="text-[10px] font-bold text-white/40 hover:text-white btn-tap">clear</button>
-          </div>
-          {env && (
-            <p className="text-[10px] font-mono text-[#F4511E]/70 leading-relaxed break-all mb-1">{env}</p>
-          )}
-          {trace.map((line, i) => (
-            <p key={i} className="text-[10px] font-mono text-white/50 leading-relaxed break-all">{line}</p>
-          ))}
-          <p className="text-[10px] font-medium text-white/30 mt-2">
-            If an upload didn't work, send this list to us — it shows exactly where it stopped.
-          </p>
-        </div>
-      )}
 
       <div className="space-y-3">
         {docTypes.map(type => {
