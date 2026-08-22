@@ -33,6 +33,27 @@ export async function action({ request }: ActionFunctionArgs) {
   const viewsBonus = get("reel_views_bonus", 50);
   const maxPerGig = get("reel_bonus_max_per_gig", 100);
 
+  /**
+   * Apply a review decision and prove it landed.
+   *
+   * A silently-reverted update here is the worst possible outcome: the wallet
+   * is credited, the worker is notified, and the submission stays in the queue
+   * looking unpaid. That is exactly what a trigger bug caused once, so the
+   * row count is checked rather than assumed.
+   */
+  const applyUpdate = async (patch: Record<string, unknown>) => {
+    const { data, error } = await ctx.admin
+      .from("reel_submissions")
+      .update(patch)
+      .eq("id", id)
+      .select("id");
+    if (error) return error.message;
+    if (!data || data.length === 0) {
+      return "The decision could not be saved — nothing was updated. Check the reel review policies.";
+    }
+    return null;
+  };
+
   /** Pay once, ever, for a given submission and reason. */
   const credit = async (amount: number, type: string, description: string) => {
     const { data: existing } = await ctx.admin
@@ -75,13 +96,14 @@ export async function action({ request }: ActionFunctionArgs) {
     const res = await credit(perReel, "reel_bonus", `Reel reward — ${reel.gig?.title ?? "gig"}`);
     if (res.error) return Response.json({ error: res.error }, { status: 500 });
 
-    await ctx.admin.from("reel_submissions").update({
+    const upErr = await applyUpdate({
       status: "approved",
       review_note: note,
       reviewed_by: ctx.adminId,
       reviewed_at: new Date().toISOString(),
       base_paid_at: new Date().toISOString(),
-    }).eq("id", id);
+    });
+    if (upErr) return Response.json({ error: upErr }, { status: 500 });
 
     await ctx.admin.from("notifications").insert({
       user_id: reel.worker_id,
@@ -96,12 +118,13 @@ export async function action({ request }: ActionFunctionArgs) {
   }
 
   if (intent === "reject") {
-    await ctx.admin.from("reel_submissions").update({
+    const upErr = await applyUpdate({
       status: "rejected",
       review_note: note,
       reviewed_by: ctx.adminId,
       reviewed_at: new Date().toISOString(),
-    }).eq("id", id);
+    });
+    if (upErr) return Response.json({ error: upErr }, { status: 500 });
     await logAdminAction(ctx, "reject_reel", `Rejected reel ${reel.reel_url}${note ? ` — ${note}` : ""}`, { targetUserId: reel.worker_id });
     return Response.json({ ok: true });
   }
@@ -121,12 +144,13 @@ export async function action({ request }: ActionFunctionArgs) {
     const res = await credit(viewsBonus, "reel_views_bonus", `Reel views bonus — ${reel.gig?.title ?? "gig"}`);
     if (res.error) return Response.json({ error: res.error }, { status: 500 });
 
-    await ctx.admin.from("reel_submissions").update({
+    const upErr = await applyUpdate({
       views_status: "approved",
       views_reviewed_by: ctx.adminId,
       views_reviewed_at: new Date().toISOString(),
       views_paid_at: new Date().toISOString(),
-    }).eq("id", id);
+    });
+    if (upErr) return Response.json({ error: upErr }, { status: 500 });
 
     await ctx.admin.from("notifications").insert({
       user_id: reel.worker_id,
@@ -141,11 +165,12 @@ export async function action({ request }: ActionFunctionArgs) {
   }
 
   if (intent === "reject_views") {
-    await ctx.admin.from("reel_submissions").update({
+    const upErr = await applyUpdate({
       views_status: "rejected",
       views_reviewed_by: ctx.adminId,
       views_reviewed_at: new Date().toISOString(),
-    }).eq("id", id);
+    });
+    if (upErr) return Response.json({ error: upErr }, { status: 500 });
     await logAdminAction(ctx, "reject_reel_views", `Rejected views claim for ${reel.reel_url}`, { targetUserId: reel.worker_id });
     return Response.json({ ok: true });
   }
