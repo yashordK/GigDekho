@@ -33,3 +33,6 @@ gigdekho-*.json
 *.njsproj
 *.sln
 *.sw?
+_*.mjs
+_*.py
+_*.txt
