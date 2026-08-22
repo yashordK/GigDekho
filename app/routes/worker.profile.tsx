@@ -10,6 +10,7 @@ import EditProfileModal from '~/components/EditProfileModal';
 import SkillSelector from '~/components/SkillSelector';
 import ThemeToggle from '~/components/ThemeToggle';
 import PortfolioPanel from '~/components/PortfolioPanel';
+import ReelRewardsPanel from '~/components/ReelRewardsPanel';
 
 export const meta = () => [
   { title: "My profile — GigDekho" },
@@ -529,6 +530,8 @@ export default function ProfileScreen() {
 
               {/* Portfolio & resume — links + uploaded files, visible to hirers */}
               {user && <PortfolioPanel userId={user.id} />}
+
+              {user && !isOrganizerView && <ReelRewardsPanel userId={user.id} />}
 
               {(() => {
                 const { earned: trophies, locked: lockedTrophy } = computeTrophies(stats.completedGigs, hasFiveStar);

@@ -3,7 +3,7 @@ import type { LoaderFunctionArgs } from "react-router";
 import { requireAdmin } from "~/lib/admin.server";
 import {
   ShieldCheck, LayoutDashboard, Users, Briefcase, Flag, Banknote,
-  Building2, Settings, FileCheck, ArrowLeft,
+  Building2, Settings, FileCheck, ArrowLeft, Video,
 } from "lucide-react";
 
 export async function loader({ request }: LoaderFunctionArgs) {
@@ -31,6 +31,7 @@ const NAV = [
   { to: "/admin/reports", label: "Reports", icon: Flag, badge: "reports" as const },
   { to: "/admin/verifications", label: "Verifications", icon: FileCheck, badge: "verifications" as const },
   { to: "/admin/payouts", label: "Payouts", icon: Banknote, badge: "payouts" as const },
+  { to: "/admin/reels", label: "Reels", icon: Video, badge: null },
   { to: "/admin/users", label: "Users", icon: Users, badge: null },
   { to: "/admin/gigs", label: "Listings", icon: Briefcase, badge: null },
   { to: "/admin/accounts", label: "Managed Accounts", icon: Building2, badge: null },
