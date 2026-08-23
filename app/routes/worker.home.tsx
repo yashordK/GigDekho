@@ -4,6 +4,7 @@ import { useAuth } from '~/context/AuthContext';
 import { useNavigate } from 'react-router';
 import GigCard from '~/components/GigCard';
 import SpotlightCategories from '~/components/SpotlightCategories';
+import ReferralPanel from '~/components/ReferralPanel';
 import ProfileCompletionNudge from '~/components/ProfileCompletionNudge';
 import { formatRelativeDate } from '~/lib/utils';
 import { Briefcase, RefreshCw, Zap, Users, SlidersHorizontal, ArrowDownAZ, Star, Wallet, Award, Gift, ChevronRight, Check } from 'lucide-react';
@@ -54,7 +55,6 @@ export default function HomeScreen() {
   const [showFilters, setShowFilters] = useState(false);
   const [showSort, setShowSort] = useState(false);
   const [showHowItWorks, setShowHowItWorks] = useState(false);
-  const [inviteCopied, setInviteCopied] = useState(false);
   const { user, profile } = useAuth();
   const navigate = useNavigate();
 
@@ -154,20 +154,6 @@ export default function HomeScreen() {
       setError('Something went wrong. Try again.');
     } finally {
       setLoading(false);
-    }
-  };
-
-  const handleInvite = async () => {
-    const link = `${window.location.origin}/?ref=${user?.id ?? ''}`;
-    const text = `I'm finding paid gigs in Indore on GigDekho. Join me: ${link}`;
-    if (typeof navigator.share === 'function') {
-      try { await navigator.share({ title: 'GigDekho', text, url: link }); } catch { /* user dismissed */ }
-    } else {
-      try {
-        await navigator.clipboard.writeText(link);
-        setInviteCopied(true);
-        setTimeout(() => setInviteCopied(false), 2500);
-      } catch { /* clipboard unavailable */ }
     }
   };
 
@@ -666,20 +652,7 @@ export default function HomeScreen() {
               </div>
            )}
 
-           {/* Refer a Friend */}
-           <div className="bg-gradient-to-br from-[#6231d4] to-[#4510b6] rounded-3xl p-6 relative overflow-hidden shadow-lg border border-[#7d4de2]">
-             <div className="absolute right-[-30px] bottom-[-30px] opacity-20">
-               <Users size={140} className="text-white"/>
-             </div>
-
-             <h3 className="font-black text-white text-lg mb-2 relative z-10 tracking-tight">Refer a Friend</h3>
-             <p className="text-[13px] font-medium text-white/80 mb-6 leading-relaxed relative z-10 max-w-[200px]">
-               Share GigDekho with friends who want to earn in Indore.
-             </p>
-             <button type="button" onClick={handleInvite} className="bg-white hover:bg-slate-50 text-[#6231d4] font-bold py-2.5 px-6 text-sm rounded-full transition-colors shadow-sm btn-tap relative z-10">
-               {inviteCopied ? '✓ Link Copied!' : 'Get Invite Link'}
-             </button>
-           </div>
+           {user && <ReferralPanel userId={user.id} />}
 
         </div>
 

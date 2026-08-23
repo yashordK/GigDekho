@@ -2,6 +2,7 @@ import { type ActionFunctionArgs } from "react-router";
 import { serviceClient, jsonRoute } from "~/lib/service-client.server";
 import { createSupabaseServerClient } from "~/lib/supabase.server";
 import { syncGigSheet } from "~/lib/sheet-sync.server";
+import { settleReferralForCompletedGig } from "~/lib/referrals.server";
 
 export const action = jsonRoute(async ({ request }: ActionFunctionArgs) => {
   const supabase = createSupabaseServerClient(request);
@@ -79,6 +80,11 @@ export const action = jsonRoute(async ({ request }: ActionFunctionArgs) => {
       await admin.from("profiles").update({ total_earned: (p?.total_earned || 0) + earning }).eq("id", app.worker_id);
     }
   }
+
+  // Completing a gig is what turns a referral into money — for both sides.
+  // Fire and forget: a referral must never be able to fail an attendance mark.
+  settleReferralForCompletedGig(admin, app.worker_id, applicationId)
+    .catch((e) => console.error("[api.mark-attendance] referral:", e));
 
   // Attendance changes the worker's status — mirror it into the sheet if one exists
   const { data: appGig } = await admin

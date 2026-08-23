@@ -1,4 +1,5 @@
 import { useEffect, useRef } from "react";
+import { captureReferralFromUrl, claimPendingReferral } from '~/lib/referral-capture';
 import { useLocation } from "react-router";
 
 const SESSION_KEY = "gd-session";
@@ -44,6 +45,12 @@ export function track(event: string, metadata?: Record<string, unknown>) {
 
 /** Records a pageview on every client-side route change. */
 export default function AnalyticsTracker() {
+  // An invite link is only worth anything if something reads it.
+  useEffect(() => {
+    captureReferralFromUrl();
+    claimPendingReferral();
+  }, []);
+
   const location = useLocation();
   const lastPath = useRef<string | null>(null);
 
