@@ -132,13 +132,19 @@ export default function ReelRewardsPanel({ userId }: { userId: string }) {
   };
 
   const claimViews = async (reelId: string) => {
+    // A screenshot is welcome but not required — we already have the reel
+    // link, and the view count is visible on the reel itself. Demanding proof
+    // people can't easily produce on a phone would just lose the claim.
     const url = claimUrl.trim();
-    if (!/^https?:\/\/.+\..+/.test(url)) { setError('Paste a link to a screenshot of your view count.'); return; }
+    if (url && !/^https?:\/\/.+\..+/.test(url)) {
+      setError("That screenshot link doesn't look right — leave it blank if you don't have one.");
+      return;
+    }
     setBusy(true); setError('');
     try {
       const { error: err } = await supabase.from('reel_submissions').update({
         views_claimed: true,
-        views_proof_url: url,
+        views_proof_url: url || null,
         views_status: 'pending',
       }).eq('id', reelId);
       if (err) throw err;
@@ -196,7 +202,8 @@ export default function ReelRewardsPanel({ userId }: { userId: string }) {
           <div className="min-w-0">
             <p className="text-sm font-black text-white">₹{rates.viewsBonus} more if it crosses {rates.threshold.toLocaleString('en-IN')} views</p>
             <p className="text-[11px] font-medium text-white/45 leading-relaxed">
-              Claim it whenever your reel gets there — send a screenshot of the view count and we'll check it.
+              Claim it whenever your reel gets there, even long after the gig has finished. We check the count on
+              your reel ourselves before paying.
             </p>
           </div>
         </div>
@@ -338,15 +345,18 @@ export default function ReelRewardsPanel({ userId }: { userId: string }) {
                     </p>
                   ) : claiming === r.id ? (
                     <div className="space-y-2">
-                      <label className={label} htmlFor={`claim-${r.id}`}>Screenshot of your view count</label>
+                      <label className={label} htmlFor={`claim-${r.id}`}>Screenshot link</label>
                       <input
                         id={`claim-${r.id}`}
                         className={input}
-                        placeholder="Paste a link to the screenshot…"
+                        placeholder="Leave blank if you don't have one"
                         value={claimUrl}
                         onChange={(e) => setClaimUrl(e.target.value)}
                         inputMode="url"
                       />
+                      <p className="text-[10px] font-medium text-white/35 leading-relaxed">
+                        We'll open your reel and check the count ourselves — a screenshot just speeds it up.
+                      </p>
                       <div className="flex gap-2">
                         <button type="button" onClick={() => { setClaiming(null); setClaimUrl(''); }}
                           className="flex-1 py-2 bg-[#1C1C1C] border border-white/10 text-white/70 rounded-xl text-[11px] font-black uppercase tracking-wider btn-tap">
