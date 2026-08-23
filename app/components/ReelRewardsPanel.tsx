@@ -179,7 +179,8 @@ export default function ReelRewardsPanel({ userId }: { userId: string }) {
         )}
       </div>
       <p className="text-xs font-medium text-white/40 mb-4">
-        Post a reel about a gig you worked and get paid for it.
+        Post a reel about a gig you worked, tell people about GigDekho, and get paid for it —
+        up to <span className="text-white/70 font-bold">₹{rates.maxPerGig + rates.viewsBonus}</span> per gig.
       </p>
 
       {/* The offer, stated plainly */}
@@ -209,12 +210,28 @@ export default function ReelRewardsPanel({ userId }: { userId: string }) {
         </div>
       </div>
 
-      <div className="flex items-start gap-2 bg-[#111111] border border-white/5 rounded-xl p-3 mb-4">
-        <Info size={13} className="text-white/40 shrink-0 mt-0.5" />
-        <p className="text-[11px] font-medium text-white/45 leading-relaxed">
-          The reel must be posted from a <span className="text-white/70 font-bold">public</span> account, stay up, and be
-          about a gig you actually worked. Talk about your experience and invite others to join — that's the point of it.
-          We check each one by hand before paying.
+      <div className="bg-[#111111] border border-white/5 rounded-xl p-4 mb-4">
+        <div className="flex items-center gap-2 mb-2.5">
+          <Info size={13} className="text-white/40 shrink-0" />
+          <p className="text-[11px] font-black text-white/60 uppercase tracking-widest">What your reel needs</p>
+        </div>
+        <ul className="space-y-1.5">
+          {[
+            'Be about a gig you actually worked — show the work or talk about the day',
+            'Say GigDekho by name, or show the app or website on screen',
+            'Invite people to join — to find work, or to post a gig and hire people',
+            'Be posted from a public account, so anyone can open the link',
+            'Stay up. If the reel is deleted, the reward can be reversed',
+          ].map((rule) => (
+            <li key={rule} className="flex items-start gap-2">
+              <span className="text-[#F4511E] text-[11px] font-black leading-relaxed shrink-0">•</span>
+              <span className="text-[11px] font-medium text-white/50 leading-relaxed">{rule}</span>
+            </li>
+          ))}
+        </ul>
+        <p className="text-[10px] font-medium text-white/30 leading-relaxed mt-2.5 pt-2.5 border-t border-white/5">
+          Keep it honest — a real experience persuades people far better than an advert. We watch every reel
+          before paying, and reels that don't mention GigDekho or aren't about your gig won't be approved.
         </p>
       </div>
 
@@ -223,7 +240,8 @@ export default function ReelRewardsPanel({ userId }: { userId: string }) {
 
       {eligible.length === 0 ? (
         <p className="text-[12px] font-semibold text-white/40">
-          Work a gig first, then you can post a reel about it and earn from it.
+          Work a gig first. After that you can post a reel about it, tell people about GigDekho,
+          and earn up to ₹{rates.maxPerGig + rates.viewsBonus} for it.
         </p>
       ) : !showForm ? (
         <button
