@@ -36,3 +36,6 @@ gigdekho-*.json
 _*.mjs
 _*.py
 _*.txt
+
+# Invoices carry bank details and PAN — never commit them
+invoice-*.html
