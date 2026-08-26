@@ -39,3 +39,4 @@ _*.txt
 
 # Invoices carry bank details and PAN — never commit them
 invoice-*.html
+receipt-*.html
