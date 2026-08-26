@@ -53,6 +53,40 @@ export default function WalletCard({ userId }: { userId: string }) {
   const isUpi = bank?.method === 'upi';
   const payoutLabel = isUpi ? `on ${bank?.upi_id}` : 'in your bank account';
 
+  /**
+   * Shrinks a QR screenshot before upload.
+   *
+   * A phone screenshot is routinely 2-5MB, and the serverless request body caps
+   * out around 4.5MB — so an untouched screenshot is rejected at the edge with a
+   * 413 that never reaches our code and produces no message anyone can act on.
+   * Shrinking here means the request is small before it is ever sent.
+   *
+   * Quality stays high and the long edge stays generous, because the whole
+   * point of the image is that someone can still scan it.
+   */
+  const shrinkQr = async (file: File): Promise<File> => {
+    if (file.size < 700 * 1024) return file;
+    try {
+      const bitmap = await createImageBitmap(file);
+      const max = 1400;
+      const scale = Math.min(1, max / Math.max(bitmap.width, bitmap.height));
+      const canvas = document.createElement('canvas');
+      canvas.width = Math.round(bitmap.width * scale);
+      canvas.height = Math.round(bitmap.height * scale);
+      const ctx = canvas.getContext('2d')!;
+      // A QR is black on white; flattening onto white avoids a transparent
+      // background turning into black mush when it becomes a JPEG.
+      ctx.fillStyle = '#ffffff';
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+      ctx.drawImage(bitmap, 0, 0, canvas.width, canvas.height);
+      const blob: Blob | null = await new Promise((res) => canvas.toBlob(res, 'image/jpeg', 0.92));
+      if (!blob || blob.size >= file.size) return file;
+      return new File([blob], 'upi-qr.jpg', { type: 'image/jpeg' });
+    } catch {
+      return file;
+    }
+  };
+
   const saveBank = async () => {
     setBusy(true); setError('');
     try {
@@ -61,13 +95,19 @@ export default function WalletCard({ userId }: { userId: string }) {
       form.append('account_holder', bankForm.account_holder);
       if (method === 'upi') {
         form.append('upi_id', bankForm.upi_id);
-        if (qrFile.current) form.append('upi_qr', qrFile.current, 'upi-qr.png');
+        if (qrFile.current) {
+          const small = await shrinkQr(qrFile.current);
+          form.append('upi_qr', small, small.name || 'upi-qr.jpg');
+        }
       } else {
         form.append('account_number', bankForm.account_number);
         form.append('ifsc', bankForm.ifsc);
       }
       const res = await fetch('/api/bank', { method: 'POST', body: form });
-      const result = await res.json();
+      if (res.status === 413) {
+        throw new Error("That image is too large to upload. Your UPI ID alone is enough — try saving without the QR.");
+      }
+      const result = await res.json().catch(() => ({}));
       if (!res.ok || result.error) throw new Error(result.error || 'Failed');
       qrFile.current = null;
       setQrName('');

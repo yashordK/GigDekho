@@ -99,6 +99,15 @@ export const action = jsonRoute(async ({ request }: ActionFunctionArgs) => {
       }
     }
   } else if (method === "bank") {
+    // Switching to a bank account orphans the QR image otherwise: the row
+    // stops pointing at it, but the file stays in a private bucket that
+    // nothing ever prunes. It is a payment address for a person — delete it.
+    const admin1 = serviceClient();
+    const { data: prevRow } = await admin1
+      .from("worker_bank_accounts").select("upi_qr_url").eq("worker_id", user.id).maybeSingle();
+    if (prevRow?.upi_qr_url) {
+      await admin1.storage.from("payout-qr").remove([prevRow.upi_qr_url]);
+    }
     row.upi_qr_url = null;
     const accountNumber = String(formData.get("account_number") ?? "").replace(/\s/g, "");
     const ifsc = String(formData.get("ifsc") ?? "").trim().toUpperCase();
