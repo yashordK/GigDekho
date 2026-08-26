@@ -1,4 +1,5 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { sendEmail, gigPaidEmail } from "~/lib/email.server";
 
 /**
  * Two-sided, per-day attendance, and the payout that hangs off it.
@@ -317,9 +318,55 @@ export async function settleGigPayout(
     user_id: app.worker_id,
     type: "payment",
     title: `₹${amount} added to your wallet`,
-    body: `${gig?.title ?? "Your gig"} is complete. You can withdraw once your balance is above the minimum.`,
+    body: `${gig?.title ?? "Your gig"} is complete. Add your UPI ID and withdraw whenever you like.`,
     link: "/worker/earnings",
   });
 
+  // The email is the part they actually see — most people never open the
+  // notifications bell. It is sent last and its failure is swallowed, because
+  // a mail server having a bad minute must not undo a payment that has already
+  // been credited.
+  try {
+    await notifyPaid(admin, app.worker_id, gig?.title ?? "your gig", amount);
+  } catch (e) {
+    console.error("[attendance] payment email:", e);
+  }
+
   return { ok: true, amount };
+}
+
+/**
+ * Tells the worker their money has arrived, and what it is worth to them to
+ * post a reel about the gig.
+ *
+ * Rates are read from app_settings rather than hardcoded so the email can never
+ * promise a different number from the one the site pays.
+ */
+async function notifyPaid(
+  admin: SupabaseClient,
+  workerId: string,
+  gigTitle: string,
+  amount: number,
+): Promise<void> {
+  const [{ data: profile }, { data: settings }, { data: payout }] = await Promise.all([
+    admin.from("profiles").select("email, full_name").eq("id", workerId).maybeSingle(),
+    admin.from("app_settings").select("key, value"),
+    admin.from("worker_bank_accounts").select("id").eq("worker_id", workerId).maybeSingle(),
+  ]);
+
+  if (!profile?.email) return;
+
+  const get = (k: string, d: number) => Number((settings ?? []).find((x: any) => x.key === k)?.value ?? d);
+  const mail = gigPaidEmail(profile.full_name || "there", {
+    amount,
+    gigTitle,
+    minWithdrawal: get("min_withdrawal_amount", 150),
+    perReel: get("reel_bonus_per_reel", 50),
+    maxPerGig: get("reel_bonus_max_per_gig", 100),
+    viewsBonus: get("reel_views_bonus", 50),
+    viewsThreshold: get("reel_views_threshold", 3000),
+    hasPayoutMethod: Boolean(payout),
+  });
+
+  await sendEmail({ to: profile.email, subject: mail.subject, html: mail.html });
 }

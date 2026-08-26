@@ -1,6 +1,6 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { supabase } from '~/lib/supabase.client';
-import { Wallet, X, Landmark, ArrowDownToLine, ArrowUpRight, ArrowDownLeft, Smartphone } from 'lucide-react';
+import { Wallet, X, Landmark, ArrowDownToLine, ArrowUpRight, ArrowDownLeft, Smartphone, QrCode, Check } from 'lucide-react';
 
 const TXN_LABEL: Record<string, string> = {
   gig_earning: 'Gig earnings',
@@ -23,6 +23,12 @@ export default function WalletCard({ userId }: { userId: string }) {
   // UPI first: most people earning here are students who can read a UPI ID off
   // their own phone, and cannot find an IFSC without digging out a passbook.
   const [method, setMethod] = useState<'upi' | 'bank'>('upi');
+  // Held in a ref, not state. The file picker sends the page to the background
+  // on Android and anything kept in state can be gone when it returns — the
+  // same failure that made document upload take five attempts.
+  const qrFile = useRef<File | null>(null);
+  const qrInput = useRef<HTMLInputElement | null>(null);
+  const [qrName, setQrName] = useState('');
   const [bankForm, setBankForm] = useState({ account_number: '', ifsc: '', account_holder: '', upi_id: '' });
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
@@ -32,7 +38,7 @@ export default function WalletCard({ userId }: { userId: string }) {
     const [{ data: t }, { data: b }, { data: s }] = await Promise.all([
       supabase.from('wallet_transactions').select('id, amount, type, status, description, created_at')
         .eq('worker_id', userId).neq('status', 'failed').order('created_at', { ascending: false }),
-      supabase.from('worker_bank_accounts').select('id, method, account_number, ifsc, upi_id, account_holder, penny_drop_status').eq('worker_id', userId).maybeSingle(),
+      supabase.from('worker_bank_accounts').select('id, method, account_number, ifsc, upi_id, upi_qr_url, account_holder, penny_drop_status').eq('worker_id', userId).maybeSingle(),
       supabase.from('app_settings').select('value').eq('key', 'min_withdrawal_amount').maybeSingle(),
     ]);
     setTxns(t || []);
@@ -55,6 +61,7 @@ export default function WalletCard({ userId }: { userId: string }) {
       form.append('account_holder', bankForm.account_holder);
       if (method === 'upi') {
         form.append('upi_id', bankForm.upi_id);
+        if (qrFile.current) form.append('upi_qr', qrFile.current, 'upi-qr.png');
       } else {
         form.append('account_number', bankForm.account_number);
         form.append('ifsc', bankForm.ifsc);
@@ -62,6 +69,12 @@ export default function WalletCard({ userId }: { userId: string }) {
       const res = await fetch('/api/bank', { method: 'POST', body: form });
       const result = await res.json();
       if (!res.ok || result.error) throw new Error(result.error || 'Failed');
+      qrFile.current = null;
+      setQrName('');
+      // Never let them walk away thinking the QR is on file when it isn't.
+      if (result.qrSkipped) {
+        setError("Your UPI ID is saved. The QR image couldn't be stored — that's fine, the ID is what we pay to.");
+      }
       await fetchAll();
     } catch (err: any) {
       setError(err.message);
@@ -204,6 +217,36 @@ export default function WalletCard({ userId }: { userId: string }) {
                     <p className="text-[10px] font-medium text-white/35 mt-1.5">
                       Open any UPI app — GPay, PhonePe, Paytm — and copy the ID shown on your profile.
                     </p>
+
+                    <div className="mt-3 pt-3 border-t border-white/5">
+                      <label htmlFor="w-qr" className="block text-[10px] font-black text-white/60 uppercase tracking-wider mb-1">
+                        UPI QR code <span className="text-white/30">— optional</span>
+                      </label>
+                      <input
+                        ref={qrInput}
+                        id="w-qr"
+                        type="file"
+                        accept="image/*"
+                        className="hidden"
+                        onChange={(e) => {
+                          const f = e.target.files?.[0];
+                          e.target.value = '';
+                          if (f) { qrFile.current = f; setQrName(f.name); setError(''); }
+                        }}
+                      />
+                      <button
+                        type="button"
+                        onClick={() => qrInput.current?.click()}
+                        className="w-full flex items-center justify-center gap-2 h-11 rounded-xl bg-[#111111] border border-dashed border-white/15 text-white/60 hover:text-white hover:border-[#F4511E]/40 text-xs font-bold transition-colors btn-tap"
+                      >
+                        {qrName
+                          ? <><Check size={14} className="text-green-400" /> {qrName.length > 22 ? qrName.slice(0, 22) + '…' : qrName}</>
+                          : <><QrCode size={14} /> Add a screenshot of your QR</>}
+                      </button>
+                      <p className="text-[10px] font-medium text-white/35 mt-1.5">
+                        Not required — your UPI ID above is enough. Add it if you'd rather we scan it.
+                      </p>
+                    </div>
                   </div>
                 ) : (
                   <>
@@ -231,7 +274,7 @@ export default function WalletCard({ userId }: { userId: string }) {
                 <div className="bg-[#111111] rounded-xl p-3.5 border border-white/5 flex items-center justify-between">
                   <span className="text-xs font-bold text-white/50 truncate flex items-center gap-1.5 min-w-0">
                     {isUpi
-                      ? <><Smartphone size={12} className="text-[#F4511E] shrink-0" /><span className="truncate">{bank.upi_id}</span></>
+                      ? <><Smartphone size={12} className="text-[#F4511E] shrink-0" /><span className="truncate">{bank.upi_id}</span>{bank.upi_qr_url && <QrCode size={11} className="text-white/30 shrink-0" />}</>
                       : <><Landmark size={12} className="text-[#F4511E] shrink-0" /><span className="truncate">····{String(bank.account_number).slice(-4)} · {bank.ifsc}</span></>}
                   </span>
                   <button type="button"
@@ -240,6 +283,8 @@ export default function WalletCard({ userId }: { userId: string }) {
                       // that keeps half of a payout destination valid.
                       setBank(null);
                       setMethod(isUpi ? 'upi' : 'bank');
+                      qrFile.current = null;
+                      setQrName('');
                       setBankForm({ account_number: '', ifsc: '', upi_id: '', account_holder: bank.account_holder ?? '' });
                     }}
                     className="text-[9px] font-black uppercase tracking-wider text-white/40 hover:text-[#F4511E] transition-colors shrink-0 ml-2">

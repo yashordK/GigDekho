@@ -20,6 +20,7 @@ import { createSupabaseServerClient } from "~/lib/supabase.server";
 // permissive on the handle: banks allow dots, hyphens and phone numbers.
 const UPI_RE = /^[a-zA-Z0-9.\-_]{2,256}@[a-zA-Z]{2,64}$/;
 const IFSC_RE = /^[A-Z]{4}0[A-Z0-9]{6}$/;
+const MAX_QR_BYTES = 4 * 1024 * 1024;
 
 export const action = jsonRoute(async ({ request }: ActionFunctionArgs) => {
   const supabase = createSupabaseServerClient(request);
@@ -36,6 +37,8 @@ export const action = jsonRoute(async ({ request }: ActionFunctionArgs) => {
   if (accountHolder.length > 100) {
     return Response.json({ error: "That name is too long." }, { status: 400 });
   }
+
+  let qrSkipped = false;
 
   const row: Record<string, any> = {
     worker_id: user.id,
@@ -58,7 +61,45 @@ export const action = jsonRoute(async ({ request }: ActionFunctionArgs) => {
     // show a stale destination next to the new one.
     row.account_number = null;
     row.ifsc = null;
+
+    // An optional QR screenshot. Plenty of people know their UPI only as the
+    // square their app shows them, and a second way to read the same address
+    // is worth having when someone is about to send real money.
+    const qr = formData.get("upi_qr");
+    if (qr instanceof File && qr.size > 0) {
+      if (!qr.type.startsWith("image/")) {
+        return Response.json({ error: "The QR code needs to be an image." }, { status: 400 });
+      }
+      if (qr.size > MAX_QR_BYTES) {
+        return Response.json({ error: "That image is too large — take a screenshot rather than a photo." }, { status: 400 });
+      }
+      const ext = (qr.name.split(".").pop() || "png").toLowerCase().replace(/[^a-z0-9]/g, "") || "png";
+      const path = `${user.id}/upi-qr-${Date.now()}.${ext}`;
+      const admin0 = serviceClient();
+      const { error: upErr } = await admin0.storage
+        .from("payout-qr")
+        .upload(path, await qr.arrayBuffer(), { contentType: qr.type, upsert: true });
+
+      // The QR is a convenience; the UPI ID is the thing that actually gets
+      // them paid. If the bucket is missing because migration 021 has not run
+      // yet, or storage simply has a bad minute, save the ID anyway rather than
+      // refusing the whole form and leaving them with no payout method at all.
+      if (upErr) {
+        console.error("[api.bank] QR upload failed, saving UPI ID without it:", upErr.message);
+        qrSkipped = true;
+      } else {
+        // Remove the previous one rather than letting old payment addresses
+        // accumulate in a private bucket nobody prunes.
+        const { data: prev } = await admin0
+          .from("worker_bank_accounts").select("upi_qr_url").eq("worker_id", user.id).maybeSingle();
+        if (prev?.upi_qr_url && prev.upi_qr_url !== path) {
+          await admin0.storage.from("payout-qr").remove([prev.upi_qr_url]);
+        }
+        row.upi_qr_url = path;
+      }
+    }
   } else if (method === "bank") {
+    row.upi_qr_url = null;
     const accountNumber = String(formData.get("account_number") ?? "").replace(/\s/g, "");
     const ifsc = String(formData.get("ifsc") ?? "").trim().toUpperCase();
     if (!/^\d{9,18}$/.test(accountNumber)) {
@@ -75,10 +116,24 @@ export const action = jsonRoute(async ({ request }: ActionFunctionArgs) => {
   }
 
   const admin = serviceClient();
-  const { data: saved, error } = await admin
+  let { data: saved, error } = await admin
     .from("worker_bank_accounts")
     .upsert(row, { onConflict: "worker_id" })
     .select("id, method");
+
+  // upi_qr_url arrives with migration 021. If a deploy lands before the
+  // migration is run, saving where someone gets paid matters far more than
+  // saving their QR image — so drop the column and try again rather than
+  // breaking payouts for everyone, including the bank path that never asked
+  // for a QR in the first place.
+  if (error && /upi_qr_url/.test(error.message ?? "")) {
+    const { upi_qr_url, ...rest } = row;
+    ({ data: saved, error } = await admin
+      .from("worker_bank_accounts")
+      .upsert(rest, { onConflict: "worker_id" })
+      .select("id, method"));
+  }
+
   if (error) return Response.json({ error: error.message }, { status: 500 });
   // A refused upsert returns no error and no rows. Never report a save that
   // did not happen.
@@ -86,5 +141,6 @@ export const action = jsonRoute(async ({ request }: ActionFunctionArgs) => {
     return Response.json({ error: "That didn't save. Please try again." }, { status: 500 });
   }
 
-  return Response.json({ ok: true, method, status: "verified" });
+  // Tell the truth about the QR rather than letting them believe it saved.
+  return Response.json({ ok: true, method, status: "verified", qrSkipped });
 });

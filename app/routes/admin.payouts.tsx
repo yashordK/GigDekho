@@ -3,7 +3,7 @@ import { useLoaderData, useRevalidator, useSearchParams } from "react-router";
 import type { LoaderFunctionArgs, ActionFunctionArgs } from "react-router";
 import { requireAdmin, logAdminAction } from "~/lib/admin.server";
 import { PageTitle, Card, Pill, EmptyState, StatCard } from "~/components/AdminUI";
-import { Banknote, CheckCircle2, XCircle, Landmark, Wallet, AlertTriangle, Smartphone, Copy, Check } from "lucide-react";
+import { Banknote, CheckCircle2, XCircle, Landmark, Wallet, AlertTriangle, Smartphone, Copy, Check, QrCode } from "lucide-react";
 
 export async function loader({ request }: LoaderFunctionArgs) {
   const { admin } = await requireAdmin(request);
@@ -22,10 +22,17 @@ export async function loader({ request }: LoaderFunctionArgs) {
   const workerIds = [...new Set((requests ?? []).map((r: any) => r.worker_id))];
   let banks: Record<string, any> = {};
   if (workerIds.length) {
-    const { data } = await admin
+    const BANK_COLS = "worker_id, method, account_number, ifsc, upi_id, account_holder, penny_drop_status";
+    let { data, error: bankErr } = await admin
       .from("worker_bank_accounts")
-      .select("worker_id, method, account_number, ifsc, upi_id, account_holder, penny_drop_status")
-      .in("worker_id", workerIds);
+      .select(`${BANK_COLS}, upi_qr_url`)
+      .in("worker_id", workerIds) as { data: any[] | null; error: any };
+
+    // Same guard as the user page: a missing upi_qr_url column must not take
+    // the UPI ID down with it, or the payouts screen loses its only job.
+    if (bankErr && /upi_qr_url/.test(bankErr.message ?? "")) {
+      ({ data } = await admin.from("worker_bank_accounts").select(BANK_COLS).in("worker_id", workerIds));
+    }
     for (const b of data ?? []) {
       // The UPI ID is sent whole because it is what has to be typed into a
       // payment app — masking it would make the screen useless for its one job.
@@ -34,6 +41,8 @@ export async function loader({ request }: LoaderFunctionArgs) {
       banks[b.worker_id] = {
         method: b.method ?? "bank",
         upi: b.upi_id ?? null,
+        qr: null as string | null,
+        qrPath: (b as any).upi_qr_url ?? null,
         tail: b.account_number ? String(b.account_number).slice(-4) : null,
         ifsc: b.ifsc,
         holder: b.account_holder,
@@ -48,6 +57,14 @@ export async function loader({ request }: LoaderFunctionArgs) {
     const { data } = await admin
       .from("wallet_transactions").select("worker_id, amount").in("worker_id", workerIds).neq("status", "failed");
     for (const t of data ?? []) balances[t.worker_id] = (balances[t.worker_id] ?? 0) + t.amount;
+  }
+
+  // Signed here rather than in the browser: the bucket is private, and the
+  // admin panel never holds a key that could read it directly.
+  for (const [workerId, b] of Object.entries(banks)) {
+    if (!b.qrPath) continue;
+    const { data } = await admin.storage.from("payout-qr").createSignedUrl(b.qrPath, 60 * 30);
+    banks[workerId].qr = data?.signedUrl ?? null;
   }
 
   const { data: pendingAll } = await admin.from("withdrawal_requests").select("amount").eq("status", "pending");
@@ -126,6 +143,7 @@ export default function AdminPayouts() {
   const [reason, setReason] = useState("");
   const [reference, setReference] = useState("");
   const [copied, setCopied] = useState<string | null>(null);
+  const [qrView, setQrView] = useState<string | null>(null);
 
   const decide = async (id: string, decision: "approve" | "reject", why = "", ref = "") => {
     setBusy(true);
@@ -216,6 +234,12 @@ export default function AdminPayouts() {
                               className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-[#F4511E]/10 border border-[#F4511E]/25 text-[#F4511E] text-[11px] font-black font-mono btn-tap hover:bg-[#F4511E]/20 transition-colors">
                               {copied === r.id ? <Check size={11} /> : <Copy size={11} />} {bank.upi}
                             </button>
+                            {bank.qr && (
+                              <button type="button" onClick={() => setQrView(bank.qr)}
+                                className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg border border-white/15 text-white/60 hover:text-white text-[11px] font-black btn-tap transition-colors">
+                                <QrCode size={11} /> QR
+                              </button>
+                            )}
                           </>
                         ) : (
                           <span className="text-[11px] font-bold text-white/60 flex items-center gap-1.5">
@@ -268,10 +292,16 @@ export default function AdminPayouts() {
             <div className="bg-[#111111] border border-white/10 rounded-xl p-3.5 mb-4">
               <p className="text-[10px] font-black uppercase tracking-wider text-white/40 mb-1">Pay to</p>
               {paying.bank?.method === "upi" ? (
-                <button type="button" onClick={() => copy(paying.bank.upi, "modal")}
-                  className="flex items-center gap-2 text-sm font-black text-[#F4511E] font-mono btn-tap">
-                  {copied === "modal" ? <Check size={13} /> : <Copy size={13} />} {paying.bank.upi}
-                </button>
+                <>
+                  <button type="button" onClick={() => copy(paying.bank.upi, "modal")}
+                    className="flex items-center gap-2 text-sm font-black text-[#F4511E] font-mono btn-tap">
+                    {copied === "modal" ? <Check size={13} /> : <Copy size={13} />} {paying.bank.upi}
+                  </button>
+                  {paying.bank.qr && (
+                    <img src={paying.bank.qr} alt="Their UPI QR code"
+                      className="mt-3 w-40 h-40 object-contain rounded-xl bg-white p-2 mx-auto block" />
+                  )}
+                </>
               ) : (
                 <p className="text-sm font-black text-white">····{paying.bank?.tail} · {paying.bank?.ifsc}</p>
               )}
@@ -297,6 +327,12 @@ export default function AdminPayouts() {
               </button>
             </div>
           </div>
+        </div>
+      )}
+
+      {qrView && (
+        <div className="fixed inset-0 z-[110] bg-black/90 flex items-center justify-center p-4" onClick={() => setQrView(null)}>
+          <img src={qrView} alt="UPI QR code" className="max-h-[80vh] max-w-full rounded-2xl bg-white p-4" />
         </div>
       )}
 

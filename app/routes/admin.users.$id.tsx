@@ -3,7 +3,7 @@ import type { LoaderFunctionArgs } from "react-router";
 import { requireAdmin } from "~/lib/admin.server";
 import { PageTitle, Card, Pill, EmptyState } from "~/components/AdminUI";
 import {
-  ArrowLeft, FileText, Wallet, Briefcase, ShieldCheck, Star, Phone, Mail,
+  ArrowLeft, FileText, Wallet, Briefcase, ShieldCheck, Star, Phone, Mail, Smartphone,
   MapPin, ExternalLink, GraduationCap,
 } from "lucide-react";
 
@@ -64,6 +64,44 @@ export async function loader({ params, request }: LoaderFunctionArgs) {
       .eq("worker_id", id).order("created_at", { ascending: false }).limit(20),
   ]);
 
+  // Where this person gets paid. Previously visible only on /admin/payouts,
+  // and only once they had already requested a withdrawal — so "have they told
+  // us where to send the money yet?" had no answer anywhere.
+  const PAYOUT_COLS = "method, account_number, ifsc, upi_id, account_holder, penny_drop_status, updated_at";
+  let { data: payoutRow, error: payoutErr } = await admin
+    .from("worker_bank_accounts")
+    .select(`${PAYOUT_COLS}, upi_qr_url`)
+    .eq("worker_id", id)
+    .maybeSingle();
+
+  // upi_qr_url arrives with migration 021. Asking for a column that does not
+  // exist fails the whole select, which would hide the UPI ID too — the one
+  // thing this panel exists to show. Retry without it.
+  if (payoutErr && /upi_qr_url/.test(payoutErr.message ?? "")) {
+    ({ data: payoutRow } = await admin
+      .from("worker_bank_accounts").select(PAYOUT_COLS).eq("worker_id", id).maybeSingle());
+  }
+
+  let payout: any = null;
+  if (payoutRow) {
+    let qr: string | null = null;
+    if ((payoutRow as any).upi_qr_url) {
+      const { data } = await admin.storage.from("payout-qr").createSignedUrl((payoutRow as any).upi_qr_url, 60 * 30);
+      qr = data?.signedUrl ?? null;
+    }
+    payout = {
+      method: payoutRow.method ?? "bank",
+      upi: payoutRow.upi_id ?? null,
+      qr,
+      // Only the tail of an account number is needed to recognise it; the UPI
+      // ID is shown whole because it has to be typed into a payment app.
+      tail: payoutRow.account_number ? String(payoutRow.account_number).slice(-4) : null,
+      ifsc: payoutRow.ifsc ?? null,
+      holder: payoutRow.account_holder ?? null,
+      updatedAt: payoutRow.updated_at ?? null,
+    };
+  }
+
   // Signed URLs — the buckets are private and must stay that way.
   const signedDocs = await Promise.all(
     (docs ?? []).map(async (d) => {
@@ -87,6 +125,7 @@ export async function loader({ params, request }: LoaderFunctionArgs) {
     skills: (skills ?? []).map((s) => s.skill),
     gigsPosted: gigsPosted ?? [],
     reliability: reliability ?? [],
+    payout,
   };
 }
 
@@ -96,7 +135,7 @@ const when = (d: string | null) =>
 
 export default function AdminUserDetail() {
   const {
-    profile, docs, legacyDocs, apps, internApps, wallet, balance, skills, gigsPosted, reliability,
+    profile, docs, legacyDocs, apps, internApps, wallet, balance, skills, gigsPosted, reliability, payout,
   } = useLoaderData<typeof loader>();
 
   const name = profile.company_name || profile.full_name || "Unnamed";
@@ -263,6 +302,37 @@ export default function AdminUserDetail() {
               <p className="text-[12px] font-semibold text-white/40">Nothing yet.</p>
             )}
           </div>
+        </Card>
+
+        {/* Where the money goes — visible before they ever request a
+            withdrawal, which is the whole point of putting it here. */}
+        <Card className="p-5">
+          <h3 className="font-black text-white mb-3 flex items-center gap-2 text-sm">
+            <Smartphone size={15} className="text-[#F4511E]" /> Where they get paid
+          </h3>
+          {!payout ? (
+            <p className="text-[12px] font-semibold text-white/40">
+              Nothing on file yet — they add this themselves on the Earnings page before withdrawing.
+            </p>
+          ) : payout.method === "upi" ? (
+            <div className="flex items-start gap-4 flex-wrap">
+              <div className="min-w-0">
+                <p className="text-[10px] font-black uppercase tracking-wider text-white/40 mb-1">UPI ID</p>
+                <p className="font-mono font-black text-[#F4511E] text-sm break-all">{payout.upi}</p>
+                {payout.holder && <p className="text-[11px] font-semibold text-white/50 mt-1">{payout.holder}</p>}
+              </div>
+              {payout.qr && (
+                <img src={payout.qr} alt="Their UPI QR code"
+                  className="w-28 h-28 object-contain rounded-xl bg-white p-1.5 shrink-0" />
+              )}
+            </div>
+          ) : (
+            <div>
+              <p className="text-[10px] font-black uppercase tracking-wider text-white/40 mb-1">Bank account</p>
+              <p className="font-black text-white text-sm">····{payout.tail} · {payout.ifsc}</p>
+              {payout.holder && <p className="text-[11px] font-semibold text-white/50 mt-1">{payout.holder}</p>}
+            </div>
+          )}
         </Card>
 
         {/* Money */}
