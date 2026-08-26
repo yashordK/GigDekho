@@ -91,7 +91,24 @@ Mobile is the primary target — most workers arrive on a phone.
 
 ---
 
-## 4. Money rules
+## 4. How money actually moves
+
+There is **no payment gateway and no automated payout**, deliberately. An
+automated payout API (RazorpayX and equivalents) requires a registered business
+entity, which GigDekho is not. So:
+
+1. The hirer pays Yash directly — cash, UPI, or bank transfer, against an
+   invoice generated from this repo.
+2. The hirer (or an admin) confirms attendance per day, then presses Pay. That
+   credits the worker's **wallet** — an internal ledger, not real money moving.
+3. The worker requests a withdrawal to their UPI ID or bank account.
+4. Yash sends it from his own UPI app and marks it paid in `/admin/payouts`,
+   recording the UTR. The debit settles and the worker is notified.
+
+Nothing in the codebase moves money on its own. `/api/pay` is a *simulated*
+hirer-side payment flow and does not charge anyone.
+
+## 4b. Money rules
 
 | Thing | Rule |
 |---|---|
@@ -126,6 +143,13 @@ credit without that key.
 - Reel rewards end to end: submit, admin review queue, wallet credit
 - Referrals end to end: capture `?ref=`, attach at signup, pay both sides
 - Google Sheets applicant export
+- **Multi-day attendance** — worker checks in per day with a photo, hirer
+  confirms and records punctuality, admin overrides any row. 25 assertions run
+  against real accounts on the live database, then rolled back.
+- **Payout on completion** — the advertised whole-gig figure, prorated by
+  attended hours only when days are missed. Idempotent on the application id.
+- **UPI withdrawals** — worker saves a UPI ID or bank account, requests a
+  withdrawal, admin sends the money by hand and records the UTR.
 
 **ID verification is NOT required to apply to a gig.** Deliberate decision.
 
@@ -135,22 +159,15 @@ credit without that key.
 - Google Maps in production — blocked by a CSP whose source is not in this repo
   or in `vercel.json`
 
-### Schema exists, no UI — nothing reads or writes these tables
-
-- `gig_days`, `gig_attendance`, `gigs.is_multi_day` (migration 013).
-  Grep confirms **zero** references anywhere in `app/`.
-- What ships today is the *old* flow: `api/mark-attendance` flips an
-  application straight to `completed` — hirer only, single shot, no per-day
-  record and no selfie.
-
 ### Designed, not built
 
-- **Multi-day attendance** — worker checks in with a selfie, hirer confirms,
-  admin can override any row. Report button visible once checked in. Hirer
-  records punctuality (`on_time` / `late`) on a late confirm. Selfies deleted
-  once the dispute is resolved and the gig is paid.
-- Multi-day posting flow with per-day date/time pickers; gig page showing
-  "6 hrs x 3 days"
+- Multi-day *posting* flow — `gig_days` rows are created automatically (one per
+  day, backfilled for single-day gigs), but there is no UI to set per-day dates
+  and times when posting. They currently have to be inserted by hand.
+- Gig page showing "6 hrs x 3 days" instead of a single date
+- Selfie deletion once a dispute is resolved and the gig is paid — the photos
+  are captured and stored privately, but nothing prunes them yet
+- Report button on an attendance row once checked in
 - Admin "request a document" from a user
 - Admin email tool: compose to a gig's applicants, templates, preview, log
 - **Services marketplace** — user-listed services, 10% commission, everything
@@ -168,6 +185,7 @@ app/
   components/            35 components
   lib/                   *.server.ts is server-only; never import into a component
   hooks/useActiveView.ts worker/hirer view, single source of truth
+  lib/attendance.server.ts day rows, check-in windows, payout maths
   context/AuthContext.jsx  only SIGNED_OUT clears the user
   index.css              Tailwind v4 @theme plus utilities
 supabase/migrations/     001-019, numbered, run in order
@@ -208,6 +226,23 @@ and `api/cancel` discarded the result and returned 200 regardless. Fixed in 016.
 **Signup 500s.** A referral-code trigger read `profiles` as
 `supabase_auth_admin`. Needs `SECURITY DEFINER` with a pinned `search_path`.
 Fixed in 014.
+
+**A column that was never created.** 013 declared `gig_attendance.punctuality`
+inside `CREATE TABLE IF NOT EXISTS`. That migration aborted partway through its
+first run and was edited and re-run — by then the table existed, so IF NOT
+EXISTS skipped it and the column silently never landed. Fixed in 020.
+**CREATE TABLE IF NOT EXISTS is not a way to change a table**; new columns need
+their own `ADD COLUMN IF NOT EXISTS`.
+
+**The service role bypasses RLS.** Verified directly against the live database.
+A policy naming only `is_admin()` does *not* block server-side writes. What
+broke reel approvals in 018 was a **trigger**, which runs even for a role that
+bypasses RLS. Don't confuse the two — check which one you are actually looking
+at before "fixing" a policy.
+
+**Admin is `profiles.is_admin`, not a role string.** `profiles.role` only ever
+holds `worker` or `organizer`. Any new admin check must mirror `requireAdmin()`
+and also reject `is_suspended`.
 
 ---
 
