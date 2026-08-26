@@ -51,9 +51,11 @@ directory. It is the shared brain across chats — keep it current.
 - **`@supabase/ssr` `createBrowserClient` is PKCE-only**, but Supabase email
   links use the *implicit* flow (`#access_token` in the hash).
   `app/lib/auth-url.ts` bridges this. Don't remove it.
-- **`auth.uid()` is NULL for the service role**, so `is_admin()` returns false
-  inside service-role writes. Any RLS policy or trigger that must permit the
-  server needs `OR auth.role() = 'service_role'`.
+- **`auth.uid()` is NULL for the service role**, so `is_admin()` is false there.
+  This does *not* block RLS policies — the service role bypasses RLS entirely
+  (verified against the live database). It **does** break **triggers**, which
+  run regardless. Any trigger that must permit the server needs
+  `OR auth.role() = 'service_role'`. See section 7.
 - **Supabase hands back a fresh `user` object on every token refresh**, which
   fires on tab visibility change. `useEffect(..., [user])` therefore re-runs at
   random. Always depend on `user?.id`.
