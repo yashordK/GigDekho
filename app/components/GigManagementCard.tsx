@@ -6,6 +6,7 @@ import AnnounceModal from "./AnnounceModal";
 import EditCoverModal from "./EditCoverModal";
 import EditGigModal from "./EditGigModal";
 import ApplicantExportBar from "./ApplicantExportBar";
+import AttendanceRoster from "~/components/AttendanceRoster";
 
 interface WorkerApplication {
   id: string;
@@ -69,6 +70,7 @@ export default function GigManagementCard({
   const { user } = useAuth();
   const [menuOpen, setMenuOpen] = useState(false);
   const [workersExpanded, setWorkersExpanded] = useState(false);
+  const [attendanceExpanded, setAttendanceExpanded] = useState(false);
   const [confirmModal, setConfirmModal] = useState<{
     isOpen: boolean;
     type: "advance" | "final";
@@ -137,22 +139,6 @@ export default function GigManagementCard({
   const acceptedWorkers = applications.filter(
     (app) => app.gig_id === gig.id && app.status === "accepted"
   );
-
-  const handleMarkAttended = async (applicationId: string) => {
-    setLoading(true);
-    try {
-      const form = new FormData();
-      form.append("application_id", applicationId);
-      const res = await fetch("/api/mark-attendance", { method: "POST", body: form });
-      if (!res.ok) throw new Error("Failed");
-      setAttendedIds((prev) => new Set(prev).add(applicationId));
-      showToast("Attendance marked! Worker reliability +5pts.", "success");
-    } catch {
-      showToast("Failed to mark attendance", "error");
-    } finally {
-      setLoading(false);
-    }
-  };
 
   // Update gig status (Completed / Cancelled)
   const handleUpdateStatus = async (newStatus: "completed" | "cancelled") => {
@@ -455,26 +441,39 @@ export default function GigManagementCard({
                           <Phone size={14} />
                         </a>
                       )}
-                      {gig.status === "completed" && (
-                        attendedIds.has(app.id) || app.status === "completed" ? (
-                          <span className="text-[10px] bg-green-500/20 text-green-400 px-2.5 py-1 rounded-full font-bold">
-                            Attended
-                          </span>
-                        ) : (
-                          <button
-                            type="button"
-                            onClick={() => handleMarkAttended(app.id)}
-                            className="text-[10px] bg-white/5 border border-white/10 text-white/60 px-2.5 py-1 rounded-full font-bold hover:bg-green-500/20 hover:text-green-400 hover:border-green-500/30 transition-all btn-tap"
-                          >
-                            Mark Attended
-                          </button>
-                        )
+                      {/* Attendance is now per day, in the section below. A
+                          second one-shot "mark attended" here would be a
+                          competing path to the same payout. */}
+                      {(attendedIds.has(app.id) || app.status === "completed") && (
+                        <span className="text-[10px] bg-green-500/20 text-green-400 px-2.5 py-1 rounded-full font-bold">
+                          Paid
+                        </span>
                       )}
                     </div>
                   </div>
                 );
               })
             )}
+          </div>
+        )}
+      </div>
+
+      {/* Attendance & pay */}
+      <div className="border-t border-white/5 pt-3 mt-3">
+        <button
+          onClick={() => setAttendanceExpanded(!attendanceExpanded)}
+          className="w-full text-left text-xs font-bold text-white/50 hover:text-white flex justify-between items-center transition-colors py-1 btn-tap"
+        >
+          <span>Attendance &amp; pay</span>
+          <span>{attendanceExpanded ? "▲" : "▼"}</span>
+        </button>
+        {attendanceExpanded && (
+          <div className="mt-3 animate-in fade-in duration-200">
+            <AttendanceRoster
+              gigId={gig.id}
+              payRate={gig.pay_rate}
+              durationHrs={gig.duration_hrs}
+            />
           </div>
         )}
       </div>

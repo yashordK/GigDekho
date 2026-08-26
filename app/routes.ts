@@ -32,6 +32,7 @@ export default [
   route("api/apply", "routes/api.apply.ts"),
   route("api/cancel", "routes/api.cancel.ts"),
   route("api/mark-attendance", "routes/api.mark-attendance.ts"),
+  route("api/attendance", "routes/api.attendance.ts"),
   route("api/pay", "routes/api.pay.ts"),
   route("api/announce", "routes/api.announce.ts"),
   route("api/qa", "routes/api.qa.ts"),

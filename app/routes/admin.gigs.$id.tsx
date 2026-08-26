@@ -2,6 +2,7 @@ import { useLoaderData, Link } from "react-router";
 import type { LoaderFunctionArgs } from "react-router";
 import { requireAdmin } from "~/lib/admin.server";
 import { PageTitle, Card, Pill, EmptyState } from "~/components/AdminUI";
+import AttendanceRoster from "~/components/AttendanceRoster";
 import { ArrowLeft, Users, ExternalLink, Phone, Mail, Star, ShieldCheck, GraduationCap } from "lucide-react";
 
 /**
@@ -87,6 +88,20 @@ export default function AdminGigApplicants() {
           </Link>
         )}
       </div>
+
+      {/* Attendance and payout, with admin powers: override a day the hirer
+          already settled, or pay an amount the day rows don't support. */}
+      {!isIntern && (
+        <Card className="p-5 mb-6">
+          <h2 className="text-sm font-black text-white uppercase tracking-wider mb-4">Attendance &amp; payout</h2>
+          <AttendanceRoster
+            gigId={gig.id}
+            payRate={gig.pay_rate}
+            durationHrs={gig.duration_hrs}
+            isAdmin
+          />
+        </Card>
+      )}
 
       {total === 0 ? (
         <EmptyState icon={<Users size={22} />} title="Nobody has applied yet" hint="Applicants appear here the moment they apply." />

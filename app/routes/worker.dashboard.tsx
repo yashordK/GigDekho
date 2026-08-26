@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '~/lib/supabase.client';
+import AttendanceCheckIn from '~/components/AttendanceCheckIn';
 import { useAuth } from '~/context/AuthContext';
 import { useNavigate } from 'react-router';
 import { Calendar, ChevronRight, Briefcase, Shield, XCircle, AlertTriangle, GraduationCap } from 'lucide-react';
@@ -341,6 +342,18 @@ export default function DashboardScreen() {
                       <XCircle size={12} className="shrink-0" />
                       −{app.cancellation_penalty} reliability pts
                       {app.status === 'no_show' && ' · ₹100 deducted from next payout'}
+                    </div>
+                  )}
+
+                  {/* Attendance lives inside the card but must not open the gig
+                      page — a stray tap while checking in would lose the camera. */}
+                  {(app.status === 'accepted' || app.status === 'completed') && (
+                    <div onClick={(e) => e.stopPropagation()} role="presentation">
+                      <AttendanceCheckIn
+                        applicationId={app.id}
+                        workerId={user.id}
+                        onChanged={fetchApplications}
+                      />
                     </div>
                   )}
 

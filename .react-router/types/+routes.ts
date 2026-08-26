@@ -85,6 +85,9 @@ type Pages = {
   "/api/mark-attendance": {
     params: {};
   };
+  "/api/attendance": {
+    params: {};
+  };
   "/api/pay": {
     params: {};
   };
@@ -158,7 +161,7 @@ type Pages = {
 type RouteFiles = {
   "root.tsx": {
     id: "root";
-    page: "/" | "/auth" | "/auth/callback" | "/auth/reset" | "/setup-profile" | "/organizer/preview" | "/gigs/:id" | "/hirer/:id" | "/admin" | "/admin/reports" | "/admin/verifications" | "/admin/payouts" | "/admin/users" | "/admin/users/:id" | "/admin/gigs" | "/admin/gigs/:id" | "/admin/reels" | "/admin/accounts" | "/admin/settings" | "/api/apply" | "/api/cancel" | "/api/mark-attendance" | "/api/pay" | "/api/announce" | "/api/qa" | "/api/apply-internship" | "/api/internship-applicants" | "/api/export-applicants" | "/api/track" | "/api/report" | "/api/admin/accounts" | "/api/admin/reels" | "/api/bank" | "/api/withdraw" | "/api/upload-doc" | "/api/referral" | "/api/cron/reminders" | "/worker/home" | "/about" | "/worker/dashboard" | "/worker/earnings" | "/worker/profile" | "/organizer/home" | "/*";
+    page: "/" | "/auth" | "/auth/callback" | "/auth/reset" | "/setup-profile" | "/organizer/preview" | "/gigs/:id" | "/hirer/:id" | "/admin" | "/admin/reports" | "/admin/verifications" | "/admin/payouts" | "/admin/users" | "/admin/users/:id" | "/admin/gigs" | "/admin/gigs/:id" | "/admin/reels" | "/admin/accounts" | "/admin/settings" | "/api/apply" | "/api/cancel" | "/api/mark-attendance" | "/api/attendance" | "/api/pay" | "/api/announce" | "/api/qa" | "/api/apply-internship" | "/api/internship-applicants" | "/api/export-applicants" | "/api/track" | "/api/report" | "/api/admin/accounts" | "/api/admin/reels" | "/api/bank" | "/api/withdraw" | "/api/upload-doc" | "/api/referral" | "/api/cron/reminders" | "/worker/home" | "/about" | "/worker/dashboard" | "/worker/earnings" | "/worker/profile" | "/organizer/home" | "/*";
   };
   "routes/home.tsx": {
     id: "routes/home";
@@ -251,6 +254,10 @@ type RouteFiles = {
   "routes/api.mark-attendance.ts": {
     id: "routes/api.mark-attendance";
     page: "/api/mark-attendance";
+  };
+  "routes/api.attendance.ts": {
+    id: "routes/api.attendance";
+    page: "/api/attendance";
   };
   "routes/api.pay.ts": {
     id: "routes/api.pay";
@@ -375,6 +382,7 @@ type RouteModules = {
   "routes/api.apply": typeof import("./app/routes/api.apply.ts");
   "routes/api.cancel": typeof import("./app/routes/api.cancel.ts");
   "routes/api.mark-attendance": typeof import("./app/routes/api.mark-attendance.ts");
+  "routes/api.attendance": typeof import("./app/routes/api.attendance.ts");
   "routes/api.pay": typeof import("./app/routes/api.pay.ts");
   "routes/api.announce": typeof import("./app/routes/api.announce.ts");
   "routes/api.qa": typeof import("./app/routes/api.qa.ts");

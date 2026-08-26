@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '~/lib/supabase.client';
-import { Wallet, X, Landmark, ArrowDownToLine, ArrowUpRight, ArrowDownLeft } from 'lucide-react';
+import { Wallet, X, Landmark, ArrowDownToLine, ArrowUpRight, ArrowDownLeft, Smartphone } from 'lucide-react';
 
 const TXN_LABEL: Record<string, string> = {
   gig_earning: 'Gig earnings',
@@ -20,7 +20,10 @@ export default function WalletCard({ userId }: { userId: string }) {
 
   // Withdraw modal state
   const [amount, setAmount] = useState('');
-  const [bankForm, setBankForm] = useState({ account_number: '', ifsc: '', account_holder: '' });
+  // UPI first: most people earning here are students who can read a UPI ID off
+  // their own phone, and cannot find an IFSC without digging out a passbook.
+  const [method, setMethod] = useState<'upi' | 'bank'>('upi');
+  const [bankForm, setBankForm] = useState({ account_number: '', ifsc: '', account_holder: '', upi_id: '' });
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
@@ -29,7 +32,7 @@ export default function WalletCard({ userId }: { userId: string }) {
     const [{ data: t }, { data: b }, { data: s }] = await Promise.all([
       supabase.from('wallet_transactions').select('id, amount, type, status, description, created_at')
         .eq('worker_id', userId).neq('status', 'failed').order('created_at', { ascending: false }),
-      supabase.from('worker_bank_accounts').select('id, account_number, ifsc, penny_drop_status').eq('worker_id', userId).maybeSingle(),
+      supabase.from('worker_bank_accounts').select('id, method, account_number, ifsc, upi_id, account_holder, penny_drop_status').eq('worker_id', userId).maybeSingle(),
       supabase.from('app_settings').select('value').eq('key', 'min_withdrawal_amount').maybeSingle(),
     ]);
     setTxns(t || []);
@@ -41,14 +44,21 @@ export default function WalletCard({ userId }: { userId: string }) {
 
   const balance = txns.reduce((acc, t) => acc + t.amount, 0);
   const bankVerified = bank?.penny_drop_status === 'verified';
+  const isUpi = bank?.method === 'upi';
+  const payoutLabel = isUpi ? `on ${bank?.upi_id}` : 'in your bank account';
 
   const saveBank = async () => {
     setBusy(true); setError('');
     try {
       const form = new FormData();
-      form.append('account_number', bankForm.account_number);
-      form.append('ifsc', bankForm.ifsc);
+      form.append('method', method);
       form.append('account_holder', bankForm.account_holder);
+      if (method === 'upi') {
+        form.append('upi_id', bankForm.upi_id);
+      } else {
+        form.append('account_number', bankForm.account_number);
+        form.append('ifsc', bankForm.ifsc);
+      }
       const res = await fetch('/api/bank', { method: 'POST', body: form });
       const result = await res.json();
       if (!res.ok || result.error) throw new Error(result.error || 'Failed');
@@ -68,10 +78,10 @@ export default function WalletCard({ userId }: { userId: string }) {
       const res = await fetch('/api/withdraw', { method: 'POST', body: form });
       const result = await res.json();
       if (!res.ok || result.error) {
-        if (result.error === 'bank_not_verified') throw new Error('Add and verify your bank details first.');
+        if (result.error === 'bank_not_verified') throw new Error('Add where you want to be paid first.');
         throw new Error(result.error || 'Failed');
       }
-      setSuccess(`Withdrawal of ₹${amount} requested — it will be transferred to your bank shortly.`);
+      setSuccess(`Withdrawal of ₹${amount} requested — it will reach you ${payoutLabel} shortly. We'll notify you once it's sent.`);
       setAmount('');
       await fetchAll();
     } catch (err: any) {
@@ -145,7 +155,7 @@ export default function WalletCard({ userId }: { userId: string }) {
         <div className="fixed inset-0 bg-black/80 z-[100] flex items-end sm:items-center sm:justify-center p-0 sm:p-4 animate-in fade-in">
           <div className="bg-[#1C1C1C] border-t sm:border border-white/10 w-full sm:max-w-sm rounded-t-3xl sm:rounded-3xl p-6 shadow-2xl animate-in slide-in-from-bottom sm:zoom-in duration-300">
             <div className="flex justify-between items-center mb-5">
-              <h3 className="font-black text-white flex items-center gap-2"><Landmark size={18} className="text-[#F4511E]" /> {bankVerified ? 'Withdraw' : 'Add Bank Details'}</h3>
+              <h3 className="font-black text-white flex items-center gap-2"><Landmark size={18} className="text-[#F4511E]" /> {bankVerified ? 'Withdraw' : 'Where should we pay you?'}</h3>
               <button type="button" aria-label="Close" onClick={() => setShowWithdraw(false)} className="p-2 bg-white/10 text-white/60 hover:text-white rounded-full btn-tap"><X size={16} /></button>
             </div>
 
@@ -155,36 +165,86 @@ export default function WalletCard({ userId }: { userId: string }) {
             {!bankVerified ? (
               <div className="space-y-3">
                 <p className="text-[11px] font-medium text-white/50">
-                  One-time setup — your account is verified before any transfer so typos are caught early. Details are visible only to you.
+                  One-time setup. Only you and GigDekho can see this, and you can change it any time.
                 </p>
+
+                <div className="grid grid-cols-2 gap-2">
+                  {([['upi', 'UPI', Smartphone], ['bank', 'Bank transfer', Landmark]] as const).map(([v, label, Icon]) => (
+                    <button
+                      key={v}
+                      type="button"
+                      onClick={() => { setMethod(v); setError(''); }}
+                      className={`flex items-center justify-center gap-1.5 py-2.5 rounded-xl text-[11px] font-black uppercase tracking-wider border transition-colors btn-tap ${
+                        method === v
+                          ? 'bg-[#F4511E]/15 border-[#F4511E]/40 text-[#F4511E]'
+                          : 'bg-[#111111] border-white/10 text-white/40 hover:text-white/70'
+                      }`}
+                    >
+                      <Icon size={13} /> {label}
+                    </button>
+                  ))}
+                </div>
+
                 <div>
-                  <label htmlFor="w-holder" className="block text-[10px] font-black text-white/60 uppercase tracking-wider mb-1">Account Holder Name</label>
+                  <label htmlFor="w-holder" className="block text-[10px] font-black text-white/60 uppercase tracking-wider mb-1">Your Full Name</label>
                   <input id="w-holder" type="text" value={bankForm.account_holder}
                     onChange={e => setBankForm(f => ({ ...f, account_holder: e.target.value }))}
-                    className="w-full h-11 px-4 rounded-xl bg-[#111111] border border-white/10 text-white text-sm font-semibold focus:outline-none focus:border-[#F4511E]" />
-                </div>
-                <div>
-                  <label htmlFor="w-acct" className="block text-[10px] font-black text-white/60 uppercase tracking-wider mb-1">Account Number</label>
-                  <input id="w-acct" type="text" inputMode="numeric" value={bankForm.account_number}
-                    onChange={e => setBankForm(f => ({ ...f, account_number: e.target.value }))}
-                    className="w-full h-11 px-4 rounded-xl bg-[#111111] border border-white/10 text-white text-sm font-semibold focus:outline-none focus:border-[#F4511E]" />
-                </div>
-                <div>
-                  <label htmlFor="w-ifsc" className="block text-[10px] font-black text-white/60 uppercase tracking-wider mb-1">IFSC Code</label>
-                  <input id="w-ifsc" type="text" placeholder="SBIN0001234" value={bankForm.ifsc}
-                    onChange={e => setBankForm(f => ({ ...f, ifsc: e.target.value.toUpperCase() }))}
+                    placeholder="As it appears on your account"
                     className="w-full h-11 px-4 rounded-xl bg-[#111111] border border-white/10 text-white text-sm font-semibold placeholder:text-white/30 focus:outline-none focus:border-[#F4511E]" />
                 </div>
+
+                {method === 'upi' ? (
+                  <div>
+                    <label htmlFor="w-upi" className="block text-[10px] font-black text-white/60 uppercase tracking-wider mb-1">UPI ID</label>
+                    <input id="w-upi" type="text" inputMode="email" autoCapitalize="none" autoCorrect="off"
+                      placeholder="yourname@okhdfcbank"
+                      value={bankForm.upi_id}
+                      onChange={e => setBankForm(f => ({ ...f, upi_id: e.target.value }))}
+                      className="w-full h-11 px-4 rounded-xl bg-[#111111] border border-white/10 text-white text-sm font-semibold placeholder:text-white/30 focus:outline-none focus:border-[#F4511E]" />
+                    <p className="text-[10px] font-medium text-white/35 mt-1.5">
+                      Open any UPI app — GPay, PhonePe, Paytm — and copy the ID shown on your profile.
+                    </p>
+                  </div>
+                ) : (
+                  <>
+                    <div>
+                      <label htmlFor="w-acct" className="block text-[10px] font-black text-white/60 uppercase tracking-wider mb-1">Account Number</label>
+                      <input id="w-acct" type="text" inputMode="numeric" value={bankForm.account_number}
+                        onChange={e => setBankForm(f => ({ ...f, account_number: e.target.value }))}
+                        className="w-full h-11 px-4 rounded-xl bg-[#111111] border border-white/10 text-white text-sm font-semibold focus:outline-none focus:border-[#F4511E]" />
+                    </div>
+                    <div>
+                      <label htmlFor="w-ifsc" className="block text-[10px] font-black text-white/60 uppercase tracking-wider mb-1">IFSC Code</label>
+                      <input id="w-ifsc" type="text" placeholder="SBIN0001234" value={bankForm.ifsc}
+                        onChange={e => setBankForm(f => ({ ...f, ifsc: e.target.value.toUpperCase() }))}
+                        className="w-full h-11 px-4 rounded-xl bg-[#111111] border border-white/10 text-white text-sm font-semibold placeholder:text-white/30 focus:outline-none focus:border-[#F4511E]" />
+                    </div>
+                  </>
+                )}
                 <button type="button" onClick={saveBank} disabled={busy}
                   className="w-full py-3.5 bg-[#F4511E] hover:bg-[#D84315] text-white rounded-xl font-black text-sm btn-tap disabled:opacity-50 transition-colors">
-                  {busy ? 'Verifying…' : 'Save & Verify'}
+                  {busy ? 'Saving…' : 'Save'}
                 </button>
               </div>
             ) : (
               <div className="space-y-4">
                 <div className="bg-[#111111] rounded-xl p-3.5 border border-white/5 flex items-center justify-between">
-                  <span className="text-xs font-bold text-white/50">Bank ····{bank.account_number.slice(-4)} · {bank.ifsc}</span>
-                  <span className="text-[9px] font-black uppercase text-green-400 bg-green-500/10 border border-green-500/20 px-2 py-1 rounded-full">Verified</span>
+                  <span className="text-xs font-bold text-white/50 truncate flex items-center gap-1.5 min-w-0">
+                    {isUpi
+                      ? <><Smartphone size={12} className="text-[#F4511E] shrink-0" /><span className="truncate">{bank.upi_id}</span></>
+                      : <><Landmark size={12} className="text-[#F4511E] shrink-0" /><span className="truncate">····{String(bank.account_number).slice(-4)} · {bank.ifsc}</span></>}
+                  </span>
+                  <button type="button"
+                    onClick={() => {
+                      // Editing means re-entering it; there is no partial edit
+                      // that keeps half of a payout destination valid.
+                      setBank(null);
+                      setMethod(isUpi ? 'upi' : 'bank');
+                      setBankForm({ account_number: '', ifsc: '', upi_id: '', account_holder: bank.account_holder ?? '' });
+                    }}
+                    className="text-[9px] font-black uppercase tracking-wider text-white/40 hover:text-[#F4511E] transition-colors shrink-0 ml-2">
+                    Change
+                  </button>
                 </div>
                 <div>
                   <label htmlFor="w-amount" className="block text-[10px] font-black text-white/60 uppercase tracking-wider mb-1">
