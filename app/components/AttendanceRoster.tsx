@@ -1,5 +1,4 @@
 import { useState, useEffect, useRef } from "react";
-import { supabase } from "~/lib/supabase.client";
 import {
   CheckCircle2, XCircle, Clock, ShieldCheck, IndianRupee, Loader2, Camera,
   AlertTriangle, Wallet,
@@ -14,6 +13,12 @@ import {
  * pay an amount the attendance record does not support. Both of those are
  * checked in /api/attendance, not here; this only decides which controls are
  * worth rendering.
+ *
+ * Every read goes through the server. Fetching this with the browser's anon key
+ * returned an empty roster for admins, because there is no admin SELECT policy
+ * on `applications` — correctly, since an admin is neither the worker nor the
+ * organizer. Rather than widen RLS, the data comes from the service role behind
+ * an authorisation check, which is how the rest of the admin panel works.
  */
 
 interface Row {
@@ -80,60 +85,27 @@ export default function AttendanceRoster({
   const [payFor, setPayFor] = useState<Worker | null>(null);
   const [payAmount, setPayAmount] = useState("");
   const hasLoaded = useRef(false);
-  const synced = useRef(false);
 
   const totalPay = Math.round(payRate * durationHrs);
 
   const load = async () => {
     if (!hasLoaded.current) setLoading(true);
-
-    // Gigs filled before attendance existed have no rows at all. Asking the
-    // server to create them on first view means no backfill script has to be
-    // run by hand, and doing it once per mount keeps it cheap.
-    if (!synced.current) {
-      synced.current = true;
+    try {
       const fd = new FormData();
-      fd.append("intent", "sync");
+      fd.append("intent", "roster");
       fd.append("gig_id", gigId);
-      await fetch("/api/attendance", { method: "POST", body: fd }).catch(() => {});
+      const res = await fetch("/api/attendance", { method: "POST", body: fd });
+      const raw = await res.text();
+      let r: any = {};
+      try { r = raw ? JSON.parse(raw) : {}; } catch { throw new Error(`Server returned ${res.status}`); }
+      if (!res.ok || r.error) throw new Error(r.error || "Couldn't load the roster.");
+      setWorkers(r.workers ?? []);
+    } catch (e: any) {
+      setError(e.message);
+    } finally {
+      hasLoaded.current = true;
+      setLoading(false);
     }
-
-    const { data: apps } = await supabase
-      .from("applications")
-      .select("id, worker_id, status")
-      .eq("gig_id", gigId)
-      .in("status", ["accepted", "completed"]);
-
-    const appIds = (apps ?? []).map((a: any) => a.id);
-    if (!appIds.length) { setWorkers([]); hasLoaded.current = true; setLoading(false); return; }
-
-    const [{ data: att }, { data: profs }, { data: txns }] = await Promise.all([
-      supabase.from("gig_attendance")
-        .select("id, application_id, worker_id, status, worker_marked_at, worker_selfie_url, confirmed_at, punctuality, day:gig_days(day_number, day_date, starts_at, ends_at, duration_hrs)")
-        .in("application_id", appIds),
-      supabase.from("profiles").select("id, full_name, email").in("id", (apps ?? []).map((a: any) => a.worker_id)),
-      supabase.from("wallet_transactions").select("reference_id, amount").in("reference_id", appIds).eq("type", "gig_earning"),
-    ]);
-
-    const byId = Object.fromEntries((profs ?? []).map((p: any) => [p.id, p]));
-    const paidBy = Object.fromEntries((txns ?? []).map((t: any) => [t.reference_id, t.amount]));
-
-    const rows = ((att ?? []) as any[])
-      .map((r) => ({ ...r, day: Array.isArray(r.day) ? r.day[0] : r.day }))
-      .filter((r) => r.day);
-
-    setWorkers((apps ?? []).map((a: any) => ({
-      applicationId: a.id,
-      workerId: a.worker_id,
-      name: byId[a.worker_id]?.full_name ?? byId[a.worker_id]?.email ?? "Unknown",
-      email: byId[a.worker_id]?.email ?? "",
-      status: a.status,
-      rows: rows.filter((r) => r.application_id === a.id).sort((x, y) => x.day.day_number - y.day.day_number),
-      paid: paidBy[a.id] ?? null,
-    })));
-
-    hasLoaded.current = true;
-    setLoading(false);
   };
 
   useEffect(() => { load(); }, [gigId]);
@@ -161,10 +133,18 @@ export default function AttendanceRoster({
   };
 
   /** Signed URL, because the proof bucket is private and stays that way. */
-  const viewSelfie = async (path: string) => {
-    const { data } = await supabase.storage.from("attendance-proof").createSignedUrl(path, 300);
-    if (data?.signedUrl) setSelfie(data.signedUrl);
-    else setError("Couldn't open that photo.");
+  const viewSelfie = async (attendanceId: string) => {
+    try {
+      const fd = new FormData();
+      fd.append("intent", "proof");
+      fd.append("attendance_id", attendanceId);
+      const res = await fetch("/api/attendance", { method: "POST", body: fd });
+      const r = await res.json().catch(() => ({}));
+      if (!res.ok || r.error || !r.url) throw new Error(r.error || "Couldn't open that photo.");
+      setSelfie(r.url);
+    } catch (e: any) {
+      setError(e.message);
+    }
   };
 
   const earnedFor = (w: Worker) => {
@@ -242,7 +222,7 @@ export default function AttendanceRoster({
                             <span className="text-[9px] font-black uppercase tracking-wider text-orange-400">late</span>
                           )}
                           {r.worker_selfie_url && (
-                            <button type="button" onClick={() => viewSelfie(r.worker_selfie_url!)}
+                            <button type="button" onClick={() => viewSelfie(r.id)}
                               className="text-[9px] font-black uppercase tracking-wider text-blue-400 hover:underline flex items-center gap-1">
                               <Camera size={9} /> Photo
                             </button>

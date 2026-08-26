@@ -37,6 +37,8 @@ export const action = jsonRoute(async ({ request }: ActionFunctionArgs) => {
 
   switch (intent) {
     case "sync": return sync(admin, user.id, fd, isAdmin);
+    case "roster": return roster(admin, user.id, fd, isAdmin);
+    case "proof": return proof(admin, user.id, fd, isAdmin);
     case "checkin": return checkin(admin, user.id, fd);
     case "confirm":
     case "absent":
@@ -75,6 +77,102 @@ async function sync(admin: any, callerId: string, fd: FormData, isAdmin: boolean
     await ensureAttendanceRows(admin, a.id, a.worker_id, gigId);
   }
   return Response.json({ ok: true, synced: apps?.length ?? 0 });
+}
+
+/**
+ * The whole roster for a gig: accepted workers, their days, and what they have
+ * been paid.
+ *
+ * Read here rather than from the browser for two reasons. There is no admin
+ * SELECT policy on `applications` — an admin is not the worker and not the
+ * organizer, so RLS legitimately hides every row from them, and a roster
+ * fetched with the anon key came back empty on the admin page. And this repo
+ * deliberately never fetches admin data with the anon key, so that a leaked
+ * client bundle exposes nothing and RLS is not the only thing in the way.
+ */
+async function roster(admin: any, callerId: string, fd: FormData, isAdmin: boolean) {
+  const gigId = String(fd.get("gig_id") ?? "");
+  if (!gigId) return Response.json({ error: "Missing gig_id" }, { status: 400 });
+
+  const { data: gig } = await admin
+    .from("gigs").select("id, organizer_id, pay_rate, duration_hrs").eq("id", gigId).maybeSingle();
+  if (!gig) return Response.json({ error: "not_found" }, { status: 404 });
+  if (gig.organizer_id !== callerId && !isAdmin) {
+    return Response.json({ error: "Unauthorized" }, { status: 403 });
+  }
+
+  const { data: apps } = await admin
+    .from("applications")
+    .select("id, worker_id, status")
+    .eq("gig_id", gigId)
+    .in("status", ["accepted", "completed"]);
+
+  if (!apps?.length) return Response.json({ ok: true, workers: [] });
+
+  // Create any missing rows on the way past, so a gig filled before attendance
+  // existed gets its days the first time anyone opens the roster.
+  for (const a of apps) await ensureAttendanceRows(admin, a.id, a.worker_id, gigId);
+
+  const appIds = apps.map((a: any) => a.id);
+  const [{ data: att }, { data: profs }, { data: txns }] = await Promise.all([
+    admin.from("gig_attendance")
+      .select("id, application_id, worker_id, status, worker_marked_at, worker_selfie_url, confirmed_at, punctuality, gig_day:gig_days(day_number, day_date, starts_at, ends_at, duration_hrs)")
+      .in("application_id", appIds),
+    admin.from("profiles").select("id, full_name, email").in("id", apps.map((a: any) => a.worker_id)),
+    admin.from("wallet_transactions").select("reference_id, amount").in("reference_id", appIds).eq("type", "gig_earning"),
+  ]);
+
+  const byId = Object.fromEntries((profs ?? []).map((p: any) => [p.id, p]));
+  const paidBy = Object.fromEntries((txns ?? []).map((t: any) => [t.reference_id, t.amount]));
+  const rows = ((att ?? []) as any[])
+    .map((r) => ({ ...r, day: Array.isArray(r.gig_day) ? r.gig_day[0] : r.gig_day }))
+    .filter((r) => r.day);
+
+  const totalPay = Math.round(Number(gig.pay_rate ?? 0) * Number(gig.duration_hrs ?? 0));
+
+  return Response.json({
+    ok: true,
+    totalPay,
+    workers: apps.map((a: any) => ({
+      applicationId: a.id,
+      workerId: a.worker_id,
+      name: byId[a.worker_id]?.full_name || byId[a.worker_id]?.email || "Unknown",
+      email: byId[a.worker_id]?.email ?? "",
+      status: a.status,
+      paid: paidBy[a.id] ?? null,
+      rows: rows
+        .filter((r) => r.application_id === a.id)
+        .sort((x, y) => x.day.day_number - y.day.day_number),
+    })),
+  });
+}
+
+/**
+ * A short-lived link to one check-in photo.
+ *
+ * The bucket is private and stays that way — these are photographs of people.
+ * Only the gig's organizer or an admin can ask, and the URL expires.
+ */
+async function proof(admin: any, callerId: string, fd: FormData, isAdmin: boolean) {
+  const attendanceId = String(fd.get("attendance_id") ?? "");
+  if (!attendanceId) return Response.json({ error: "Missing attendance_id" }, { status: 400 });
+
+  const { data: row } = await admin
+    .from("gig_attendance")
+    .select("id, worker_id, worker_selfie_url, gig_day:gig_days(gig_id)")
+    .eq("id", attendanceId)
+    .maybeSingle();
+  if (!row?.worker_selfie_url) return Response.json({ error: "no_photo" }, { status: 404 });
+
+  const day: any = Array.isArray(row.gig_day) ? row.gig_day[0] : row.gig_day;
+  const { data: gig } = await admin.from("gigs").select("organizer_id").eq("id", day.gig_id).maybeSingle();
+  const mayLook = isAdmin || gig?.organizer_id === callerId || row.worker_id === callerId;
+  if (!mayLook) return Response.json({ error: "Unauthorized" }, { status: 403 });
+
+  const { data, error } = await admin.storage
+    .from("attendance-proof").createSignedUrl(row.worker_selfie_url, 300);
+  if (error) return Response.json({ error: error.message }, { status: 500 });
+  return Response.json({ ok: true, url: data.signedUrl });
 }
 
 /**
