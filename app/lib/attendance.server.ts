@@ -88,7 +88,19 @@ export async function ensureAttendanceRows(
   workerId: string,
   gigId: string,
 ): Promise<void> {
-  const days = await ensureGigDays(admin, gigId);
+  const allDays = await ensureGigDays(admin, gigId);
+  if (!allDays.length) return;
+
+  // Only the days this person actually signed up for. Creating a row for a day
+  // they never committed to would show up as an unmarked day on the roster and
+  // block their payout on work they never agreed to do.
+  const { data: committed } = await admin
+    .from("application_days")
+    .select("gig_day_id")
+    .eq("application_id", applicationId);
+
+  const chosen = new Set((committed ?? []).map((r: any) => r.gig_day_id));
+  const days = chosen.size ? allDays.filter((d) => chosen.has(d.id)) : allDays;
   if (!days.length) return;
 
   const { data: rows } = await admin
@@ -171,11 +183,19 @@ export interface PayoutBreakdown {
 /**
  * What this worker has earned on this gig.
  *
- * Pay is advertised as a whole-gig figure (rate x duration on the gig record),
- * not rebuilt from the day rows — the day rows are how the work is scheduled,
- * and their hours can be edited after people have already applied. Paying from
- * them would silently change the deal. Days decide the *share* that was earned,
- * never the total.
+ * Two pricing shapes, because multi-day gigs cannot use the single-day one.
+ *
+ * A gig with a `day_rate` pays per day worked: the total is the sum over the
+ * days *that person committed to and turned up for*. That is the only shape
+ * that composes once two workers sign up for different day-sets — a single
+ * "₹1,400 for the gig" would mean something different to each of them.
+ *
+ * Without a day_rate it falls back to the old whole-gig figure
+ * (pay_rate x duration_hrs), prorated by attended hours when days are missed.
+ * Every gig posted before per-day pricing works exactly as it did.
+ *
+ * Either way the money is released once, when all of their days are settled —
+ * nobody gets paid for day one and disappears.
  */
 export async function computePayout(
   admin: SupabaseClient,
@@ -183,13 +203,13 @@ export async function computePayout(
 ): Promise<PayoutBreakdown | null> {
   const { data: app } = await admin
     .from("applications")
-    .select("id, gig_id, worker_id, status, gigs(pay_rate, duration_hrs)")
+    .select("id, gig_id, worker_id, status, gigs(pay_rate, duration_hrs, day_rate)")
     .eq("id", applicationId)
     .maybeSingle();
   if (!app) return null;
 
   const gig: any = Array.isArray(app.gigs) ? app.gigs[0] : app.gigs;
-  const totalPay = Math.round(Number(gig?.pay_rate ?? 0) * Number(gig?.duration_hrs ?? 0));
+  const dayRate = gig?.day_rate == null ? null : Number(gig.day_rate);
 
   const { data: rows } = await admin
     .from("gig_attendance")
@@ -213,12 +233,25 @@ export async function computePayout(
     if (!RESOLVED.includes(r.status)) allResolved = false;
   }
 
-  // If every scheduled day was worked, pay the advertised figure exactly —
-  // never a rounded fraction of it that lands a rupee or two short.
-  const earned =
-    totalHours <= 0 ? 0
-      : attendedHours >= totalHours ? totalPay
-        : Math.round((totalPay * attendedHours) / totalHours);
+  // What they would get for turning up to everything they signed up for. This
+  // is the figure shown as "you will earn", so it has to mean their days, not
+  // the gig's.
+  const totalPay = dayRate != null
+    ? Math.round(dayRate * list.length)
+    : Math.round(Number(gig?.pay_rate ?? 0) * Number(gig?.duration_hrs ?? 0));
+
+  let earned: number;
+  if (dayRate != null) {
+    earned = Math.round(dayRate * daysAttended);
+  } else if (totalHours <= 0) {
+    earned = 0;
+  } else if (attendedHours >= totalHours) {
+    // Every scheduled day worked: pay the advertised figure exactly, never a
+    // rounded fraction of it that lands a rupee or two short.
+    earned = totalPay;
+  } else {
+    earned = Math.round((totalPay * attendedHours) / totalHours);
+  }
 
   return {
     totalPay,

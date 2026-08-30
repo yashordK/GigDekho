@@ -54,18 +54,45 @@ export const action = jsonRoute(async ({ request }: ActionFunctionArgs) => {
     return Response.json({ error: "already_applied" }, { status: 400 });
   }
 
-  // INSERT with status 'pending' — the BEFORE INSERT trigger handles FCFS:
-  //   slots available → sets status='accepted', increments gig.slots_filled
-  //   slots full      → keeps status='pending', sets waitlist_position
-  const { data: newApp, error } = await admin
-    .from("applications")
-    .insert({ gig_id: gigId, worker_id: user.id, status: "pending" })
-    .select("id, status, waitlist_position")
-    .single();
+  // Which days they are committing to. Absent or empty means the whole gig,
+  // which is what every single-day gig and every all-days gig sends.
+  const rawDays = formData.getAll("day_ids").map(String).filter(Boolean);
+  const dayIds = rawDays.length ? rawDays : null;
 
-  if (error || !newApp) {
-    return Response.json({ error: error?.message ?? "Insert failed" }, { status: 500 });
+  // Acceptance happens inside one transaction in the database, not here.
+  // Capacity is per day now, and reading it in the app then writing would let
+  // two people applying in the same second both take the last slot.
+  const { data: rpcRows, error } = await admin.rpc("apply_to_gig", {
+    p_gig_id: gigId,
+    p_worker_id: user.id,
+    p_day_ids: dayIds,
+  });
+
+  if (error) {
+    const msg = error.message ?? "";
+    if (msg.includes("below_min_days")) {
+      const n = msg.split("below_min_days:")[1]?.trim().replace(/[^0-9]/g, "");
+      return Response.json({
+        error: `This gig needs at least ${n || "more"} days. Pick a few more and try again.`,
+      }, { status: 400 });
+    }
+    if (msg.includes("no_days_selected")) {
+      return Response.json({ error: "Pick at least one day to work." }, { status: 400 });
+    }
+    if (msg.includes("gig_closed")) {
+      return Response.json({ error: "This gig is no longer accepting applications" }, { status: 400 });
+    }
+    if (msg.includes("gig_not_found")) {
+      return Response.json({ error: "Gig not found" }, { status: 404 });
+    }
+    return Response.json({ error: msg || "Could not apply" }, { status: 500 });
   }
+
+  const newApp = Array.isArray(rpcRows) ? rpcRows[0] : rpcRows;
+  if (!newApp?.application_id) {
+    return Response.json({ error: "Could not apply" }, { status: 500 });
+  }
+  const fullDays: number[] = newApp.full_days ?? [];
 
   const isAccepted = newApp.status === "accepted";
   const isWaitlisted = newApp.status === "pending" && newApp.waitlist_position != null;
@@ -96,5 +123,8 @@ export const action = jsonRoute(async ({ request }: ActionFunctionArgs) => {
   return Response.json({
     status: isAccepted ? "accepted" : "waitlisted",
     waitlist_position: newApp.waitlist_position ?? null,
+    // Naming the days that were full turns "you are on the waitlist" into
+    // something they can act on — drop day 3 and you are in.
+    full_days: fullDays,
   });
 });
