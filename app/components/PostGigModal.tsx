@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from "react";
+import { useViewportHeight } from "~/hooks/useViewportHeight";
 import { supabase } from "~/lib/supabase.client";
 import { fetchSkillCategories } from "~/lib/categories";
 import LocationPicker from "./LocationPicker";
@@ -42,6 +43,9 @@ const emptyRole = (): RoleForm => ({
 const QUALIFICATION_HINT = "e.g. Students in their pre-final year, comfortable with Figma";
 
 export default function PostGigModal({ isOpen, onClose, onSuccess, user, showToast, template }: PostGigModalProps) {
+  // Sized to the space the keyboard leaves, so the Back/Next footer never ends
+  // up behind it. See useViewportHeight.
+  const sheetHeight = useViewportHeight(isOpen);
   const [hiringType, setHiringType] = useState<HiringType | null>(null);
   const [step, setStep] = useState(1);
   const [categories, setCategories] = useState<any[]>([]);
@@ -380,7 +384,9 @@ export default function PostGigModal({ isOpen, onClose, onSuccess, user, showToa
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-0 md:p-4 bg-black/80 animate-in fade-in duration-200">
-      <div className="bg-[#111111] md:bg-[#1C1C1C] border-t md:border border-white/10 w-full max-w-[640px] h-[100dvh] md:h-auto md:max-h-[90vh] rounded-t-3xl md:rounded-3xl flex flex-col shadow-2xl relative overflow-hidden animate-in slide-in-from-bottom md:zoom-in duration-300">
+      <div
+        className="bg-[#111111] md:bg-[#1C1C1C] border-t md:border border-white/10 w-full max-w-[640px] h-[100dvh] md:h-auto md:max-h-[90vh] rounded-t-3xl md:rounded-3xl flex flex-col shadow-2xl relative overflow-hidden animate-in slide-in-from-bottom md:zoom-in duration-300" style={sheetHeight ? { height: `${sheetHeight}px`, maxHeight: `${sheetHeight}px` } : undefined}
+      >
 
         {/* Header */}
         <div className="flex items-center justify-between px-6 py-4 border-b border-white/10">
@@ -407,7 +413,7 @@ export default function PostGigModal({ isOpen, onClose, onSuccess, user, showToa
         )}
 
         {/* Content */}
-        <div className="flex-1 overflow-y-auto p-6 space-y-6 hide-scrollbar">
+        <div className="flex-1 min-h-0 overflow-y-auto p-6 space-y-6 hide-scrollbar">
 
           {/* ══ TYPE CHOOSER ══ */}
           {hiringType === null && (

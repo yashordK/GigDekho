@@ -161,6 +161,8 @@ export default function LocationPicker({ value, onChange }: LocationPickerProps)
         <button
           type="button"
           onClick={() => handleRemoteToggle(!value.is_remote)}
+          aria-pressed={value.is_remote}
+          aria-label="Remote / work from home"
           className={`w-12 h-6 flex items-center rounded-full p-1 transition-colors duration-200 btn-tap ${
             value.is_remote ? "bg-[#F4511E]" : "bg-white/10"
           }`}

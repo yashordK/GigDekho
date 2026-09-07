@@ -279,7 +279,7 @@ export default function ProfileScreen() {
                  <button type="button" aria-label="Close" onClick={() => setShowSkillsModal(false)} className="p-2 bg-white/10 text-white/60 hover:text-white rounded-full btn-tap"><X size={18} /></button>
               </div>
 
-              <div className="flex-1 overflow-y-auto hide-scrollbar mb-5 -mx-1 px-1">
+              <div className="flex-1 min-h-0 overflow-y-auto hide-scrollbar mb-5 -mx-1 px-1">
                 <SkillSelector selected={tempSkills} onChange={setTempSkills} />
               </div>
 

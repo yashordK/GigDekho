@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from "react";
+import { useViewportHeight } from "~/hooks/useViewportHeight";
 import { supabase } from "~/lib/supabase.client";
 import { X, AlertTriangle, Upload, FileText, Link2, Check, ChevronRight, ChevronLeft } from "lucide-react";
 
@@ -24,6 +25,8 @@ interface Props {
 export default function InternshipApplyModal({
   isOpen, onClose, onSubmitted, gigId, gigTitle, user, profile,
 }: Props) {
+  // Same keyboard problem as the posting sheet: this is a form on a phone.
+  const sheetHeight = useViewportHeight(true);
   const [step, setStep] = useState(1);
   const [form, setForm] = useState({
     full_name: "", email: "", phone: "",
@@ -159,7 +162,9 @@ export default function InternshipApplyModal({
 
   return (
     <div className="fixed inset-0 z-[100] flex items-end md:items-center justify-center p-0 md:p-4 bg-black/85 animate-in fade-in duration-200">
-      <div className="bg-[#1C1C1C] border-t md:border border-white/10 w-full max-w-lg h-[100dvh] md:h-auto md:max-h-[90vh] rounded-t-3xl md:rounded-3xl flex flex-col shadow-2xl overflow-hidden animate-in slide-in-from-bottom md:zoom-in duration-300">
+      <div
+        className="bg-[#1C1C1C] border-t md:border border-white/10 w-full max-w-lg h-[100dvh] md:h-auto md:max-h-[90vh] rounded-t-3xl md:rounded-3xl flex flex-col shadow-2xl overflow-hidden animate-in slide-in-from-bottom md:zoom-in duration-300" style={sheetHeight ? { height: `${sheetHeight}px`, maxHeight: `${sheetHeight}px` } : undefined}
+      >
 
         {/* Header */}
         <div className="flex items-center justify-between px-6 py-4 border-b border-white/10 shrink-0">
@@ -176,7 +181,7 @@ export default function InternshipApplyModal({
         </div>
 
         {/* Body */}
-        <div className="flex-1 overflow-y-auto p-6 hide-scrollbar">
+        <div className="flex-1 min-h-0 overflow-y-auto p-6 hide-scrollbar">
           {error && (
             <div className="mb-4 p-3 bg-red-500/10 border border-red-500/20 text-red-400 rounded-xl text-xs font-semibold">{error}</div>
           )}
