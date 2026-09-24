@@ -116,7 +116,17 @@ export const action = jsonRoute(async ({ request }: ActionFunctionArgs) => {
     return Response.json({ error: msg || "Could not apply" }, { status: 500 });
   }
 
-  const newApp = Array.isArray(rpcRows) ? rpcRows[0] : rpcRows;
+  // out_* names: every result column of apply_to_gig is also a PL/pgSQL
+  // variable inside it, so names that match real columns made references
+  // ambiguous and took the function down twice. See migration 024.
+  const row = Array.isArray(rpcRows) ? rpcRows[0] : rpcRows;
+  const newApp = row ? {
+    application_id: row.out_application_id,
+    status: row.out_status,
+    waitlist_position: row.out_waitlist_position,
+    full_days: row.out_full_days,
+  } : null;
+
   if (!newApp?.application_id) {
     return Response.json({ error: "Could not apply" }, { status: 500 });
   }
