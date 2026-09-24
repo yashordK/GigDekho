@@ -332,7 +332,6 @@ export default function InternshipManagementCard({
         isOpen={showCover}
         onClose={() => setShowCover(false)}
         gig={gig}
-        userId={gig.organizer_id}
         onSaved={onActionSuccess}
         showToast={showToast}
       />

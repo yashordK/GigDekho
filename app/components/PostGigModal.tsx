@@ -493,7 +493,6 @@ export default function PostGigModal({ isOpen, onClose, onSuccess, user, showToa
                 <CoverImagePicker
                   value={cover}
                   onChange={setCover}
-                  userId={user?.id}
                   roleHint={roles[0]?.isCustom ? roles[0]?.custom_role : roles[0]?.role_type}
                 />
               </div>
@@ -783,7 +782,6 @@ export default function PostGigModal({ isOpen, onClose, onSuccess, user, showToa
                 <CoverImagePicker
                   value={cover}
                   onChange={setCover}
-                  userId={user?.id}
                   roleHint={intern.isCustomRole ? intern.custom_role : intern.role_type}
                 />
               </div>

@@ -11,14 +11,12 @@ export default function EditCoverModal({
   isOpen,
   onClose,
   gig,
-  userId,
   onSaved,
   showToast,
 }: {
   isOpen: boolean;
   onClose: () => void;
   gig: any;
-  userId: string;
   onSaved: () => void;
   showToast: (msg: string, type: "success" | "error" | "info") => void;
 }) {
@@ -89,7 +87,6 @@ export default function EditCoverModal({
         <CoverImagePicker
           value={cover}
           onChange={setCover}
-          userId={userId}
           roleHint={gig.custom_role ?? gig.role_type}
         />
 

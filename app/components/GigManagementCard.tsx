@@ -496,7 +496,6 @@ export default function GigManagementCard({
         isOpen={showCover}
         onClose={() => setShowCover(false)}
         gig={gig}
-        userId={user?.id ?? gig.organizer_id}
         onSaved={onActionSuccess}
         showToast={showToast}
       />

@@ -68,6 +68,28 @@ export const action = jsonRoute(async ({ request }: ActionFunctionArgs) => {
     p_day_ids: dayIds,
   });
 
+  // apply_to_gig arrives with migration 022. If a deploy lands before the
+  // migration is run, applying to a gig matters far more than applying to
+  // specific days — so fall back to the insert this endpoint used before,
+  // which the old BEFORE INSERT trigger still turns into accepted-or-waitlisted.
+  if (error && /apply_to_gig|Could not find the function|PGRST202/i.test(
+        `${error.message ?? ""} ${(error as any).code ?? ""}`)) {
+    console.warn("[api.apply] apply_to_gig missing — has migration 022 been run? Falling back.");
+    const { data: legacy, error: legacyErr } = await admin
+      .from("applications")
+      .insert({ gig_id: gigId, worker_id: user.id, status: "pending" })
+      .select("id, status, waitlist_position")
+      .single();
+    if (legacyErr || !legacy) {
+      return Response.json({ error: legacyErr?.message ?? "Could not apply" }, { status: 500 });
+    }
+    return Response.json({
+      status: legacy.status === "accepted" ? "accepted" : "waitlisted",
+      waitlist_position: legacy.waitlist_position ?? null,
+      full_days: [],
+    });
+  }
+
   if (error) {
     const msg = error.message ?? "";
     if (msg.includes("below_min_days")) {

@@ -15,17 +15,24 @@ const MAX_BYTES = 5 * 1024 * 1024;
 /**
  * Lets a hirer keep the stock photo, upload their own, or turn the cover
  * off entirely. Used both when posting and when editing a live listing.
+ *
+ * The upload folder is read from the session rather than passed in. Storage
+ * only lets you write into a folder named after your own auth id, and callers
+ * were passing the *gig's* organizer instead of the person at the keyboard —
+ * so an admin fixing someone's listing, or anyone editing a gig whose
+ * organizer_id differs from their own id, got "new row violates row-level
+ * security policy". Which folder the file lands in does not matter: the bucket
+ * is public and the gig row stores the resulting URL. The folder is a
+ * write-ownership boundary, nothing more.
  */
 export default function CoverImagePicker({
   value,
   onChange,
-  userId,
   roleHint,
   compact = false,
 }: {
   value: CoverValue;
   onChange: (v: CoverValue) => void;
-  userId: string;
   /** Role name, so the "default" preview matches what applicants will see */
   roleHint?: string | null;
   compact?: boolean;
@@ -51,13 +58,25 @@ export default function CoverImagePicker({
     setUploading(true);
     setError("");
     try {
+      const { data: auth } = await supabase.auth.getUser();
+      const uploaderId = auth?.user?.id;
+      if (!uploaderId) {
+        throw new Error("You've been signed out. Sign in again and retry the upload.");
+      }
       const ext = (file.name.split(".").pop() || "jpg").toLowerCase().replace(/[^a-z0-9]/g, "");
-      const path = `${userId}/${Date.now()}.${ext}`;
+      const path = `${uploaderId}/${Date.now()}.${ext}`;
       const { error: upErr } = await supabase.storage.from("gig-covers").upload(path, file, {
         cacheControl: "31536000",
         upsert: false,
       });
-      if (upErr) throw upErr;
+      if (upErr) {
+        // The storage policy message is accurate but means nothing to a hirer.
+        throw new Error(
+          /row-level security/i.test(upErr.message)
+            ? "Couldn't save that image. Sign out and back in, then try again."
+            : upErr.message
+        );
+      }
       const { data: pub } = supabase.storage.from("gig-covers").getPublicUrl(path);
       onChange({ cover_mode: "custom", cover_image_url: pub.publicUrl });
     } catch (err: any) {
