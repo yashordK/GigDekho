@@ -68,13 +68,19 @@ export const action = jsonRoute(async ({ request }: ActionFunctionArgs) => {
     p_day_ids: dayIds,
   });
 
-  // apply_to_gig arrives with migration 022. If a deploy lands before the
-  // migration is run, applying to a gig matters far more than applying to
-  // specific days — so fall back to the insert this endpoint used before,
-  // which the old BEFORE INSERT trigger still turns into accepted-or-waitlisted.
-  if (error && /apply_to_gig|Could not find the function|PGRST202/i.test(
-        `${error.message ?? ""} ${(error as any).code ?? ""}`)) {
-    console.warn("[api.apply] apply_to_gig missing — has migration 022 been run? Falling back.");
+  // The four conditions below are the function telling us the application is
+  // genuinely not allowed. Everything else — the function not existing because
+  // a migration has not run, or the function itself being broken — is our
+  // problem, not the applicant's, and must not stop them applying.
+  //
+  // This polarity is deliberate and was earned: 022 shipped apply_to_gig with
+  // an ambiguous column reference, so every call raised. A fallback that only
+  // recognised "function missing" left applying broken in production.
+  const rpcMessage = `${error?.message ?? ""} ${(error as any)?.code ?? ""}`;
+  const isBusinessRule = /below_min_days|no_days_selected|gig_closed|gig_not_found/i.test(rpcMessage);
+
+  if (error && !isBusinessRule) {
+    console.error("[api.apply] apply_to_gig unusable, falling back to a plain insert:", rpcMessage);
     const { data: legacy, error: legacyErr } = await admin
       .from("applications")
       .insert({ gig_id: gigId, worker_id: user.id, status: "pending" })
