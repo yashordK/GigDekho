@@ -167,13 +167,13 @@ credit without that key.
 ### Built but unproven
 
 - Analytics tracking — `/api/track` returns `{"ok":false}` in production
-- Google Maps in production — **the CSP theory was wrong**. Measured directly:
-  production sends *no* CSP header at all, the key is valid, and
-  `maps.googleapis.com` returns HTTP 200 for the `www.gigdekho.com` referrer.
-  The script tag is present in the production HTML with a real key. A failure
-  seen inside the Claude browser pane was the pane blocking a third-party
-  request, not production. If a map fails to load for a real user, suspect an
-  ad blocker or their network first — `app/lib/maps.ts` now names that cause.
+- Google Maps in production — **fixed.** The CSP theory was right all along;
+  the CSP lives in `app/entry.server.tsx` and is applied only when
+  `NODE_ENV !== development`, which is exactly why localhost always worked.
+  `script-src` omitted `maps.googleapis.com`, so the script was blocked.
+  **`curl -I` does not show these headers** — a HEAD request skips the render
+  path that sets them, which is how the header was twice declared absent. Use
+  `curl -s -o /dev/null -D- <url>` (a GET) when checking response headers here.
 
 ### Designed, not built
 

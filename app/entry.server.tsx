@@ -75,11 +75,15 @@ export default function handleRequest(
               "Content-Security-Policy",
               [
                 "default-src 'self'",
-                "script-src 'self' 'unsafe-inline'",
+                // Google Maps loads its own modules from maps.googleapis.com and
+                // pulls tiles and metadata over XHR. Without both of these the
+                // map silently never loads in production while working fine on
+                // localhost, because this whole block is skipped in dev.
+                "script-src 'self' 'unsafe-inline' https://maps.googleapis.com https://maps.gstatic.com",
                 "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
                 "font-src 'self' https://fonts.gstatic.com data:",
                 "img-src 'self' data: https: blob:",
-                "connect-src 'self' https://*.supabase.co wss://*.supabase.co https://api.razorpay.com",
+                "connect-src 'self' https://*.supabase.co wss://*.supabase.co https://api.razorpay.com https://maps.googleapis.com https://maps.gstatic.com",
                 "media-src 'self' blob:",
                 "worker-src 'self' blob:",
                 "frame-src https://api.razorpay.com",
