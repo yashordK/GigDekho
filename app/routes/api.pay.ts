@@ -1,6 +1,7 @@
 import { type ActionFunctionArgs } from "react-router";
 import { serviceClient, jsonRoute } from "~/lib/service-client.server";
 import { createSupabaseServerClient } from "~/lib/supabase.server";
+import { gigTotalPay } from "~/lib/utils";
 
 // Simulated payment flow (Razorpay integration pending).
 // Amounts are computed server-side from the gig record — never trusted from the client.
@@ -33,7 +34,10 @@ export const action = jsonRoute(async ({ request }: ActionFunctionArgs) => {
     return Response.json({ error: "No workers hired yet" }, { status: 400 });
   }
 
-  const totalCost = Math.round(gig.pay_rate * gig.duration_hrs * gig.slots_filled);
+  // Rounded per person, then multiplied — the same basis the hirer's own cost
+  // card shows. Rounding the whole product instead drifts a few rupees away
+  // from the figure they were quoted once pay_rate carries paise.
+  const totalCost = gigTotalPay(gig.pay_rate, gig.duration_hrs) * gig.slots_filled;
   const advanceAmount = Math.round(totalCost * 0.3);
   const finalAmount = totalCost - advanceAmount;
 

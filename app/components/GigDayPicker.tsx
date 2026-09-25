@@ -22,7 +22,6 @@ export interface GigDay {
   day_date: string;
   starts_at: string;
   ends_at: string;
-  duration_hrs: number;
   slots_needed: number;
   slots_filled: number;
   slots_left: number;
@@ -75,7 +74,7 @@ export default function GigDayPicker({
 
       const { data: times } = await supabase
         .from("gig_days")
-        .select("id, starts_at, ends_at, duration_hrs")
+        .select("id, starts_at, ends_at")
         .eq("gig_id", gigId);
       const byId = Object.fromEntries((times ?? []).map((t: any) => [t.id, t]));
 
@@ -85,7 +84,6 @@ export default function GigDayPicker({
         day_date: r.day_date,
         starts_at: byId[r.gig_day_id]?.starts_at ?? "00:00:00",
         ends_at: byId[r.gig_day_id]?.ends_at ?? "00:00:00",
-        duration_hrs: Number(byId[r.gig_day_id]?.duration_hrs ?? 0),
         slots_needed: r.slots_needed,
         slots_filled: r.slots_filled,
         slots_left: r.slots_left,
@@ -115,7 +113,6 @@ export default function GigDayPicker({
     onChange(selected.includes(id) ? selected.filter((x) => x !== id) : [...selected, id]);
 
   const chosen = days.filter((d) => selected.includes(d.id));
-  const chosenHours = Math.round(chosen.reduce((s, d) => s + d.duration_hrs, 0) * 100) / 100;
   const belowMin = canPick && minDays != null && chosen.length > 0 && chosen.length < minDays;
 
   return (
@@ -155,7 +152,7 @@ export default function GigDayPicker({
                     Day {d.day_number} · {fmtDate(d.day_date)}
                   </p>
                   <p className="text-[10px] font-semibold text-white/40 mt-0.5">
-                    {fmtTime(d.starts_at)} – {fmtTime(d.ends_at)} · {d.duration_hrs} hrs
+                    {fmtTime(d.starts_at)} – {fmtTime(d.ends_at)}
                   </p>
                 </div>
 
@@ -204,7 +201,7 @@ export default function GigDayPicker({
             {chosen.length === 0
               ? "No days picked yet."
               : <>
-                  {chosen.length} {chosen.length === 1 ? "day" : "days"} · {chosenHours} hrs
+                  {chosen.length} {chosen.length === 1 ? "day" : "days"}
                   {dayRate != null && (
                     <span className="text-[#F4511E]"> · ₹{Math.round(dayRate * chosen.length)} total</span>
                   )}

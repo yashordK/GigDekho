@@ -11,6 +11,7 @@ import SkillSelector from '~/components/SkillSelector';
 import ThemeToggle from '~/components/ThemeToggle';
 import PortfolioPanel from '~/components/PortfolioPanel';
 import ReelRewardsPanel from '~/components/ReelRewardsPanel';
+import { gigTotalPay } from '~/lib/utils';
 
 export const meta = () => [
   { title: "My profile — GigDekho" },
@@ -118,7 +119,7 @@ export default function ProfileScreen() {
 
       const completedGigs = count || 0;
       const totalEarned = (appsData || []).reduce((acc, app) =>
-        app.gig ? acc + app.gig.pay_rate * app.gig.duration_hrs : acc, 0);
+        app.gig ? acc + gigTotalPay(app.gig.pay_rate, app.gig.duration_hrs) : acc, 0);
 
       const { data: ratingData } = await supabase
         .from('ratings')

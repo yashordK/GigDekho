@@ -4,7 +4,7 @@ import AttendanceCheckIn from '~/components/AttendanceCheckIn';
 import { useAuth } from '~/context/AuthContext';
 import { useNavigate } from 'react-router';
 import { Calendar, ChevronRight, Briefcase, Shield, XCircle, AlertTriangle, GraduationCap } from 'lucide-react';
-import { formatRelativeDate } from '~/lib/utils';
+import { formatRelativeDate, gigTotalPay } from '~/lib/utils';
 import SpotlightCategories from '~/components/SpotlightCategories';
 import { gigCoverUrl } from '~/lib/cover';
 
@@ -295,7 +295,7 @@ export default function DashboardScreen() {
             filteredApps.map(app => {
               if (!app.gig) return null;
               const sParams = getStatusParams(app);
-              const totalPay = app.gig.pay_rate * app.gig.duration_hrs;
+              const totalPay = gigTotalPay(app.gig.pay_rate, app.gig.duration_hrs);
               const canCancel = app.status === 'accepted' || (app.status === 'pending' && app.waitlist_position != null);
 
               return (
@@ -373,7 +373,7 @@ export default function DashboardScreen() {
                           <XCircle size={14} />
                         </button>
                       )}
-                      <span className="font-black text-[#F4511E] text-2xl tracking-tight">₹{totalPay}</span>
+                      <span className="font-black text-[#F4511E] text-2xl tracking-tight">₹{totalPay.toLocaleString('en-IN')}</span>
                       <div className="w-8 h-8 rounded-full bg-[#111111] flex items-center justify-center group-hover:bg-[#F4511E]/10 transition-colors border border-white/5 group-hover:border-[#F4511E]/20">
                         <ChevronRight size={16} className="text-white/40 group-hover:text-[#F4511E] transition-colors" />
                       </div>

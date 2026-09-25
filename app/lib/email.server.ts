@@ -1,3 +1,5 @@
+import { gigTotalPay } from "~/lib/utils";
+
 const RESEND_API_KEY = process.env.RESEND_API_KEY!;
 const FROM_EMAIL = "GigDekho <noreply@gigdekho.com>";
 
@@ -37,7 +39,7 @@ export function applicationAcceptedEmail(
     role_type: string;
   }
 ) {
-  const totalPay = gig.pay_rate * gig.duration_hrs;
+  const totalPay = gigTotalPay(gig.pay_rate, gig.duration_hrs);
   const eventDate = new Date(gig.event_date).toLocaleString("en-IN", {
     dateStyle: "full",
     timeStyle: "short",
@@ -84,7 +86,7 @@ export function promotedFromWaitlistEmail(
   workerName: string,
   gig: { title: string; event_date: string; location_text: string; pay_rate: number; duration_hrs: number }
 ) {
-  const totalPay = gig.pay_rate * gig.duration_hrs;
+  const totalPay = gigTotalPay(gig.pay_rate, gig.duration_hrs);
   return {
     subject: `🎉 A spot opened up — You're confirmed for ${gig.title}!`,
     html: `
@@ -125,7 +127,7 @@ export function reminder48hEmail(
   workerName: string,
   gig: { title: string; event_date: string; location_text: string; pay_rate: number; duration_hrs: number }
 ) {
-  const totalPay = gig.pay_rate * gig.duration_hrs;
+  const totalPay = gigTotalPay(gig.pay_rate, gig.duration_hrs);
   const eventDate = new Date(gig.event_date).toLocaleString("en-IN", {
     dateStyle: "full",
     timeStyle: "short",
@@ -154,7 +156,7 @@ export function reminder24hEmail(
   workerName: string,
   gig: { title: string; event_date: string; location_text: string; pay_rate: number; duration_hrs: number }
 ) {
-  const totalPay = gig.pay_rate * gig.duration_hrs;
+  const totalPay = gigTotalPay(gig.pay_rate, gig.duration_hrs);
   const eventDate = new Date(gig.event_date).toLocaleString("en-IN", {
     dateStyle: "full",
     timeStyle: "short",
@@ -183,7 +185,7 @@ export function reminder6hEmail(
   workerName: string,
   gig: { title: string; event_date: string; location_text: string; pay_rate: number; duration_hrs: number }
 ) {
-  const totalPay = gig.pay_rate * gig.duration_hrs;
+  const totalPay = gigTotalPay(gig.pay_rate, gig.duration_hrs);
   const eventDate = new Date(gig.event_date).toLocaleString("en-IN", {
     dateStyle: "short",
     timeStyle: "short",

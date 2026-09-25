@@ -7,6 +7,7 @@ import EditCoverModal from "./EditCoverModal";
 import EditGigModal from "./EditGigModal";
 import ApplicantExportBar from "./ApplicantExportBar";
 import AttendanceRoster from "~/components/AttendanceRoster";
+import { gigTotalPay } from '~/lib/utils';
 
 interface WorkerApplication {
   id: string;
@@ -131,7 +132,7 @@ export default function GigManagementCard({
   const payment = getPayment();
 
   // Calculations
-  const totalCost = gig.pay_rate * gig.duration_hrs * gig.slots_filled;
+  const totalCost = gigTotalPay(gig.pay_rate, gig.duration_hrs) * gig.slots_filled;
   const advanceAmount = Math.round(totalCost * 0.3);
   const finalAmount = totalCost - advanceAmount;
 

@@ -4,7 +4,7 @@ import { supabase } from "~/lib/supabase.client";
 import { fetchSkillCategories } from "~/lib/categories";
 import LocationPicker from "./LocationPicker";
 import CoverImagePicker, { type CoverValue } from "./CoverImagePicker";
-import GigDaysEditor, { emptyDay, dayHours, totalHours, type DayForm } from "./GigDaysEditor";
+import GigDaysEditor, { emptyDay, dayHours, totalHours, fmtDuration, type DayForm } from "./GigDaysEditor";
 import {
   X, Plus, Trash2, Calendar, MapPin, AlertCircle, ChevronLeft, ChevronRight, Check,
   Users, GraduationCap, Briefcase, Clock, IndianRupee, Link2, FileText,
@@ -831,7 +831,7 @@ export default function PostGigModal({ isOpen, onClose, onSuccess, user, showToa
                       <p className="text-[11px] font-bold text-white/50">
                         ₹{Number(role.pay_rate)} per day × {days.length} days ={" "}
                         <span className="text-[#F4511E] font-black">₹{Number(role.pay_rate) * days.length}</span> per person
-                        <span className="text-white/30"> · {totalHours(days)} hrs total</span>
+                        <span className="text-white/30"> · {fmtDuration(totalHours(days))} total</span>
                       </p>
                     )}
 
@@ -936,7 +936,7 @@ export default function PostGigModal({ isOpen, onClose, onSuccess, user, showToa
                       </span>
                       {isMultiDay && (
                         <span className="text-[10px] text-white/30 font-semibold">
-                          ₹{Number(role.pay_rate || 0) * days.length} per person · {totalHours(days)} hrs
+                          ₹{Number(role.pay_rate || 0) * days.length} per person · {fmtDuration(totalHours(days))}
                         </span>
                       )}
                     </div>

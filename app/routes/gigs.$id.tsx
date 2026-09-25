@@ -3,7 +3,7 @@ import { useState, useEffect } from 'react';
 import { supabase } from '~/lib/supabase.client';
 import { useAuth } from '~/context/AuthContext';
 import { MapPin, Clock, Calendar, Info, CheckCircle2, AlertCircle, ShieldCheck, ChevronRight, Users, IndianRupee, Briefcase, GraduationCap, Link2, Hourglass } from 'lucide-react';
-import { formatRelativeDate } from '~/lib/utils';
+import { formatRelativeDate, gigTotalPay } from '~/lib/utils';
 import { createSupabaseServerClient } from '~/lib/supabase.server';
 import { getMapsLoader } from "~/lib/maps";
 import GigThread from "~/components/GigThread";
@@ -114,13 +114,13 @@ export const meta = ({ loaderData: data }: { loaderData: any }) => {
       { name: "robots", content: gig.status === "open" ? "index, follow" : "noindex, nofollow" },
     ];
   }
-  const totalPay = gig.pay_rate * gig.duration_hrs;
+  const totalPay = gigTotalPay(gig.pay_rate, gig.duration_hrs);
   const displayRole = gig.role_type;
   const slotsLeft = gig.slots_total - gig.slots_filled;
   const title = `${gig.title} · ${gig.location_text} · ₹${totalPay} — GigDekho`;
   const description =
     gig.description?.slice(0, 155) ??
-    `${displayRole} in ${gig.location_text}. Earn ₹${totalPay} for ${gig.duration_hrs}hrs. ${slotsLeft} slot${slotsLeft !== 1 ? "s" : ""} left.`;
+    `${displayRole} in ${gig.location_text}. Earn ₹${totalPay}. ${slotsLeft} slot${slotsLeft !== 1 ? "s" : ""} left.`;
 
   return [
     { title },
@@ -368,7 +368,22 @@ export default function GigDetailScreen() {
      return <div className="p-6 text-center text-white/50 font-bold bg-[#111111] min-h-screen pt-32">Gig not found.</div>;
   }
 
-  const payTotal = gig.pay_rate * gig.duration_hrs;
+  const payTotal = gigTotalPay(gig.pay_rate, gig.duration_hrs);
+
+  /**
+   * When the shift starts and ends. An hour count makes the reader do the
+   * arithmetic to find out whether they can make it; a window answers that
+   * directly. Only meaningful for a single-day gig — on a multi-day one
+   * duration_hrs is the total across the whole run, so adding it to the start
+   * would invent an end time that does not exist.
+   */
+  const shiftWindow = (() => {
+    if (gig.is_multi_day) return null;
+    const start = new Date(gig.event_date);
+    const end = new Date(start.getTime() + Number(gig.duration_hrs || 0) * 3600 * 1000);
+    const f = (d: Date) => d.toLocaleTimeString("en-IN", { hour: "numeric", minute: "2-digit" });
+    return `${f(start)} – ${f(end)}`;
+  })();
   const imageUrl = gigCoverUrl(gig, 1200);
   const isInternship = gig.gig_type === 'internship';
   const deadlinePassed = gig.application_deadline && new Date(gig.application_deadline) < new Date();
@@ -573,8 +588,8 @@ export default function GigDetailScreen() {
                    </div>
                    <div className="bg-[#1C1C1C] rounded-2xl p-4 shadow-sm border border-white/5 flex flex-col items-start justify-center">
                       <Clock size={18} className="text-[#00BCD4] mb-2 bg-[#00BCD4]/10 p-1.5 rounded-lg box-content" />
-                      <p className="text-[10px] font-bold text-white/30 uppercase tracking-widest leading-none mb-1">Duration</p>
-                      <p className="font-bold text-white text-sm leading-tight">{gig.duration_hrs} Hours</p>
+                      <p className="text-[10px] font-bold text-white/30 uppercase tracking-widest leading-none mb-1">Time</p>
+                      <p className="font-bold text-white text-sm leading-tight">{shiftWindow ?? "Multiple days"}</p>
                    </div>
                    <div className="bg-[#1C1C1C] rounded-2xl p-4 shadow-sm border border-white/5 flex flex-col items-start justify-center">
                       <MapPin size={18} className="text-[#F4511E] mb-2 bg-[#F4511E]/10 p-1.5 rounded-lg box-content" />
@@ -729,18 +744,20 @@ export default function GigDetailScreen() {
                      ) : (
                      <>
                      <p className="text-[10px] font-black text-white/40 uppercase tracking-widest mb-1">Total Project Payout</p>
-                     <h2 className="text-[44px] font-black text-[#F4511E] tracking-tight mb-8 leading-none">₹{payTotal}</h2>
+                     <h2 className="text-[44px] font-black text-[#F4511E] tracking-tight mb-8 leading-none">₹{payTotal.toLocaleString('en-IN')}</h2>
 
                      {/* The hourly breakdown used to sit here. A per-hour figure
                          reads small next to the total for the same work, so we
                          lead with what they actually take home and show the
                          time it takes, not the rate. */}
-                     <div className="space-y-4 mb-6">
-                       <div className="flex justify-between items-center pb-2">
-                         <span className="text-[13px] font-bold text-white/50">Duration</span>
-                         <span className="text-[15px] font-bold text-white">{gig.duration_hrs} hours</span>
+                     {shiftWindow && (
+                       <div className="space-y-4 mb-6">
+                         <div className="flex justify-between items-center pb-2">
+                           <span className="text-[13px] font-bold text-white/50">Time</span>
+                           <span className="text-[15px] font-bold text-white">{shiftWindow}</span>
+                         </div>
                        </div>
-                     </div>
+                     )}
 
                      {applicationStatus === 'accepted' ? (
                         <div className="space-y-3">

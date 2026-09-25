@@ -52,6 +52,22 @@ export function totalHours(days: DayForm[]): number {
   return Math.round(days.reduce((s, d) => s + dayHours(d), 0) * 100) / 100;
 }
 
+/**
+ * Hours and minutes, the way a shift is actually spoken about.
+ *
+ * dayHours returns decimal hours because that is what the duration column
+ * stores and what the pay maths multiplies. Showing that number raw reads as
+ * a wrong time: 4:30pm to 11:59pm is 7 hours 29 minutes, which decimalises to
+ * 7.48 and looks like 7 hours 48 minutes to anyone reading quickly.
+ */
+export function fmtDuration(hours: number): string {
+  const mins = Math.round(hours * 60);
+  const h = Math.floor(mins / 60);
+  const m = mins % 60;
+  if (!h) return `${m}m`;
+  return m ? `${h}h ${m}m` : `${h}h`;
+}
+
 export default function GigDaysEditor({
   days,
   onChange,
@@ -108,7 +124,7 @@ export default function GigDaysEditor({
               </span>
               <div className="flex items-center gap-2">
                 <span className="text-[10px] font-bold text-white/40 flex items-center gap-1">
-                  <Clock size={10} /> {hrs || 0} hrs
+                  <Clock size={10} /> {fmtDuration(hrs)}
                 </span>
                 {days.length > 1 && (
                   <button
@@ -169,7 +185,7 @@ export default function GigDaysEditor({
       </button>
 
       <p className="text-[11px] font-bold text-white/40 text-center">
-        {days.length} {days.length === 1 ? "day" : "days"} · {totalHours(days)} hours in total
+        {days.length} {days.length === 1 ? "day" : "days"} · {fmtDuration(totalHours(days))} in total
       </p>
     </div>
   );
