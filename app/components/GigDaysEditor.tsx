@@ -17,11 +17,21 @@ export interface DayForm {
   slots_needed: number | "";
 }
 
+/** yyyy-mm-dd for a Date, in local time. `toISOString` goes through UTC,
+ * which rolls the date back a day for anyone east of it (IST included) — the
+ * exact bug that silently broke same-day date math here before. */
+function localISODate(d: Date): string {
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${y}-${m}-${day}`;
+}
+
 export function emptyDay(afterDate?: string): DayForm {
   const base = afterDate ? new Date(`${afterDate}T00:00:00`) : new Date();
   base.setDate(base.getDate() + (afterDate ? 1 : 7));
   return {
-    day_date: base.toISOString().slice(0, 10),
+    day_date: localISODate(base),
     starts_at: "10:00",
     ends_at: "18:00",
     slots_needed: 2,
@@ -51,10 +61,35 @@ export default function GigDaysEditor({
   onChange: (d: DayForm[]) => void;
   errors?: Record<string, string>;
 }) {
+  // Editing a field on day i also updates every later day that still carries
+  // that same value forward — i.e. one the hirer never customised away from
+  // what was auto-filled. A day that was deliberately set differently keeps
+  // its own value; the date is never cascaded this way since each day's date
+  // is necessarily distinct.
   const set = (i: number, patch: Partial<DayForm>) =>
-    onChange(days.map((d, n) => (n === i ? { ...d, ...patch } : d)));
+    onChange(
+      days.map((d, n) => {
+        if (n === i) return { ...d, ...patch };
+        if (n < i) return d;
+        const cascade: Partial<DayForm> = {};
+        (Object.keys(patch) as (keyof DayForm)[]).forEach((key) => {
+          if (key === "day_date") return;
+          if (d[key] === days[i][key]) cascade[key] = patch[key] as any;
+        });
+        return Object.keys(cascade).length ? { ...d, ...cascade } : d;
+      })
+    );
 
-  const add = () => onChange([...days, emptyDay(days[days.length - 1]?.day_date)]);
+  // A new day starts as a copy of the last one — same times, same headcount —
+  // with its date pushed one day forward. Re-entering the same details for
+  // every day is the exact hassle this is meant to remove.
+  const add = () => {
+    const prev = days[days.length - 1];
+    const next = prev
+      ? { ...emptyDay(prev.day_date), starts_at: prev.starts_at, ends_at: prev.ends_at, slots_needed: prev.slots_needed }
+      : emptyDay();
+    onChange([...days, next]);
+  };
   const remove = (i: number) => onChange(days.filter((_, n) => n !== i));
 
   const input =
