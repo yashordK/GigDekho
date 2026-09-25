@@ -10,6 +10,7 @@ import GigThread from "~/components/GigThread";
 import { gigCoverUrl } from "~/lib/cover";
 import InternshipApplyModal from "~/components/InternshipApplyModal";
 import ReportModal from "~/components/ReportModal";
+import GigDayPicker from "~/components/GigDayPicker";
 
 const GIG_FIELDS = `
   id, title, description, role_type, pay_rate, duration_hrs, event_date,
@@ -17,6 +18,7 @@ const GIG_FIELDS = `
   created_at, organizer_id, gig_type, work_mode, commitment, duration_months,
   stipend_min, stipend_max, is_unpaid, jd_url, preferences,
   application_deadline, custom_role,
+  commitment_mode, min_days, day_rate, is_multi_day,
   profiles!gigs_organizer_id_fkey ( full_name, company_name, avg_rating, is_verified )
 `;
 const COVER_FIELDS = "cover_mode, cover_image_url,";
@@ -36,6 +38,13 @@ export async function loader({ params, request }) {
   // The cover columns arrive with migration 011. Until it's applied, asking
   // for them fails the whole query — and a listing 404ing is far worse than
   // one rendering with its default cover. Retry without them.
+  if (error && /commitment_mode|min_days|day_rate|is_multi_day/.test(error.message ?? "")) {
+    const withoutMultiDay = GIG_FIELDS.replace("  commitment_mode, min_days, day_rate, is_multi_day,\n", "");
+    const retry = await supabaseServer.from("gigs")
+      .select(COVER_FIELDS + withoutMultiDay).eq("id", params.id).maybeSingle();
+    if (!retry.error) { gigRow = retry.data; error = null; }
+  }
+
   if (error && /cover_mode|cover_image_url/.test(error.message ?? "")) {
     ({ data: gigRow, error } = await fetchGig(false));
   }
@@ -138,6 +147,9 @@ export default function GigDetailScreen() {
   const [gig, setGig] = useState(ssrGig);
   const [loading, setLoading] = useState(false);
   const [applying, setApplying] = useState(false);
+  // gig_day ids this person is signing up for. Empty means the whole gig,
+  // which is what a single-day or all-days gig always sends.
+  const [selectedDays, setSelectedDays] = useState<string[]>([]);
   const [applicationStatus, setApplicationStatus] = useState<string | null>(null);
   const [waitlistPosition, setWaitlistPosition] = useState<number | null>(null);
   const [applicationId, setApplicationId] = useState<string | null>(null);
@@ -256,6 +268,18 @@ export default function GigDetailScreen() {
       navigate('/auth?mode=worker');
       return;
     }
+    // Catch an impossible selection here rather than letting them read the
+    // terms and then be refused by the server.
+    if (gig.commitment_mode === "pick_days") {
+      if (selectedDays.length === 0) {
+        showToast("Pick at least one day you can work.", true);
+        return;
+      }
+      if (gig.min_days && selectedDays.length < gig.min_days) {
+        showToast(`This gig needs at least ${gig.min_days} days from each person.`, true);
+        return;
+      }
+    }
     setShowTerms(true);
   };
 
@@ -265,6 +289,9 @@ export default function GigDetailScreen() {
     try {
       const form = new FormData();
       form.append("gig_id", id!);
+      // Empty means the whole gig, which is what every single-day and
+      // every all-days gig sends.
+      selectedDays.forEach((d) => form.append("day_ids", d));
       const res = await fetch("/api/apply", { method: "POST", body: form });
       const result = await res.json();
 
@@ -279,6 +306,14 @@ export default function GigDetailScreen() {
           return;
         }
         throw new Error(result.error || "Failed to apply");
+      }
+
+      if (result.status === "waitlisted" && result.full_days?.length) {
+        const list = result.full_days.join(", ");
+        showToast(
+          `Day ${list} ${result.full_days.length === 1 ? "is" : "are"} already full — you're on the waitlist. Deselect ${result.full_days.length === 1 ? "it" : "them"} to start right away.`,
+          true
+        );
       }
 
       if (result.status === "accepted") {
@@ -734,6 +769,15 @@ export default function GigDetailScreen() {
                            Completed
                         </button>
                      ) : (
+                      <>
+                        <GigDayPicker
+                          gigId={gig.id}
+                          commitmentMode={gig.commitment_mode === "pick_days" ? "pick_days" : "all_days"}
+                          minDays={gig.min_days ?? null}
+                          dayRate={gig.day_rate ?? null}
+                          selected={selectedDays}
+                          onChange={setSelectedDays}
+                        />
                         <button
                           type="button"
                           onClick={handleApplyClick}
@@ -742,6 +786,7 @@ export default function GigDetailScreen() {
                         >
                            {applying ? 'Applying...' : gig.slots_total - (gig.slots_filled||0) <= 0 ? 'Join Waitlist' : 'Apply Now'}
                         </button>
+                      </>
                      )}
                      
                      <div className="mt-8 space-y-3.5 pt-6 border-t border-white/5 -mx-2 px-2">

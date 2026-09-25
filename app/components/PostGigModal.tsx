@@ -4,6 +4,7 @@ import { supabase } from "~/lib/supabase.client";
 import { fetchSkillCategories } from "~/lib/categories";
 import LocationPicker from "./LocationPicker";
 import CoverImagePicker, { type CoverValue } from "./CoverImagePicker";
+import GigDaysEditor, { emptyDay, dayHours, totalHours, type DayForm } from "./GigDaysEditor";
 import {
   X, Plus, Trash2, Calendar, MapPin, AlertCircle, ChevronLeft, ChevronRight, Check,
   Users, GraduationCap, Briefcase, Clock, IndianRupee, Link2, FileText,
@@ -60,6 +61,16 @@ export default function PostGigModal({ isOpen, onClose, onSuccess, user, showToa
     location_text: "", lat: null as number | null, lng: null as number | null, is_remote: false,
   });
   const [roles, setRoles] = useState<RoleForm[]>([emptyRole()]);
+
+  // ── Multi-day ─────────────────────────────────────────────────────
+  // Off by default: most gigs are one day, and a hirer who does not need this
+  // should never have to think about it.
+  const [isMultiDay, setIsMultiDay] = useState(false);
+  const [days, setDays] = useState<DayForm[]>([emptyDay(), emptyDay(new Date().toISOString().slice(0, 10))]);
+  // all_days is the default the hirer chose: nobody posts a gig and discovers
+  // fragmented coverage they did not ask for.
+  const [commitmentMode, setCommitmentMode] = useState<"all_days" | "pick_days">("all_days");
+  const [minDays, setMinDays] = useState<number | "">("");
   const [cover, setCover] = useState<CoverValue>({ cover_mode: "default", cover_image_url: null });
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [roleErrors, setRoleErrors] = useState<any[]>([]);
@@ -140,8 +151,27 @@ export default function PostGigModal({ isOpen, onClose, onSuccess, user, showToa
     const e: Record<string, string> = {};
     if (!eventTitle.trim()) e.title = "Event title is required";
     else if (eventTitle.trim().length < 3) e.title = "Event title must be at least 3 characters";
-    if (!eventDate) e.eventDate = "Event date and time is required";
-    else if (new Date(eventDate) <= new Date()) e.eventDate = "Event date must be in the future";
+    if (isMultiDay) {
+      if (days.length < 2) e.days = "A multi-day gig needs at least two days. Turn the toggle off for a single day.";
+      else if (days.some((d) => !d.day_date)) e.days = "Every day needs a date.";
+      else if (days.some((d) => dayHours(d) <= 0)) e.days = "Every day needs a start and an end time.";
+      else if (days.some((d) => d.slots_needed === "" || Number(d.slots_needed) < 1))
+        e.days = "Every day needs at least one person.";
+      else if (new Date(`${days[0].day_date}T${days[0].starts_at}`) <= new Date())
+        e.days = "The first day has to be in the future.";
+      else {
+        // Two days on the same date would collide on gig_days' (gig_id, day_number)
+        // ordering and read as nonsense on the worker's screen.
+        const dates = days.map((d) => d.day_date);
+        if (new Set(dates).size !== dates.length) e.days = "Two days share the same date.";
+      }
+      if (commitmentMode === "pick_days" && minDays !== "" &&
+          (Number(minDays) < 1 || Number(minDays) > days.length))
+        e.days = `The minimum has to be between 1 and ${days.length}.`;
+    } else {
+      if (!eventDate) e.eventDate = "Event date and time is required";
+      else if (new Date(eventDate) <= new Date()) e.eventDate = "Event date must be in the future";
+    }
     if (!location.is_remote && !location.location_text.trim()) e.location = "Please select a physical location or toggle Remote";
     setErrors(e);
     return Object.keys(e).length === 0;
@@ -152,10 +182,14 @@ export default function PostGigModal({ isOpen, onClose, onSuccess, user, showToa
       const e: any = {};
       if (!role.isCustom && !role.role_type) e.role_type = "Please select a role";
       if (role.isCustom && !role.custom_role.trim()) e.custom_role = "Custom role name is required";
-      if (role.pay_rate === "") e.pay_rate = "Pay rate is required";
+      if (role.pay_rate === "") e.pay_rate = isMultiDay ? "Pay per day is required" : "Pay rate is required";
       else if (Number(role.pay_rate) < 50 || Number(role.pay_rate) > 10000) e.pay_rate = "Pay rate must be between ₹50 and ₹10,000";
-      if (role.duration_hrs === "") e.duration_hrs = "Duration is required";
-      else if (Number(role.duration_hrs) < 0.5 || Number(role.duration_hrs) > 24) e.duration_hrs = "Duration must be between 0.5 and 24 hours";
+      // Multi-day gigs take their hours from the schedule, so the per-role
+      // duration field is hidden and must not be validated.
+      if (!isMultiDay) {
+        if (role.duration_hrs === "") e.duration_hrs = "Duration is required";
+        else if (Number(role.duration_hrs) < 0.5 || Number(role.duration_hrs) > 24) e.duration_hrs = "Duration must be between 0.5 and 24 hours";
+      }
       if (role.slots_total === "") e.slots_total = "Slots count is required";
       else if (Number(role.slots_total) < 1 || Number(role.slots_total) > 100) e.slots_total = "Slots must be between 1 and 100";
       return e;
@@ -263,18 +297,67 @@ export default function PostGigModal({ isOpen, onClose, onSuccess, user, showToa
    * default cover. Once migration 011 is applied this fallback never fires.
    */
   const insertGigs = async (rows: any[]) => {
-    const first = await supabase.from("gigs").insert(rows);
-    if (!first.error) return { error: null, coverSkipped: false };
+    const first = await supabase.from("gigs").insert(rows).select("id");
+    if (!first.error) return { error: null, coverSkipped: false, ids: (first.data ?? []).map((g: any) => g.id) };
 
     const msg = `${first.error.message} ${first.error.code ?? ""}`;
     const missingCoverColumn =
       /cover_mode|cover_image_url/.test(msg) &&
       /does not exist|schema cache|column/i.test(msg);
-    if (!missingCoverColumn) return { error: first.error, coverSkipped: false };
 
-    const stripped = rows.map(({ cover_mode, cover_image_url, ...rest }) => rest);
-    const retry = await supabase.from("gigs").insert(stripped);
-    return { error: retry.error, coverSkipped: !retry.error };
+    // commitment_mode, min_days and day_rate arrive with migration 022. A
+    // listing going up as a plain single-day gig beats one that cannot be
+    // posted at all, so strip whichever set of columns the database does not
+    // have yet and try again.
+    const missingMultiDayColumn =
+      /commitment_mode|min_days|day_rate/.test(msg) &&
+      /does not exist|schema cache|column/i.test(msg);
+
+    if (!missingCoverColumn && !missingMultiDayColumn) {
+      return { error: first.error, coverSkipped: false, ids: [] };
+    }
+
+    const stripped = rows.map((row) => {
+      const { ...rest } = row;
+      if (missingCoverColumn) { delete rest.cover_mode; delete rest.cover_image_url; }
+      if (missingMultiDayColumn) { delete rest.commitment_mode; delete rest.min_days; delete rest.day_rate; }
+      return rest;
+    });
+    const retry = await supabase.from("gigs").insert(stripped).select("id");
+    return {
+      error: retry.error,
+      coverSkipped: missingCoverColumn && !retry.error,
+      ids: (retry.data ?? []).map((g: any) => g.id),
+    };
+  };
+
+  /**
+   * Writes the schedule for the gigs that were just created.
+   *
+   * Only for multi-day gigs: a single-day gig has its one day row created on
+   * demand by the server the first time attendance needs it, which keeps one
+   * code path rather than two.
+   *
+   * A failure here is reported but does not undo the listing — the gig is live
+   * and can be scheduled afterwards, whereas rolling it back would lose
+   * everything the hirer typed.
+   */
+  const insertGigDays = async (gigIds: string[]) => {
+    if (!isMultiDay || !gigIds.length) return { error: null };
+    const ordered = [...days].sort((a, b) => a.day_date.localeCompare(b.day_date));
+    const rows = gigIds.flatMap((gigId) =>
+      ordered.map((d, i) => ({
+        gig_id: gigId,
+        day_number: i + 1,
+        day_date: d.day_date,
+        starts_at: `${d.starts_at}:00`,
+        ends_at: `${d.ends_at}:00`,
+        duration_hrs: dayHours(d),
+        slots_needed: Number(d.slots_needed) || 1,
+      }))
+    );
+    const { error } = await supabase.from("gig_days").insert(rows);
+    return { error };
   };
 
   // ── Submit ────────────────────────────────────────────────────────
@@ -296,18 +379,37 @@ export default function PostGigModal({ isOpen, onClose, onSuccess, user, showToa
           setLoading(false);
           return;
         }
-        const gigInserts = roles.map((role) => ({
+        // A multi-day gig is priced per day and scheduled by its day rows, so
+        // the gig-level figures are derived from them. pay_rate x duration_hrs
+        // still equals the real total, which is what every existing card,
+        // listing and payout calculation reads.
+        const ordered = [...days].sort((a, b) => a.day_date.localeCompare(b.day_date));
+        const hours = isMultiDay ? totalHours(ordered) : 0;
+        const startISO = isMultiDay
+          ? new Date(`${ordered[0].day_date}T${ordered[0].starts_at}:00`).toISOString()
+          : new Date(eventDate).toISOString();
+
+        const gigInserts = roles.map((role) => {
+          const dayRate = Number(role.pay_rate);
+          const multiTotal = dayRate * ordered.length;
+          return {
           organizer_id: user.id,
           gig_type: "event",
           title: `${eventTitle} — ${role.isCustom ? role.custom_role : role.role_type}`,
           description: eventDescription,
           role_type: role.isCustom ? null : role.role_type,
           custom_role: role.isCustom ? role.custom_role : null,
-          pay_rate: Number(role.pay_rate),
-          duration_hrs: Number(role.duration_hrs),
+          pay_rate: isMultiDay && hours > 0
+            ? Math.round((multiTotal / hours) * 100) / 100
+            : Number(role.pay_rate),
+          duration_hrs: isMultiDay ? hours : Number(role.duration_hrs),
+          day_rate: isMultiDay ? dayRate : null,
+          is_multi_day: isMultiDay,
+          commitment_mode: isMultiDay ? commitmentMode : "all_days",
+          min_days: isMultiDay && commitmentMode === "pick_days" && minDays !== "" ? Number(minDays) : null,
           slots_total: Number(role.slots_total),
           slots_filled: 0,
-          event_date: new Date(eventDate).toISOString(),
+          event_date: startISO,
           location_text: location.location_text,
           lat: location.lat,
           lng: location.lng,
@@ -315,10 +417,23 @@ export default function PostGigModal({ isOpen, onClose, onSuccess, user, showToa
           cover_mode: cover.cover_mode,
           cover_image_url: cover.cover_mode === "custom" ? cover.cover_image_url : null,
           status: "open",
-        }));
-        const { error, coverSkipped } = await insertGigs(gigInserts);
+          };
+        });
+        const { error, coverSkipped, ids } = await insertGigs(gigInserts);
         if (error) throw error;
-        showToast(coverSkipped ? "Event posted! (Cover images aren't enabled yet.)" : "Event posted successfully!", "success");
+
+        const { error: daysErr } = await insertGigDays(ids);
+        if (daysErr) {
+          showToast(
+            "Event posted, but the day-by-day schedule didn't save. Open the listing to set it up.",
+            "error"
+          );
+        } else {
+          showToast(
+            coverSkipped ? "Event posted! (Cover images aren't enabled yet.)" : "Event posted successfully!",
+            "success"
+          );
+        }
       } else {
         if (!validateInternStep1() || !validateInternStep2()) {
           showToast("Please fix the validation errors before submitting", "error");
@@ -465,11 +580,81 @@ export default function PostGigModal({ isOpen, onClose, onSuccess, user, showToa
                 <Err msg={errors.title} />
               </div>
 
-              <div className="flex flex-col space-y-1.5">
-                <label htmlFor="gig-event-date" className={labelCls}>Event Date & Time</label>
-                <input id="gig-event-date" type="datetime-local" value={eventDate}
-                  onChange={(e) => setEventDate(e.target.value)} className={inputCls(errors.eventDate)} />
-                <Err msg={errors.eventDate} />
+              <div className="flex flex-col space-y-2.5">
+                <div className="flex items-center justify-between bg-[#1C1C1C] p-3 rounded-2xl border border-white/5">
+                  <div className="flex flex-col pr-3">
+                    <span className="text-sm font-black text-white">Runs over multiple days</span>
+                    <span className="text-[11px] text-white/50 font-medium">
+                      Set each day's own timings and headcount
+                    </span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setIsMultiDay(!isMultiDay)}
+                    aria-pressed={isMultiDay}
+                    aria-label="Runs over multiple days"
+                    className={`w-12 h-6 flex items-center rounded-full p-1 transition-colors duration-200 btn-tap shrink-0 ${isMultiDay ? "bg-[#F4511E]" : "bg-white/10"}`}
+                  >
+                    <div className={`bg-white w-4 h-4 rounded-full shadow-md transform duration-200 ${isMultiDay ? "translate-x-6" : "translate-x-0"}`} />
+                  </button>
+                </div>
+
+                {!isMultiDay ? (
+                  <div className="flex flex-col space-y-1.5">
+                    <label htmlFor="gig-event-date" className={labelCls}>Event Date &amp; Time</label>
+                    <input id="gig-event-date" type="datetime-local" value={eventDate}
+                      onChange={(e) => setEventDate(e.target.value)} className={inputCls(errors.eventDate)} />
+                    <Err msg={errors.eventDate} />
+                  </div>
+                ) : (
+                  <>
+                    <GigDaysEditor days={days} onChange={setDays} errors={errors} />
+
+                    <div className="bg-[#1C1C1C] rounded-2xl border border-white/5 p-3 space-y-2.5">
+                      <span className={labelCls}>Can people work only some of the days?</span>
+                      <div className="grid grid-cols-2 gap-2">
+                        {([
+                          ["all_days", "All days", "They commit to the whole run"],
+                          ["pick_days", "Pick days", "They choose which days"],
+                        ] as const).map(([v, label, hint]) => (
+                          <button
+                            key={v}
+                            type="button"
+                            onClick={() => setCommitmentMode(v)}
+                            aria-pressed={commitmentMode === v}
+                            className={`p-2.5 rounded-xl border text-left transition-colors btn-tap ${
+                              commitmentMode === v
+                                ? "bg-[#F4511E]/15 border-[#F4511E]/40"
+                                : "bg-[#111111] border-white/10 hover:border-white/20"
+                            }`}
+                          >
+                            <span className={`block text-xs font-black ${commitmentMode === v ? "text-[#F4511E]" : "text-white/70"}`}>{label}</span>
+                            <span className="block text-[10px] font-medium text-white/40 leading-tight mt-0.5">{hint}</span>
+                          </button>
+                        ))}
+                      </div>
+
+                      {commitmentMode === "pick_days" && (
+                        <div>
+                          <label htmlFor="gig-min-days" className={labelCls}>
+                            Minimum days each person must take (optional)
+                          </label>
+                          <input
+                            id="gig-min-days" type="number" inputMode="numeric" min={1} max={days.length}
+                            placeholder={`Any of the ${days.length}`}
+                            value={minDays}
+                            onChange={(e) => setMinDays(e.target.value === "" ? "" : Number(e.target.value))}
+                            className={inputCls()}
+                          />
+                          <p className="text-[10px] font-medium text-white/40 mt-1">
+                            Leave blank to accept anyone for any single day. More flexibility means more
+                            applicants, but patchier cover.
+                          </p>
+                        </div>
+                      )}
+                    </div>
+                  </>
+                )}
               </div>
 
               <div className="flex flex-col space-y-1.5">
@@ -587,21 +772,27 @@ export default function PostGigModal({ isOpen, onClose, onSuccess, user, showToa
                       <Err msg={rErrors.role_type || rErrors.custom_role} />
                     </div>
 
-                    <div className="grid grid-cols-3 gap-3">
+                    <div className={`grid gap-3 ${isMultiDay ? "grid-cols-2" : "grid-cols-3"}`}>
                       <div className="flex flex-col space-y-1.5">
-                        <label htmlFor={`pay-${index}`} className="text-[10px] font-black text-white/60 uppercase tracking-wider">Pay (₹/hr)</label>
-                        <input id={`pay-${index}`} type="number" placeholder="200" value={role.pay_rate}
+                        <label htmlFor={`pay-${index}`} className="text-[10px] font-black text-white/60 uppercase tracking-wider">
+                          {isMultiDay ? "Pay (₹/day)" : "Pay (₹/hr)"}
+                        </label>
+                        <input id={`pay-${index}`} type="number" placeholder={isMultiDay ? "600" : "200"} value={role.pay_rate}
                           onChange={(e) => updateRoleField(index, "pay_rate", e.target.value === "" ? "" : Number(e.target.value))}
                           className={`w-full h-11 px-3 rounded-xl bg-[#111111] md:bg-[#1C1C1C] border text-white text-sm font-semibold focus-visible:outline-[#F4511E] ${rErrors.pay_rate ? "border-red-500" : "border-white/5"}`} />
                       </div>
+                      {!isMultiDay && (
                       <div className="flex flex-col space-y-1.5">
                         <label htmlFor={`hrs-${index}`} className="text-[10px] font-black text-white/60 uppercase tracking-wider">Hours</label>
                         <input id={`hrs-${index}`} type="number" step="0.5" placeholder="6" value={role.duration_hrs}
                           onChange={(e) => updateRoleField(index, "duration_hrs", e.target.value === "" ? "" : Number(e.target.value))}
                           className={`w-full h-11 px-3 rounded-xl bg-[#111111] md:bg-[#1C1C1C] border text-white text-sm font-semibold focus-visible:outline-[#F4511E] ${rErrors.duration_hrs ? "border-red-500" : "border-white/5"}`} />
                       </div>
+                      )}
                       <div className="flex flex-col space-y-1.5">
-                        <label htmlFor={`slots-${index}`} className="text-[10px] font-black text-white/60 uppercase tracking-wider">Workers</label>
+                        <label htmlFor={`slots-${index}`} className="text-[10px] font-black text-white/60 uppercase tracking-wider">
+                          {isMultiDay ? "Workers (per day)" : "Workers"}
+                        </label>
                         <input id={`slots-${index}`} type="number" placeholder="5" value={role.slots_total}
                           onChange={(e) => updateRoleField(index, "slots_total", e.target.value === "" ? "" : Number(e.target.value))}
                           className={`w-full h-11 px-3 rounded-xl bg-[#111111] md:bg-[#1C1C1C] border text-white text-sm font-semibold focus-visible:outline-[#F4511E] ${rErrors.slots_total ? "border-red-500" : "border-white/5"}`} />
@@ -609,7 +800,15 @@ export default function PostGigModal({ isOpen, onClose, onSuccess, user, showToa
                     </div>
                     <Err msg={rErrors.pay_rate || rErrors.duration_hrs || rErrors.slots_total} />
 
-                    {role.pay_rate && role.duration_hrs && (
+                    {isMultiDay && role.pay_rate && (
+                      <p className="text-[11px] font-bold text-white/50">
+                        ₹{Number(role.pay_rate)} per day × {days.length} days ={" "}
+                        <span className="text-[#F4511E] font-black">₹{Number(role.pay_rate) * days.length}</span> per person
+                        <span className="text-white/30"> · {totalHours(days)} hrs total</span>
+                      </p>
+                    )}
+
+                    {!isMultiDay && role.pay_rate && role.duration_hrs && (
                       <div className="flex justify-between items-center bg-[#111111] md:bg-[#1C1C1C] px-4 py-2.5 rounded-xl border border-white/5">
                         <span className="text-[10px] font-bold text-white/40 uppercase tracking-wider">Payout per worker</span>
                         <span className="text-xs font-black text-[#F4511E]">₹{totalPay}</span>
