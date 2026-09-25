@@ -10,6 +10,10 @@ import { CalendarDays, Check, Users, Loader2, AlertTriangle } from "lucide-react
  * on any day will take the one that still needs people if you show them which
  * that is, and a day nobody can see is short stays short. Full days are not
  * hidden, only marked, because someone may still want to join the waitlist.
+ *
+ * Pay is quoted as one total, never per day. A day rate invites the reader to
+ * price a single shift and haggle over it; the number that matters to someone
+ * deciding whether to take the work is what they finish the run with.
  */
 
 export interface GigDay {
@@ -152,7 +156,6 @@ export default function GigDayPicker({
                   </p>
                   <p className="text-[10px] font-semibold text-white/40 mt-0.5">
                     {fmtTime(d.starts_at)} – {fmtTime(d.ends_at)} · {d.duration_hrs} hrs
-                    {dayRate != null && <span className="text-white/30"> · ₹{dayRate}</span>}
                   </p>
                 </div>
 
