@@ -37,6 +37,12 @@ interface PostGigModalProps {
 
 type HiringType = "event" | "internship";
 
+/** A yyyy-mm-dd from the schedule, read the way a person would say it. */
+const fmtDay = (d?: string) =>
+  d
+    ? new Date(`${d}T00:00:00`).toLocaleDateString("en-IN", { day: "numeric", month: "short" })
+    : "—";
+
 const emptyRole = (): RoleForm => ({
   role_type: "", custom_role: "", pay_rate: "", duration_hrs: "", slots_total: "", isCustom: false,
 });
@@ -66,7 +72,13 @@ export default function PostGigModal({ isOpen, onClose, onSuccess, user, showToa
   // Off by default: most gigs are one day, and a hirer who does not need this
   // should never have to think about it.
   const [isMultiDay, setIsMultiDay] = useState(false);
-  const [days, setDays] = useState<DayForm[]>([emptyDay(), emptyDay(new Date().toISOString().slice(0, 10))]);
+  // Day two is built from day one, not from today — seeding it separately put
+  // the second day a week *before* the first, and hid that behind a toggle
+  // most hirers only flip once they are already deep in the form.
+  const [days, setDays] = useState<DayForm[]>(() => {
+    const first = emptyDay();
+    return [first, emptyDay(first.day_date)];
+  });
   // all_days is the default the hirer chose: nobody posts a gig and discovers
   // fragmented coverage they did not ask for.
   const [commitmentMode, setCommitmentMode] = useState<"all_days" | "pick_days">("all_days");
@@ -266,8 +278,18 @@ export default function PostGigModal({ isOpen, onClose, onSuccess, user, showToa
     }
   };
 
-  const calculateTotalCost = () =>
-    roles.reduce((sum, r) => sum + Number(r.pay_rate || 0) * Number(r.duration_hrs || 0) * Number(r.slots_total || 0), 0);
+  /**
+   * A multi-day gig prices per day and keeps its hours in the schedule, so
+   * duration_hrs is deliberately left blank on the role. Multiplying by it
+   * there gives every estimate as zero, which is what the review screen used
+   * to show.
+   */
+  const roleCost = (r: RoleForm) =>
+    Number(r.pay_rate || 0) *
+    (isMultiDay ? days.length : Number(r.duration_hrs || 0)) *
+    Number(r.slots_total || 0);
+
+  const calculateTotalCost = () => roles.reduce((sum, r) => sum + roleCost(r), 0);
 
   /**
    * Turns Postgres/PostgREST failures into something a hirer can act on.
@@ -831,13 +853,40 @@ export default function PostGigModal({ isOpen, onClose, onSuccess, user, showToa
               <h3 className="text-sm font-black text-white uppercase tracking-wider">Review Event Details</h3>
               <div className="bg-[#1C1C1C] md:bg-[#111111] border border-white/10 rounded-2xl p-5 space-y-3 shadow-inner">
                 <div className="flex justify-between"><span className="text-xs font-bold text-white/40">Event Title</span><span className="text-xs font-black text-white">{eventTitle}</span></div>
-                <div className="flex justify-between">
-                  <span className="text-xs font-bold text-white/40">Date & Time</span>
-                  <span className="text-xs font-black text-white flex items-center gap-1">
-                    <Calendar size={13} className="text-[#F4511E]" />
-                    {new Date(eventDate).toLocaleString("en-IN", { weekday: "short", day: "numeric", month: "short", hour: "numeric", minute: "2-digit" })}
+                <div className="flex justify-between gap-3">
+                  <span className="text-xs font-bold text-white/40 shrink-0">
+                    {isMultiDay ? "Schedule" : "Date & Time"}
+                  </span>
+                  <span className="text-xs font-black text-white flex items-center gap-1 text-right">
+                    <Calendar size={13} className="text-[#F4511E] shrink-0" />
+                    {isMultiDay
+                      ? `${days.length} days · ${fmtDay(days[0]?.day_date)} – ${fmtDay(days[days.length - 1]?.day_date)}`
+                      : new Date(eventDate).toLocaleString("en-IN", { weekday: "short", day: "numeric", month: "short", hour: "numeric", minute: "2-digit" })}
                   </span>
                 </div>
+
+                {isMultiDay && (
+                  <div className="pt-1 space-y-1 border-t border-white/5">
+                    {days.map((d, n) => (
+                      <div key={n} className="flex justify-between gap-3">
+                        <span className="text-[11px] font-bold text-white/30">Day {n + 1}</span>
+                        <span className="text-[11px] font-bold text-white/60">
+                          {fmtDay(d.day_date)} · {d.starts_at}–{d.ends_at} · {d.slots_needed} needed
+                        </span>
+                      </div>
+                    ))}
+                    <div className="flex justify-between gap-3 pt-0.5">
+                      <span className="text-[11px] font-bold text-white/30">Commitment</span>
+                      <span className="text-[11px] font-bold text-white/60">
+                        {commitmentMode === "all_days"
+                          ? "Every day required"
+                          : minDays
+                            ? `Pick days · at least ${minDays}`
+                            : "Pick any days"}
+                      </span>
+                    </div>
+                  </div>
+                )}
                 <div className="flex justify-between">
                   <span className="text-xs font-bold text-white/40">Location</span>
                   <span className="text-xs font-black text-white max-w-[200px] truncate flex items-center gap-1">
@@ -845,6 +894,23 @@ export default function PostGigModal({ isOpen, onClose, onSuccess, user, showToa
                     {location.is_remote ? "Remote (Work from Home)" : location.location_text}
                   </span>
                 </div>
+                <div className="pt-1 border-t border-white/5">
+                  <span className="text-xs font-bold text-white/40 block mb-1">Description</span>
+                  {eventDescription.trim() ? (
+                    <p className="text-[11px] font-semibold text-white/70 leading-relaxed whitespace-pre-wrap line-clamp-6">
+                      {eventDescription}
+                    </p>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={() => setStep(1)}
+                      className="text-[11px] font-bold text-[#F4511E] underline underline-offset-2 btn-tap"
+                    >
+                      Not added — tap to write one
+                    </button>
+                  )}
+                </div>
+
                 {isUrgent && (
                   <div className="bg-[#F4511E]/15 text-[#F4511E] border border-[#F4511E]/20 px-3 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-widest text-center">
                     ⚡ Urgent Recruitment Enabled
@@ -858,11 +924,20 @@ export default function PostGigModal({ isOpen, onClose, onSuccess, user, showToa
                   <div key={idx} className="bg-[#1C1C1C] md:bg-[#111111] border border-white/5 rounded-2xl p-4 flex justify-between items-center">
                     <div className="flex flex-col">
                       <span className="text-sm font-black text-white">{role.isCustom ? role.custom_role : role.role_type}</span>
-                      <span className="text-[11px] text-white/50 font-semibold">₹{role.pay_rate}/hr · {role.duration_hrs}hrs · {role.slots_total} slots</span>
+                      <span className="text-[11px] text-white/50 font-semibold">
+                        {isMultiDay
+                          ? `₹${role.pay_rate}/day · ${days.length} days · ${role.slots_total} per day`
+                          : `₹${role.pay_rate}/hr · ${role.duration_hrs}hrs · ${role.slots_total} slots`}
+                      </span>
+                      {isMultiDay && (
+                        <span className="text-[10px] text-white/30 font-semibold">
+                          ₹{Number(role.pay_rate || 0) * days.length} per person · {totalHours(days)} hrs
+                        </span>
+                      )}
                     </div>
                     <div className="text-right">
                       <span className="text-xs font-bold text-white/40 block">Est. Cost</span>
-                      <span className="text-sm font-black text-white">₹{Number(role.pay_rate || 0) * Number(role.duration_hrs || 0) * Number(role.slots_total || 0)}</span>
+                      <span className="text-sm font-black text-white">₹{roleCost(role)}</span>
                     </div>
                   </div>
                 ))}
