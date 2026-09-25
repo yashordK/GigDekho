@@ -307,6 +307,11 @@ export default function PostGigModal({ isOpen, onClose, onSuccess, user, showToa
     if (code === "23514") {
       return "One of the values isn't allowed. Check the stipend, duration and headcount.";
     }
+    // A column too narrow for what we sent. Nothing the hirer typed is wrong,
+    // so say so rather than showing them a Postgres type error.
+    if (code === "22P02" || code === "22003") {
+      return "This gig can't be saved yet — the database needs migration 025. Nothing was lost; tell Yash.";
+    }
     return err?.message || "Failed to post. Try again.";
   };
 
