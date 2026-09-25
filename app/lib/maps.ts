@@ -12,9 +12,18 @@ export function getMapsLoader() {
         return Promise.resolve((window as any).google);
       }
 
-      // Already failed
+      // Already failed. The two cases are worth telling apart: a rejected key
+      // is something only the owner can fix, while a blocked request is
+      // usually the viewer's own extension or network and is worth retrying.
       if ((window as any).__MAPS_AUTH_FAILED__) {
-        return Promise.reject(new Error("Maps auth failed"));
+        return Promise.reject(new Error(
+          "Maps rejected the API key — check the key's restrictions and that billing is on."
+        ));
+      }
+      if ((window as any).__MAPS_LOAD_FAILED__) {
+        return Promise.reject(new Error(
+          "Maps couldn't be reached. An ad blocker or your network may be blocking maps.googleapis.com."
+        ));
       }
 
       // The <script> tag is rendered by root.tsx from a runtime key. If it
@@ -33,13 +42,24 @@ export function getMapsLoader() {
       return new Promise<any>((resolve, reject) => {
         let ticks = 0;
         const INTERVAL = 200;
-        const MAX_TICKS = 75; // 15 seconds
+        const MAX_TICKS = 40; // 8 seconds — long enough for a slow phone,
+                              // short enough that a failure does not feel hung
 
         const timer = setInterval(() => {
           if ((window as any).__MAPS_AUTH_FAILED__) {
             clearInterval(timer);
             reject(new Error(
-              "Maps auth failed — make sure billing is enabled on your Google Cloud project and the API key is valid."
+              "Maps rejected the API key — check the key's restrictions and that billing is on."
+            ));
+            return;
+          }
+
+          // Set by the script tag's own onerror, so a blocked request stops
+          // the wait at once instead of burning the full timeout.
+          if ((window as any).__MAPS_LOAD_FAILED__) {
+            clearInterval(timer);
+            reject(new Error(
+              "Maps couldn't be reached. An ad blocker or your network may be blocking maps.googleapis.com."
             ));
             return;
           }

@@ -152,21 +152,31 @@ credit without that key.
   attended hours only when days are missed. Idempotent on the application id.
 - **UPI withdrawals** — worker saves a UPI ID or bank account, requests a
   withdrawal, admin sends the money by hand and records the UTR.
+- **Multi-day posting and per-day applying** — the posting form has a
+  multi-day toggle with per-day date, times and headcount; the hirer picks
+  all-days or pick-days with an optional minimum. The gig page shows each day
+  with its remaining slots and lets a worker choose. Capacity is per day and
+  derived, never stored. Verified end to end against production.
+- **`npm run test:sql`** — runs a migration's functions against Postgres
+  compiled to WASM before it touches the live database. Use it for every
+  migration that defines a function; `apply_to_gig` shipped broken twice
+  because SQL was read rather than run.
 
 **ID verification is NOT required to apply to a gig.** Deliberate decision.
 
 ### Built but unproven
 
 - Analytics tracking — `/api/track` returns `{"ok":false}` in production
-- Google Maps in production — blocked by a CSP whose source is not in this repo
-  or in `vercel.json`
+- Google Maps in production — **the CSP theory was wrong**. Measured directly:
+  production sends *no* CSP header at all, the key is valid, and
+  `maps.googleapis.com` returns HTTP 200 for the `www.gigdekho.com` referrer.
+  The script tag is present in the production HTML with a real key. A failure
+  seen inside the Claude browser pane was the pane blocking a third-party
+  request, not production. If a map fails to load for a real user, suspect an
+  ad blocker or their network first — `app/lib/maps.ts` now names that cause.
 
 ### Designed, not built
 
-- Multi-day *posting* flow — `gig_days` rows are created automatically (one per
-  day, backfilled for single-day gigs), but there is no UI to set per-day dates
-  and times when posting. They currently have to be inserted by hand.
-- Gig page showing "6 hrs x 3 days" instead of a single date
 - Selfie deletion once a dispute is resolved and the gig is paid — the photos
   are captured and stored privately, but nothing prunes them yet
 - Report button on an attendance row once checked in

@@ -64,14 +64,30 @@ export function Layout({ children }: { children: React.ReactNode }) {
               "if('serviceWorker'in navigator){navigator.serviceWorker.getRegistrations().then(function(rs){if(!rs.length)return;var had=false;rs.forEach(function(r){had=true;r.unregister()});if(had){try{sessionStorage.setItem('gd-sw-killed','1')}catch(e){}if(window.caches&&caches.keys){caches.keys().then(function(ks){return Promise.all(ks.map(function(k){return caches.delete(k)}))}).then(function(){location.reload()})}else{location.reload()}}}).catch(function(){})}",
           }}
         />
-        {/* Global gm_authFailure handler — must exist before Maps script loads */}
+        {/* Global gm_authFailure handler — must exist before Maps script loads.
+            The onerror twin matters just as much: an ad blocker, a corporate
+            proxy or a flaky network makes the request fail outright, and that
+            never triggers gm_authFailure. Without it the map area sat empty for
+            the loader's full 15-second timeout before the address fallback
+            appeared, which reads as broken rather than degraded. */}
         <script dangerouslySetInnerHTML={{ __html: "window.gm_authFailure=function(){window.__MAPS_AUTH_FAILED__=true;};" }} />
         {mapsKey ? (
-          <script
-            src={`https://maps.googleapis.com/maps/api/js?key=${mapsKey}&libraries=places`}
-            async
-            defer
-          />
+          <>
+            <script
+              src={`https://maps.googleapis.com/maps/api/js?key=${mapsKey}&libraries=places`}
+              async
+              defer
+            />
+            {/* React strips event-handler props from the HTML it renders, so an
+                onError prop above would silently never exist. The listener has
+                to be attached by real script. */}
+            <script
+              dangerouslySetInnerHTML={{
+                __html:
+                  "(function(){var s=document.querySelector('script[src*=\"maps.googleapis.com/maps/api/js\"]');if(s){s.addEventListener('error',function(){window.__MAPS_LOAD_FAILED__=true;});}})();",
+              }}
+            />
+          </>
         ) : null}
         <Meta />
         <Links />
