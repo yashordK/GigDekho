@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { supabase } from "~/lib/supabase.client";
 import { X, Pencil, AlertTriangle } from "lucide-react";
+import { gigTotalPay } from "~/lib/utils";
 
 /**
  * Edit a listing after it's live — both event gigs and internships.
@@ -41,6 +42,12 @@ export default function EditGigModal({
   const [f, setF] = useState<any>({});
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [saving, setSaving] = useState(false);
+  // How many days the gig actually runs. Needed to bound the minimum, and to
+  // know whether the commitment controls are worth showing at all.
+  const [dayCount, setDayCount] = useState(0);
+  // A multi-day gig is priced per day; its hourly rate and total hours both
+  // come from the schedule, so neither is editable here.
+  const isDayPriced = Boolean(gig?.is_multi_day) && dayCount > 0;
 
   useEffect(() => {
     if (!isOpen || !gig) return;
@@ -65,8 +72,20 @@ export default function EditGigModal({
       jd_url: gig.jd_url ?? "",
       preferences: gig.preferences ?? "",
       application_deadline: toDateInput(gig.application_deadline),
+      // multi-day
+      commitment_mode: gig.commitment_mode === "pick_days" ? "pick_days" : "all_days",
+      min_days: gig.min_days ?? "",
+      day_rate: gig.day_rate ?? "",
     });
   }, [isOpen, gig]);
+
+  useEffect(() => {
+    if (!isOpen || !gig?.id || !gig?.is_multi_day) { setDayCount(0); return; }
+    let cancelled = false;
+    supabase.from("gig_days").select("id", { count: "exact", head: true }).eq("gig_id", gig.id)
+      .then(({ count }) => { if (!cancelled) setDayCount(count ?? 0); });
+    return () => { cancelled = true; };
+  }, [isOpen, gig?.id, gig?.is_multi_day]);
 
   if (!isOpen || !gig) return null;
 
@@ -103,9 +122,17 @@ export default function EditGigModal({
       }
     } else {
       if (!f.location_text?.trim()) e.location_text = "Add where this is happening";
-      if (!f.pay_rate || Number(f.pay_rate) <= 0) e.pay_rate = "Enter the hourly pay";
-      if (!f.duration_hrs || Number(f.duration_hrs) <= 0) e.duration_hrs = "Enter how many hours";
+      if (isDayPriced) {
+        if (!f.day_rate || Number(f.day_rate) <= 0) e.day_rate = "Enter the pay per day";
+      } else {
+        if (!f.pay_rate || Number(f.pay_rate) <= 0) e.pay_rate = "Enter the hourly pay";
+        if (!f.duration_hrs || Number(f.duration_hrs) <= 0) e.duration_hrs = "Enter how many hours";
+      }
       if (!f.event_date) e.event_date = "Pick the date";
+      if (gig?.is_multi_day && f.commitment_mode === "pick_days" && f.min_days !== "" &&
+          (Number(f.min_days) < 1 || Number(f.min_days) > dayCount)) {
+        e.min_days = `The minimum has to be between 1 and ${dayCount}.`;
+      }
     }
     setErrors(e);
     return Object.keys(e).length === 0;
@@ -137,11 +164,32 @@ export default function EditGigModal({
           patch.lng = null;
         }
       } else {
-        patch.pay_rate = Number(f.pay_rate);
-        patch.duration_hrs = Number(f.duration_hrs);
+        if (isDayPriced) {
+          // The day rate is what the hirer agreed and what the payout reads.
+          // pay_rate is a derived mirror of it for the hourly figures the rest
+          // of the app shows, so it is recomputed here rather than edited —
+          // editing the two independently is how a gig ends up advertising one
+          // price and paying another.
+          const hrs = Number(gig.duration_hrs) || 0;
+          patch.day_rate = Number(f.day_rate);
+          patch.pay_rate = hrs > 0
+            ? Math.round((Number(f.day_rate) * dayCount / hrs) * 100) / 100
+            : Number(f.day_rate);
+        } else {
+          patch.pay_rate = Number(f.pay_rate);
+          patch.duration_hrs = Number(f.duration_hrs);
+        }
         patch.event_date = f.event_date;
         patch.is_urgent = f.is_urgent;
         patch.location_text = f.location_text.trim();
+        if (gig.is_multi_day) {
+          patch.commitment_mode = f.commitment_mode;
+          // A minimum only means anything when they can choose in the first
+          // place, so switching back to all-days clears it rather than leaving
+          // a stale number behind to confuse the next edit.
+          patch.min_days =
+            f.commitment_mode === "pick_days" && f.min_days !== "" ? Number(f.min_days) : null;
+        }
       }
 
       // `select` matters: when RLS refuses an update it returns no error and
@@ -329,20 +377,32 @@ export default function EditGigModal({
                 <Err k="location_text" />
               </div>
 
-              <div className="grid grid-cols-2 gap-3">
+              {isDayPriced ? (
                 <div>
-                  <label className={label} htmlFor="edit-pay">Pay (₹/hr)</label>
-                  <input id="edit-pay" type="number" min={1} className={input}
-                    value={f.pay_rate ?? ""} onChange={(e) => set("pay_rate", e.target.value === "" ? "" : Number(e.target.value))} />
-                  <Err k="pay_rate" />
+                  <label className={label} htmlFor="edit-day-rate">Pay (₹/day)</label>
+                  <input id="edit-day-rate" type="number" min={1} className={input}
+                    value={f.day_rate ?? ""} onChange={(e) => set("day_rate", e.target.value === "" ? "" : Number(e.target.value))} />
+                  <Err k="day_rate" />
+                  <p className="text-[10px] font-medium text-white/40 mt-1">
+                    Hours come from the schedule. Edit a day's timings to change them.
+                  </p>
                 </div>
-                <div>
-                  <label className={label} htmlFor="edit-hrs">Hours</label>
-                  <input id="edit-hrs" type="number" min={1} className={input}
-                    value={f.duration_hrs ?? ""} onChange={(e) => set("duration_hrs", e.target.value === "" ? "" : Number(e.target.value))} />
-                  <Err k="duration_hrs" />
+              ) : (
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className={label} htmlFor="edit-pay">Pay (₹/hr)</label>
+                    <input id="edit-pay" type="number" min={1} className={input}
+                      value={f.pay_rate ?? ""} onChange={(e) => set("pay_rate", e.target.value === "" ? "" : Number(e.target.value))} />
+                    <Err k="pay_rate" />
+                  </div>
+                  <div>
+                    <label className={label} htmlFor="edit-hrs">Hours</label>
+                    <input id="edit-hrs" type="number" min={1} className={input}
+                      value={f.duration_hrs ?? ""} onChange={(e) => set("duration_hrs", e.target.value === "" ? "" : Number(e.target.value))} />
+                    <Err k="duration_hrs" />
+                  </div>
                 </div>
-              </div>
+              )}
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
@@ -359,11 +419,69 @@ export default function EditGigModal({
                 </div>
               </div>
 
-              {f.pay_rate && f.duration_hrs ? (
+              {isDayPriced ? (
+                f.day_rate ? (
+                  <p className="text-[11px] font-bold text-white/40">
+                    ₹{Number(f.day_rate).toLocaleString("en-IN")} per day × {dayCount} days ={" "}
+                    <span className="text-[#F4511E] font-black">
+                      ₹{Math.round(Number(f.day_rate) * dayCount).toLocaleString("en-IN")}
+                    </span>{" "}
+                    per person
+                  </p>
+                ) : null
+              ) : f.pay_rate && f.duration_hrs ? (
                 <p className="text-[11px] font-bold text-white/40">
-                  Each person earns ₹{(Number(f.pay_rate) * Number(f.duration_hrs)).toLocaleString("en-IN")}
+                  Each person earns ₹{gigTotalPay(f.pay_rate, f.duration_hrs).toLocaleString("en-IN")}
                 </p>
               ) : null}
+
+              {gig?.is_multi_day && dayCount > 1 && (
+                <div className="bg-[#111111] border border-white/10 rounded-2xl p-3 space-y-2.5">
+                  <span className={label}>Can people work only some of the days?</span>
+                  <div className="grid grid-cols-2 gap-2">
+                    {([
+                      ["all_days", "All days", `They commit to all ${dayCount}`],
+                      ["pick_days", "Pick days", "They choose which days"],
+                    ] as const).map(([v, text, hint]) => (
+                      <button
+                        key={v}
+                        type="button"
+                        onClick={() => set("commitment_mode", v)}
+                        aria-pressed={f.commitment_mode === v}
+                        className={`p-2.5 rounded-xl border text-left transition-colors btn-tap ${
+                          f.commitment_mode === v
+                            ? "bg-[#F4511E]/15 border-[#F4511E]/40"
+                            : "bg-[#1C1C1C] border-white/10 hover:border-white/20"
+                        }`}
+                      >
+                        <span className={`block text-xs font-black ${f.commitment_mode === v ? "text-[#F4511E]" : "text-white/70"}`}>{text}</span>
+                        <span className="block text-[10px] font-medium text-white/40 leading-tight mt-0.5">{hint}</span>
+                      </button>
+                    ))}
+                  </div>
+
+                  {f.commitment_mode === "pick_days" && (
+                    <div>
+                      <label className={label} htmlFor="edit-min-days">
+                        Minimum days each person must take (optional)
+                      </label>
+                      <input
+                        id="edit-min-days" type="number" min={1} max={dayCount}
+                        placeholder={`Any of the ${dayCount}`}
+                        className={input}
+                        value={f.min_days ?? ""}
+                        onChange={(e) => set("min_days", e.target.value === "" ? "" : Number(e.target.value))}
+                      />
+                      <Err k="min_days" />
+                    </div>
+                  )}
+
+                  <p className="text-[10px] font-medium text-white/40 leading-relaxed">
+                    Changing this only affects who can apply from now on. Anyone already
+                    accepted keeps the days they were given.
+                  </p>
+                </div>
+              )}
 
               <label className="flex items-center gap-2.5 cursor-pointer">
                 <input type="checkbox" checked={Boolean(f.is_urgent)} onChange={(e) => set("is_urgent", e.target.checked)}

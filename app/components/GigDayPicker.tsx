@@ -46,6 +46,7 @@ export default function GigDayPicker({
   dayRate,
   selected,
   onChange,
+  refreshKey = 0,
 }: {
   gigId: string;
   commitmentMode: "all_days" | "pick_days";
@@ -54,6 +55,12 @@ export default function GigDayPicker({
   /** Chosen gig_day ids. Ignored when the gig requires every day. */
   selected: string[];
   onChange: (ids: string[]) => void;
+  /**
+   * Bumped by the page after an application lands. The fill counts are read
+   * once on mount, so without this the day a worker just took still advertises
+   * the seat they are sitting in until they reload.
+   */
+  refreshKey?: number;
 }) {
   const [days, setDays] = useState<GigDay[]>([]);
   const [loading, setLoading] = useState(true);
@@ -96,7 +103,7 @@ export default function GigDayPicker({
       setLoading(false);
     })();
     return () => { cancelled = true; };
-  }, [gigId, commitmentMode]);
+  }, [gigId, commitmentMode, refreshKey]);
 
   if (loading) {
     return (

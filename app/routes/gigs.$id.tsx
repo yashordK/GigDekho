@@ -150,6 +150,7 @@ export default function GigDetailScreen() {
   // gig_day ids this person is signing up for. Empty means the whole gig,
   // which is what a single-day or all-days gig always sends.
   const [selectedDays, setSelectedDays] = useState<string[]>([]);
+  const [dayFillKey, setDayFillKey] = useState(0);
   const [applicationStatus, setApplicationStatus] = useState<string | null>(null);
   const [waitlistPosition, setWaitlistPosition] = useState<number | null>(null);
   const [applicationId, setApplicationId] = useState<string | null>(null);
@@ -319,6 +320,7 @@ export default function GigDetailScreen() {
       if (result.status === "accepted") {
         setApplicationStatus("accepted");
         setGig((prev: any) => ({ ...prev, slots_filled: (prev.slots_filled || 0) + 1 }));
+        setDayFillKey((k) => k + 1);
         // Refresh to get application ID
         await fetchData();
         showToast("You're confirmed! Check your email for details. 🎉");
@@ -326,6 +328,7 @@ export default function GigDetailScreen() {
         // Stored as 'pending' with waitlist_position in DB (trigger convention)
         setApplicationStatus("pending");
         setWaitlistPosition(result.waitlist_position);
+        setDayFillKey((k) => k + 1);
         await fetchData();
         showToast(`You're #${result.waitlist_position} on the waitlist! We'll notify you if a spot opens.`);
       }
@@ -352,6 +355,7 @@ export default function GigDetailScreen() {
       setApplicationStatus("cancelled");
       setShowCancelConfirm(false);
       setGig((prev: any) => ({ ...prev, slots_filled: Math.max(0, (prev.slots_filled || 1) - 1) }));
+      setDayFillKey((k) => k + 1);
       showToast("Spot cancelled. Check your email for confirmation.");
     } catch {
       showToast("Network error. Try again.", true);
@@ -794,6 +798,7 @@ export default function GigDetailScreen() {
                           dayRate={gig.day_rate ?? null}
                           selected={selectedDays}
                           onChange={setSelectedDays}
+                          refreshKey={dayFillKey}
                         />
                         <button
                           type="button"
