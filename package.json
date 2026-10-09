@@ -11,7 +11,7 @@
     "typecheck": "react-router typegen && tsc",
     "lint": "eslint .",
     "preview": "vite preview",
-    "test:sql": "node supabase/test/apply-to-gig.test.mjs supabase/migrations/024_apply_to_gig_no_name_collisions.sql"
+    "test:sql": "node supabase/test/apply-to-gig.test.mjs supabase/migrations/027_gender_split.sql && node supabase/test/gender-split.test.mjs"
   },
   "dependencies": {
     "@googlemaps/js-api-loader": "^2.1.1",

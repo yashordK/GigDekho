@@ -45,6 +45,9 @@ export default function EditGigModal({
   // How many days the gig actually runs. Needed to bound the minimum, and to
   // know whether the commitment controls are worth showing at all.
   const [dayCount, setDayCount] = useState(0);
+  // The gender split as it currently stands on the gig's days. Read from the
+  // days rather than the gig, because that is where capacity is enforced.
+  const [splitLoaded, setSplitLoaded] = useState(false);
   // A multi-day gig is priced per day; its hourly rate and total hours both
   // come from the schedule, so neither is editable here.
   const isDayPriced = Boolean(gig?.is_multi_day) && dayCount > 0;
@@ -76,6 +79,9 @@ export default function EditGigModal({
       commitment_mode: gig.commitment_mode === "pick_days" ? "pick_days" : "all_days",
       min_days: gig.min_days ?? "",
       day_rate: gig.day_rate ?? "",
+      split_on: false,
+      slots_male: "",
+      slots_female: "",
     });
   }, [isOpen, gig]);
 
@@ -86,6 +92,28 @@ export default function EditGigModal({
       .then(({ count }) => { if (!cancelled) setDayCount(count ?? 0); });
     return () => { cancelled = true; };
   }, [isOpen, gig?.id, gig?.is_multi_day]);
+
+  // Every event gig has day rows now, so the split is read from day one and
+  // written back across all of them.
+  useEffect(() => {
+    if (!isOpen || !gig?.id || gig?.gig_type === "internship") { setSplitLoaded(false); return; }
+    let cancelled = false;
+    supabase.from("gig_days")
+      .select("slots_male, slots_female").eq("gig_id", gig.id).order("day_number").limit(1)
+      .then(({ data }) => {
+        if (cancelled) return;
+        const d = data?.[0];
+        const on = d?.slots_male != null || d?.slots_female != null;
+        setF((prev: any) => ({
+          ...prev,
+          split_on: on,
+          slots_male: d?.slots_male ?? "",
+          slots_female: d?.slots_female ?? "",
+        }));
+        setSplitLoaded(true);
+      });
+    return () => { cancelled = true; };
+  }, [isOpen, gig?.id, gig?.gig_type]);
 
   if (!isOpen || !gig) return null;
 
@@ -129,6 +157,15 @@ export default function EditGigModal({
         if (!f.duration_hrs || Number(f.duration_hrs) <= 0) e.duration_hrs = "Enter how many hours";
       }
       if (!f.event_date) e.event_date = "Pick the date";
+      if (f.split_on) {
+        const m = f.slots_male === "" ? 0 : Number(f.slots_male);
+        const w = f.slots_female === "" ? 0 : Number(f.slots_female);
+        if (m < 0 || w < 0) e.slots_male = "Reserved seats cannot be negative";
+        else if (m + w === 0) e.slots_male = "Set at least one side, or turn the split off";
+        else if (!gig?.is_multi_day && m + w > Number(f.slots_total || 0)) {
+          e.slots_male = `That is ${m + w} seats across ${f.slots_total} openings. Raise the openings or lower the split.`;
+        }
+      }
       if (gig?.is_multi_day && f.commitment_mode === "pick_days" && f.min_days !== "" &&
           (Number(f.min_days) < 1 || Number(f.min_days) > dayCount)) {
         e.min_days = `The minimum has to be between 1 and ${dayCount}.`;
@@ -203,6 +240,23 @@ export default function EditGigModal({
       if (error) throw error;
       if (!data || data.length === 0) {
         throw new Error("You don't have permission to edit this listing, or your session expired.");
+      }
+
+      // Capacity is enforced from gig_days, so the split is written there. The
+      // same numbers go on every day of a multi-day run — a day that genuinely
+      // needs a different mix is rare enough to not be worth a per-day grid here.
+      if (gig.gig_type !== "internship" && splitLoaded) {
+        const patchDays = f.split_on
+          ? {
+              slots_male: f.slots_male === "" ? 0 : Number(f.slots_male),
+              slots_female: f.slots_female === "" ? 0 : Number(f.slots_female),
+            }
+          : { slots_male: null, slots_female: null };
+        const { error: dayErr } = await supabase
+          .from("gig_days").update(patchDays).eq("gig_id", gig.id);
+        if (dayErr) {
+          showToast("Saved, but the gender split didn't apply. Try again.", "error");
+        }
       }
 
       showToast("Listing updated", "success");
@@ -482,6 +536,49 @@ export default function EditGigModal({
                   </p>
                 </div>
               )}
+
+              <div className="bg-[#111111] border border-white/10 rounded-2xl p-3 space-y-2.5">
+                <label className="flex items-start gap-2.5 cursor-pointer">
+                  <input type="checkbox" checked={Boolean(f.split_on)}
+                    onChange={(e) => set("split_on", e.target.checked)}
+                    className="w-4 h-4 accent-[#F4511E] mt-0.5" />
+                  <span>
+                    <span className="text-xs font-bold text-white/80 block">Reserve seats by gender</span>
+                    <span className="text-[10px] font-medium text-white/40 block leading-relaxed">
+                      For events that need a set number of each. Leave this off and the gig
+                      is open to everyone on a first-come basis.
+                    </span>
+                  </span>
+                </label>
+
+                {f.split_on && (
+                  <>
+                    <div className="grid grid-cols-2 gap-3">
+                      <div>
+                        <label className={label} htmlFor="edit-slots-male">Male</label>
+                        <input id="edit-slots-male" type="number" min={0} className={input}
+                          value={f.slots_male ?? ""}
+                          onChange={(e) => set("slots_male", e.target.value === "" ? "" : Number(e.target.value))} />
+                      </div>
+                      <div>
+                        <label className={label} htmlFor="edit-slots-female">Female</label>
+                        <input id="edit-slots-female" type="number" min={0} className={input}
+                          value={f.slots_female ?? ""}
+                          onChange={(e) => set("slots_female", e.target.value === "" ? "" : Number(e.target.value))} />
+                      </div>
+                    </div>
+                    <Err k="slots_male" />
+                    <p className="text-[10px] font-medium text-white/40 leading-relaxed">
+                      {gig?.is_multi_day && dayCount > 1
+                        ? `Applies to each of the ${dayCount} days.`
+                        : "Applies to this gig."}{" "}
+                      Once one side is full, further applicants of that gender go to the
+                      waitlist while the other side stays open. Anyone whose gender is not
+                      recorded is waitlisted for you to place.
+                    </p>
+                  </>
+                )}
+              </div>
 
               <label className="flex items-center gap-2.5 cursor-pointer">
                 <input type="checkbox" checked={Boolean(f.is_urgent)} onChange={(e) => set("is_urgent", e.target.checked)}

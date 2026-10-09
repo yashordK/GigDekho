@@ -26,6 +26,9 @@ export default function SetupProfileScreen() {
   const [city] = useState('Indore');
   const [selectedSkills, setSelectedSkills] = useState<string[]>([]);
   const [isStudent, setIsStudent] = useState<boolean | null>(null);
+  // Events are often staffed to a mix, so hirers can reserve seats per gender.
+  // Asked once here rather than chased later, and declinable.
+  const [gender, setGender] = useState<'male' | 'female' | 'undisclosed' | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [avatarUrl, setAvatarUrl] = useState('');
@@ -89,6 +92,7 @@ export default function SetupProfileScreen() {
           ...(intent === 'worker' && isStudent !== null
             ? { student_status: isStudent ? 'student_unverified' : 'not_student' }
             : {}),
+          ...(intent === 'worker' && gender ? { gender } : {}),
         })
         .select()
         .single();
@@ -175,6 +179,37 @@ export default function SetupProfileScreen() {
                   readOnly
                 />
             </div>
+
+            {intent === 'worker' && (
+              <div>
+                <span className="block text-sm font-bold text-white/70 mb-2">Gender</span>
+                <p className="text-[11px] font-medium text-white/40 -mt-1 mb-2 leading-relaxed">
+                  Some events hire a set number of men and women for specific roles.
+                  This is only used to place you against those.
+                </p>
+                <div className="grid grid-cols-3 gap-2">
+                  {([
+                    ['male', 'Male'],
+                    ['female', 'Female'],
+                    ['undisclosed', 'Rather not say'],
+                  ] as const).map(([v, text]) => (
+                    <button
+                      key={v}
+                      type="button"
+                      onClick={() => setGender(v)}
+                      aria-pressed={gender === v}
+                      className={`py-2.5 px-2 rounded-xl border text-xs font-black transition-colors btn-tap ${
+                        gender === v
+                          ? 'bg-[#F4511E]/15 border-[#F4511E]/40 text-[#F4511E]'
+                          : 'bg-[#111111]/60 border-white/10 text-white/60 hover:border-white/20'
+                      }`}
+                    >
+                      {text}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
 
             {intent === 'worker' && (
               <>

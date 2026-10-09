@@ -192,7 +192,7 @@ export default function OrganizerHomeScreen() {
       if (gigIds.length > 0) {
         const { data: appsData, error: appsErr } = await supabase
           .from("applications")
-          .select("id, gig_id, worker_id, status, profiles(full_name, avg_rating, phone)")
+          .select("id, gig_id, worker_id, status, profiles(full_name, avg_rating, phone, gender)")
           .in("gig_id", gigIds)
           .eq("status", "accepted");
         if (appsErr) throw appsErr;

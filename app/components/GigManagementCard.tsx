@@ -18,6 +18,7 @@ interface WorkerApplication {
     full_name: string;
     avg_rating: number;
     phone: string;
+    gender?: string | null;
   } | null;
 }
 
@@ -405,6 +406,27 @@ export default function GigManagementCard({
           <span>View Accepted Workers ({acceptedWorkers.length})</span>
           <span>{workersExpanded ? "▲" : "▼"}</span>
         </button>
+
+        {workersExpanded && acceptedWorkers.length > 0 && (() => {
+          const men = acceptedWorkers.filter((a) => a.profiles?.gender === "male").length;
+          const women = acceptedWorkers.filter((a) => a.profiles?.gender === "female").length;
+          const unstated = acceptedWorkers.length - men - women;
+          return (
+            <div className="mt-3 flex flex-wrap items-center gap-1.5">
+              <span className="px-2 py-1 rounded-full text-[10px] font-black bg-blue-500/10 text-blue-300 border border-blue-500/25">
+                {men} male
+              </span>
+              <span className="px-2 py-1 rounded-full text-[10px] font-black bg-purple-500/10 text-purple-300 border border-purple-500/25">
+                {women} female
+              </span>
+              {unstated > 0 && (
+                <span className="px-2 py-1 rounded-full text-[10px] font-black bg-white/5 text-white/40 border border-white/10">
+                  {unstated} not recorded
+                </span>
+              )}
+            </div>
+          );
+        })()}
 
         {workersExpanded && (
           <div className="mt-3 space-y-2.5 max-h-[200px] overflow-y-auto hide-scrollbar animate-in fade-in duration-200">

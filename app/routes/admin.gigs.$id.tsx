@@ -31,7 +31,7 @@ export async function loader({ params, request }: LoaderFunctionArgs) {
     isIntern
       ? Promise.resolve({ data: [] as any[] })
       : admin.from("applications")
-          .select("id, status, applied_at, waitlist_position, worker:profiles!applications_worker_id_fkey(id, full_name, email, phone, city, avg_rating, reliability_score, id_verified, worker_level)")
+          .select("id, status, applied_at, waitlist_position, worker:profiles!applications_worker_id_fkey(id, full_name, email, phone, city, avg_rating, reliability_score, id_verified, worker_level, gender)")
           .eq("gig_id", id).order("applied_at", { ascending: true }),
     isIntern
       ? admin.from("internship_applications")
@@ -144,6 +144,37 @@ export default function AdminGigApplicants() {
         </div>
       ) : (
         <div className="space-y-3">
+          {(() => {
+            // Counted from the applicants already on screen rather than fetched
+            // again, so the split can never disagree with the list under it.
+            const live = apps.filter((a: any) => !["cancelled", "rejected"].includes(a.status));
+            const gender = (a: any) => (Array.isArray(a.worker) ? a.worker[0] : a.worker)?.gender;
+            const men = live.filter((a: any) => gender(a) === "male").length;
+            const women = live.filter((a: any) => gender(a) === "female").length;
+            const unstated = live.length - men - women;
+            if (!live.length) return null;
+            return (
+              <Card className="p-4">
+                <p className="text-[11px] font-black uppercase tracking-wider text-white/40 mb-2">
+                  Applicant split
+                </p>
+                <div className="flex flex-wrap items-center gap-2">
+                  <Pill tone="blue">{men} male</Pill>
+                  <Pill tone="purple">{women} female</Pill>
+                  {unstated > 0 && <Pill tone="neutral">{unstated} not recorded</Pill>}
+                  <span className="text-[11px] font-bold text-white/35 ml-auto">
+                    {live.length} applicant{live.length === 1 ? "" : "s"} in total
+                  </span>
+                </div>
+                {unstated > 0 && (
+                  <p className="text-[10px] font-medium text-white/30 mt-2 leading-relaxed">
+                    Gender is set from the users list. Anyone not recorded is counted in the
+                    total but cannot be placed against a reserved seat.
+                  </p>
+                )}
+              </Card>
+            );
+          })()}
           {apps.map((a: any) => {
             const w = Array.isArray(a.worker) ? a.worker[0] : a.worker;
             return (
@@ -154,6 +185,8 @@ export default function AdminGigApplicants() {
                       <h3 className="font-black text-white">{w?.full_name ?? "Unknown"}</h3>
                       <Pill tone={tone(a.status)}>{a.status}</Pill>
                       {w?.id_verified && <Pill tone="green"><ShieldCheck size={9} className="inline mr-0.5" /> verified</Pill>}
+                      {w?.gender === "male" && <Pill tone="blue">male</Pill>}
+                      {w?.gender === "female" && <Pill tone="purple">female</Pill>}
                       {a.waitlist_position != null && <Pill tone="orange">waitlist #{a.waitlist_position}</Pill>}
                     </div>
                     <p className="text-[11px] font-semibold text-white/45 flex flex-wrap items-center gap-3">

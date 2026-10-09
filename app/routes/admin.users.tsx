@@ -21,7 +21,7 @@ export async function loader({ request }: LoaderFunctionArgs) {
 
   let query = admin
     .from("profiles")
-    .select("id, full_name, email, phone, role, city, avg_rating, reliability_score, worker_level, is_suspended, is_admin, is_managed, id_verified, business_verified, basics_certified, campus_ambassador, student_status, created_at")
+    .select("id, full_name, email, phone, role, city, avg_rating, reliability_score, worker_level, is_suspended, is_admin, is_managed, id_verified, business_verified, basics_certified, campus_ambassador, student_status, gender, created_at")
     .order("created_at", { ascending: false })
     .limit(40);
   if (q) query = query.or(`full_name.ilike.%${q}%,email.ilike.%${q}%,phone.ilike.%${q}%`);
@@ -72,6 +72,19 @@ export async function action({ request }: ActionFunctionArgs) {
       });
     }
     return Response.json({ ok: true, value: next });
+  }
+
+  // Set from the admin list rather than asked of the worker, because the 60
+  // people who signed up before the field existed are never going to be
+  // chased for it one by one.
+  if (intent === "set_gender") {
+    const value = String(fd.get("gender") ?? "");
+    if (!["male", "female", "undisclosed", ""].includes(value)) {
+      return Response.json({ error: "Invalid gender" }, { status: 400 });
+    }
+    await ctx.admin.from("profiles").update({ gender: value || null }).eq("id", userId);
+    await logAdminAction(ctx, "edit_user", `gender → ${value || "cleared"}`, { targetUserId: userId });
+    return Response.json({ ok: true });
   }
 
   if (intent === "student_verified") {
@@ -223,6 +236,40 @@ export default function AdminUsers() {
                   }`} style={{ minHeight: "30px" }}>
                   <GraduationCap size={12} /> Student {u.student_status === "student_verified" ? "✓" : ""}
                 </button>
+                {u.role !== "organizer" && (
+                  <div className="flex items-center gap-1 pl-1 border-l border-white/10">
+                    {([
+                      ["male", "M"],
+                      ["female", "F"],
+                      ["undisclosed", "–"],
+                    ] as const).map(([v, text]) => (
+                      <button
+                        key={v}
+                        type="button"
+                        disabled={busy}
+                        title={`Set gender: ${v}`}
+                        onClick={async () => {
+                          setBusy(true);
+                          try {
+                            // Tapping the active one clears it, so a wrong
+                            // guess from a name can be undone.
+                            await post({ intent: "set_gender", user_id: u.id, gender: u.gender === v ? "" : v });
+                            revalidator.revalidate();
+                          } finally { setBusy(false); }
+                        }}
+                        className={`w-7 rounded-full text-[10px] font-black border transition-colors btn-tap disabled:opacity-50 min-h-0 ${
+                          u.gender === v
+                            ? "bg-blue-500/20 text-blue-300 border-blue-500/40"
+                            : "border-white/10 text-white/30 hover:text-white/70"
+                        }`}
+                        style={{ minHeight: "30px" }}
+                      >
+                        {text}
+                      </button>
+                    ))}
+                  </div>
+                )}
+
                 <button type="button" disabled={busy || u.is_admin} onClick={() => toggle(u.id, "is_suspended")}
                   title={u.is_admin ? "Admins can't be suspended from here" : undefined}
                   className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[10px] font-black border transition-colors btn-tap disabled:opacity-30 min-h-0 ml-auto ${

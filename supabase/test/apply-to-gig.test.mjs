@@ -26,6 +26,11 @@ const db = await PGlite.create();
 
 // ── Just enough of the real schema for apply_to_gig to run against ──
 await db.exec(`
+  CREATE TABLE profiles (
+    id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+    full_name text,
+    role text
+  );
   CREATE TABLE gigs (
     id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
     organizer_id uuid,
@@ -110,6 +115,7 @@ let sql = fs.readFileSync(MIGRATION, 'utf8');
 sql = sql
   .replace(/REVOKE ALL ON FUNCTION[\s\S]*?;/g, '')
   .replace(/GRANT EXECUTE ON FUNCTION[\s\S]*?;/g, '')
+  .replace(/GRANT SELECT ON[\s\S]*?;/g, '')
   .replace(/SET search_path = public, pg_temp/g, '')
   .replace(/SECURITY DEFINER/g, '');
 try {
