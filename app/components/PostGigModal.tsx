@@ -359,30 +359,48 @@ export default function PostGigModal({ isOpen, onClose, onSuccess, user, showToa
   };
 
   /**
-   * Writes the schedule for the gigs that were just created.
+   * Writes the schedule for the gigs that were just created — including the
+   * single day of a one-day gig.
    *
-   * Only for multi-day gigs: a single-day gig has its one day row created on
-   * demand by the server the first time attendance needs it, which keeps one
-   * code path rather than two.
+   * That last part is not redundant. Capacity is enforced from gig_days, so a
+   * gig without one cannot be applied to at all, and a row created later by the
+   * attendance code carried no headcount: it defaulted to one person whatever
+   * the listing said. Writing it here, from the same numbers the hirer typed,
+   * is what keeps the one code path the comment used to claim.
    *
    * A failure here is reported but does not undo the listing — the gig is live
    * and can be scheduled afterwards, whereas rolling it back would lose
    * everything the hirer typed.
    */
-  const insertGigDays = async (gigIds: string[]) => {
-    if (!isMultiDay || !gigIds.length) return { error: null };
-    const ordered = [...days].sort((a, b) => a.day_date.localeCompare(b.day_date));
-    const rows = gigIds.flatMap((gigId) =>
-      ordered.map((d, i) => ({
-        gig_id: gigId,
-        day_number: i + 1,
-        day_date: d.day_date,
-        starts_at: `${d.starts_at}:00`,
-        ends_at: `${d.ends_at}:00`,
-        duration_hrs: dayHours(d),
-        slots_needed: Number(d.slots_needed) || 1,
-      }))
-    );
+  const insertGigDays = async (gigIds: string[], single?: { date: string; starts: string; ends: string; hrs: number }) => {
+    if (!gigIds.length) return { error: null };
+
+    const rows = isMultiDay
+      ? gigIds.flatMap((gigId) => {
+          const ordered = [...days].sort((a, b) => a.day_date.localeCompare(b.day_date));
+          return ordered.map((d, i) => ({
+            gig_id: gigId,
+            day_number: i + 1,
+            day_date: d.day_date,
+            starts_at: `${d.starts_at}:00`,
+            ends_at: `${d.ends_at}:00`,
+            duration_hrs: dayHours(d),
+            slots_needed: Number(d.slots_needed) || 1,
+          }));
+        })
+      : single
+        ? gigIds.map((gigId, i) => ({
+            gig_id: gigId,
+            day_number: 1,
+            day_date: single.date,
+            starts_at: single.starts,
+            ends_at: single.ends,
+            duration_hrs: single.hrs,
+            slots_needed: Math.max(Number(roles[i]?.slots_total) || 1, 1),
+          }))
+        : [];
+
+    if (!rows.length) return { error: null };
     const { error } = await supabase.from("gig_days").insert(rows);
     return { error };
   };
@@ -449,7 +467,21 @@ export default function PostGigModal({ isOpen, onClose, onSuccess, user, showToa
         const { error, coverSkipped, ids } = await insertGigs(gigInserts);
         if (error) throw error;
 
-        const { error: daysErr } = await insertGigDays(ids);
+        // A single-day gig needs its one row built from the date and hours the
+        // hirer entered, in local time — the same clock the date picker showed.
+        const singleDay = (() => {
+          if (isMultiDay || !eventDate) return undefined;
+          const start = new Date(eventDate);
+          const h = Math.max(Number(roles[0]?.duration_hrs) || 0, 0.5);
+          const end = new Date(start.getTime() + h * 3600 * 1000);
+          const hhmm = (d: Date) =>
+            `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}:00`;
+          const ymd = (d: Date) =>
+            `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+          return { date: ymd(start), starts: hhmm(start), ends: hhmm(end), hrs: h };
+        })();
+
+        const { error: daysErr } = await insertGigDays(ids, singleDay);
         if (daysErr) {
           showToast(
             "Event posted, but the day-by-day schedule didn't save. Open the listing to set it up.",

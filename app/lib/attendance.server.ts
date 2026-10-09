@@ -49,7 +49,7 @@ export async function ensureGigDays(admin: SupabaseClient, gigId: string): Promi
 
   const { data: gig } = await admin
     .from("gigs")
-    .select("id, event_date, duration_hrs")
+    .select("id, event_date, duration_hrs, slots_total")
     .eq("id", gigId)
     .maybeSingle();
   if (!gig?.event_date) return [];
@@ -71,6 +71,10 @@ export async function ensureGigDays(admin: SupabaseClient, gigId: string): Promi
       starts_at: hhmm(ist),
       ends_at: hhmm(end),
       duration_hrs: hrs,
+      // Without this the row defaults to one person however many the gig
+      // advertised, and capacity is read from here — a six-person gig
+      // accepted one and waitlisted the rest.
+      slots_needed: Math.max(Number(gig.slots_total) || 1, 1),
     })
     .select("id, day_number, day_date, starts_at, ends_at, duration_hrs");
 
