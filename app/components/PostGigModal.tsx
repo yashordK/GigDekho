@@ -17,6 +17,10 @@ interface RoleForm {
   duration_hrs: number | "";
   slots_total: number | "";
   isCustom: boolean;
+  /** Seats reserved per gender on a single-day gig, where headcount is per
+   *  role. A multi-day gig splits per day instead, in the schedule. */
+  slots_male: number | "";
+  slots_female: number | "";
 }
 
 export interface GigTemplate {
@@ -45,6 +49,7 @@ const fmtDay = (d?: string) =>
 
 const emptyRole = (): RoleForm => ({
   role_type: "", custom_role: "", pay_rate: "", duration_hrs: "", slots_total: "", isCustom: false,
+  slots_male: "", slots_female: "",
 });
 
 const QUALIFICATION_HINT = "e.g. Students in their pre-final year, comfortable with Figma";
@@ -81,6 +86,9 @@ export default function PostGigModal({ isOpen, onClose, onSuccess, user, showToa
   });
   // all_days is the default the hirer chose: nobody posts a gig and discovers
   // fragmented coverage they did not ask for.
+  // Off by default: most gigs do not care, and a gig with no split behaves
+  // exactly as it always has.
+  const [splitByGender, setSplitByGender] = useState(false);
   const [commitmentMode, setCommitmentMode] = useState<"all_days" | "pick_days">("all_days");
   const [minDays, setMinDays] = useState<number | "">("");
   const [cover, setCover] = useState<CoverValue>({ cover_mode: "default", cover_image_url: null });
@@ -122,6 +130,7 @@ export default function PostGigModal({ isOpen, onClose, onSuccess, user, showToa
     setEventDate("");
     setEventDescription(template?.description ?? "");
     setIsUrgent(false);
+    setSplitByGender(false);
     setLocation({ location_text: "", lat: null, lng: null, is_remote: false });
     setRoles(template?.roles?.length ? template.roles.map((r) => ({ ...emptyRole(), ...r })) : [emptyRole()]);
     setErrors({});
@@ -169,6 +178,12 @@ export default function PostGigModal({ isOpen, onClose, onSuccess, user, showToa
       else if (days.some((d) => dayHours(d) <= 0)) e.days = "Every day needs a start and an end time.";
       else if (days.some((d) => d.slots_needed === "" || Number(d.slots_needed) < 1))
         e.days = "Every day needs at least one person.";
+      else if (splitByGender && days.some((d) => {
+        const m = d.slots_male === "" ? 0 : Number(d.slots_male);
+        const w = d.slots_female === "" ? 0 : Number(d.slots_female);
+        return m + w === 0 || m + w > Number(d.slots_needed);
+      }))
+        e.days = "On each day the male and female seats must add up to at least one, and no more than the people needed that day.";
       else if (new Date(`${days[0].day_date}T${days[0].starts_at}`) <= new Date())
         e.days = "The first day has to be in the future.";
       else {
@@ -204,6 +219,14 @@ export default function PostGigModal({ isOpen, onClose, onSuccess, user, showToa
       }
       if (role.slots_total === "") e.slots_total = "Slots count is required";
       else if (Number(role.slots_total) < 1 || Number(role.slots_total) > 100) e.slots_total = "Slots must be between 1 and 100";
+      if (splitByGender && !isMultiDay) {
+        const m = role.slots_male === "" ? 0 : Number(role.slots_male);
+        const w = role.slots_female === "" ? 0 : Number(role.slots_female);
+        if (m + w === 0) e.slots_male = "Reserve at least one seat, or turn the split off";
+        else if (m + w > Number(role.slots_total || 0)) {
+          e.slots_male = `That is ${m + w} seats across ${role.slots_total || 0} workers.`;
+        }
+      }
       return e;
     });
     setRoleErrors(newErrors);
@@ -386,6 +409,10 @@ export default function PostGigModal({ isOpen, onClose, onSuccess, user, showToa
             ends_at: `${d.ends_at}:00`,
             duration_hrs: dayHours(d),
             slots_needed: Number(d.slots_needed) || 1,
+            // null, not 0: null means "no split on this day", while 0 would
+            // mean "nobody of that gender", which is a different promise.
+            slots_male: splitByGender ? (d.slots_male === "" ? 0 : Number(d.slots_male)) : null,
+            slots_female: splitByGender ? (d.slots_female === "" ? 0 : Number(d.slots_female)) : null,
           }));
         })
       : single
@@ -397,6 +424,8 @@ export default function PostGigModal({ isOpen, onClose, onSuccess, user, showToa
             ends_at: single.ends,
             duration_hrs: single.hrs,
             slots_needed: Math.max(Number(roles[i]?.slots_total) || 1, 1),
+            slots_male: splitByGender ? (roles[i]?.slots_male === "" ? 0 : Number(roles[i]?.slots_male)) : null,
+            slots_female: splitByGender ? (roles[i]?.slots_female === "" ? 0 : Number(roles[i]?.slots_female)) : null,
           }))
         : [];
 
@@ -658,6 +687,32 @@ export default function PostGigModal({ isOpen, onClose, onSuccess, user, showToa
                   </button>
                 </div>
 
+                <div className="flex items-center justify-between bg-[#1C1C1C] p-3 rounded-2xl border border-white/5">
+                  <div className="flex flex-col pr-3">
+                    <span className="text-sm font-black text-white">Reserve seats by gender</span>
+                    <span className="text-[11px] text-white/50 font-medium">
+                      For events needing a set number of each. Off means open to everyone.
+                    </span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setSplitByGender(!splitByGender)}
+                    aria-pressed={splitByGender}
+                    aria-label="Reserve seats by gender"
+                    className={`w-12 h-6 flex items-center rounded-full p-1 transition-colors duration-200 btn-tap shrink-0 ${splitByGender ? "bg-[#F4511E]" : "bg-white/10"}`}
+                  >
+                    <div className={`bg-white w-4 h-4 rounded-full shadow-md transform duration-200 ${splitByGender ? "translate-x-6" : "translate-x-0"}`} />
+                  </button>
+                </div>
+
+                {splitByGender && (
+                  <p className="text-[10px] font-medium text-white/40 leading-relaxed -mt-1 px-1">
+                    {isMultiDay
+                      ? "Set the mix for each day below. Once one side is full, further applicants of that gender go to the waitlist while the other side stays open."
+                      : "Set the numbers with the headcount on the next step."}
+                  </p>
+                )}
+
                 {!isMultiDay ? (
                   <div className="flex flex-col space-y-1.5">
                     <label htmlFor="gig-event-date" className={labelCls}>Event Date &amp; Time</label>
@@ -667,7 +722,7 @@ export default function PostGigModal({ isOpen, onClose, onSuccess, user, showToa
                   </div>
                 ) : (
                   <>
-                    <GigDaysEditor days={days} onChange={setDays} errors={errors} />
+                    <GigDaysEditor days={days} onChange={setDays} errors={errors} splitByGender={splitByGender} />
 
                     <div className="bg-[#1C1C1C] rounded-2xl border border-white/5 p-3 space-y-2.5">
                       <span className={labelCls}>Can people work only some of the days?</span>
@@ -858,6 +913,29 @@ export default function PostGigModal({ isOpen, onClose, onSuccess, user, showToa
                       </div>
                     </div>
                     <Err msg={rErrors.pay_rate || rErrors.duration_hrs || rErrors.slots_total} />
+
+                    {splitByGender && !isMultiDay && (
+                      <div className="bg-[#111111] md:bg-[#1C1C1C] rounded-xl border border-white/5 p-3 space-y-2">
+                        <span className="text-[10px] font-black text-white/60 uppercase tracking-wider">
+                          Of those {role.slots_total || 0}, reserve
+                        </span>
+                        <div className="grid grid-cols-2 gap-2">
+                          <div>
+                            <label htmlFor={`male-${index}`} className="text-[10px] font-black text-white/50 uppercase tracking-wider block mb-1">Male</label>
+                            <input id={`male-${index}`} type="number" inputMode="numeric" min={0} placeholder="0" value={role.slots_male}
+                              onChange={(e) => updateRoleField(index, "slots_male", e.target.value === "" ? "" : Number(e.target.value))}
+                              className="w-full h-11 px-3 rounded-xl bg-[#1C1C1C] md:bg-[#111111] border border-white/5 text-white text-sm font-semibold focus-visible:outline-[#F4511E]" />
+                          </div>
+                          <div>
+                            <label htmlFor={`female-${index}`} className="text-[10px] font-black text-white/50 uppercase tracking-wider block mb-1">Female</label>
+                            <input id={`female-${index}`} type="number" inputMode="numeric" min={0} placeholder="0" value={role.slots_female}
+                              onChange={(e) => updateRoleField(index, "slots_female", e.target.value === "" ? "" : Number(e.target.value))}
+                              className="w-full h-11 px-3 rounded-xl bg-[#1C1C1C] md:bg-[#111111] border border-white/5 text-white text-sm font-semibold focus-visible:outline-[#F4511E]" />
+                          </div>
+                        </div>
+                        <Err msg={rErrors.slots_male} />
+                      </div>
+                    )}
 
                     {isMultiDay && role.pay_rate && (
                       <p className="text-[11px] font-bold text-white/50">
