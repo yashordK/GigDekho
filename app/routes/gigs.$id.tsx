@@ -14,7 +14,7 @@ import GigDayPicker from "~/components/GigDayPicker";
 import CompleteDetailsSheet from "~/components/CompleteDetailsSheet";
 
 const GIG_FIELDS = `
-  id, title, description, role_type, pay_rate, duration_hrs, event_date,
+  id, title, description, role_type, pay_rate, duration_hrs, day_count, event_date,
   location_text, lat, lng, is_urgent, slots_total, slots_filled, status,
   created_at, organizer_id, gig_type, work_mode, commitment, duration_months,
   stipend_min, stipend_max, is_unpaid, jd_url, preferences,
@@ -39,8 +39,10 @@ export async function loader({ params, request }) {
   // The cover columns arrive with migration 011. Until it's applied, asking
   // for them fails the whole query — and a listing 404ing is far worse than
   // one rendering with its default cover. Retry without them.
-  if (error && /commitment_mode|min_days|day_rate|is_multi_day/.test(error.message ?? "")) {
-    const withoutMultiDay = GIG_FIELDS.replace("  commitment_mode, min_days, day_rate, is_multi_day,\n", "");
+  if (error && /commitment_mode|min_days|day_rate|is_multi_day|day_count/.test(error.message ?? "")) {
+    const withoutMultiDay = GIG_FIELDS
+      .replace("  commitment_mode, min_days, day_rate, is_multi_day,\n", "")
+      .replace(" day_count,", "");
     const retry = await supabaseServer.from("gigs")
       .select(COVER_FIELDS + withoutMultiDay).eq("id", params.id).maybeSingle();
     if (!retry.error) { gigRow = retry.data; error = null; }
@@ -132,7 +134,7 @@ export const meta = ({ loaderData: data }: { loaderData: any }) => {
       { name: "robots", content: gig.status === "open" ? "index, follow" : "noindex, nofollow" },
     ];
   }
-  const totalPay = gigTotalPay(gig.pay_rate, gig.duration_hrs);
+  const totalPay = gigTotalPay(gig);
   const displayRole = gig.role_type;
   const slotsLeft = gig.slots_total - gig.slots_filled;
   const title = `${gig.title} · ${gig.location_text} · ₹${totalPay} — GigDekho`;
@@ -427,7 +429,7 @@ export default function GigDetailScreen() {
      return <div className="p-6 text-center text-white/50 font-bold bg-[#111111] min-h-screen pt-32">Gig not found.</div>;
   }
 
-  const payTotal = gigTotalPay(gig.pay_rate, gig.duration_hrs);
+  const payTotal = gigTotalPay(gig);
 
   /**
    * When the shift starts and ends. An hour count makes the reader do the

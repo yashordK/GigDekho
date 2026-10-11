@@ -160,7 +160,7 @@ export const action = jsonRoute(async ({ request }: ActionFunctionArgs) => {
   (async () => {
     try {
       const [{ data: gig }, { data: profile }] = await Promise.all([
-        admin.from("gigs").select("title, event_date, location_text, pay_rate, duration_hrs, role_type").eq("id", gigId).single(),
+        admin.from("gigs").select("title, event_date, location_text, pay_rate, duration_hrs, day_rate, day_count, role_type").eq("id", gigId).single(),
         admin.from("profiles").select("full_name").eq("id", user.id).single(),
       ]);
       const name = profile?.full_name || "there";

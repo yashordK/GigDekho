@@ -220,8 +220,12 @@ export default function EditGigModal({
           // rate times the days. duration_hrs keeps whatever the gig already
           // had, because it describes the shift window, not the money, and
           // pay_rate is only a derived mirror for the hourly figures elsewhere.
+          // gigs.day_count is maintained by a trigger from the day rows, so it
+          // is true even before this modal has finished counting them. Reading
+          // the count from component state is what once saved a three-day gig
+          // priced for one day.
           const hrs = Number(gig.duration_hrs) || 0;
-          const days = gig.is_multi_day ? dayCount : 1;
+          const days = Math.max(Number(gig.day_count) || dayCount || 1, 1);
           patch.day_rate = Number(f.day_rate);
           patch.pay_rate = hrs > 0
             ? Math.round((Number(f.day_rate) * days / hrs) * 100) / 100
@@ -523,9 +527,9 @@ export default function EditGigModal({
                 f.day_rate ? (
                   gig?.is_multi_day ? (
                     <p className="text-[11px] font-bold text-white/40">
-                      ₹{Number(f.day_rate).toLocaleString("en-IN")} per day × {dayCount} days ={" "}
+                      ₹{Number(f.day_rate).toLocaleString("en-IN")} per day × {gig.day_count ?? dayCount} days ={" "}
                       <span className="text-[#F4511E] font-black">
-                        ₹{Math.round(Number(f.day_rate) * dayCount).toLocaleString("en-IN")}
+                        ₹{Math.round(Number(f.day_rate) * (gig.day_count ?? dayCount)).toLocaleString("en-IN")}
                       </span>{" "}
                       per person
                     </p>

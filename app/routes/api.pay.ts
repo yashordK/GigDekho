@@ -22,7 +22,7 @@ export const action = jsonRoute(async ({ request }: ActionFunctionArgs) => {
   // Verify caller owns the gig
   const { data: gig } = await admin
     .from("gigs")
-    .select("id, organizer_id, pay_rate, duration_hrs, slots_filled, status")
+    .select("id, organizer_id, pay_rate, duration_hrs, day_rate, day_count, slots_filled, status")
     .eq("id", gigId)
     .single();
 
@@ -37,7 +37,7 @@ export const action = jsonRoute(async ({ request }: ActionFunctionArgs) => {
   // Rounded per person, then multiplied — the same basis the hirer's own cost
   // card shows. Rounding the whole product instead drifts a few rupees away
   // from the figure they were quoted once pay_rate carries paise.
-  const totalCost = gigTotalPay(gig.pay_rate, gig.duration_hrs) * gig.slots_filled;
+  const totalCost = gigTotalPay(gig) * gig.slots_filled;
   const advanceAmount = Math.round(totalCost * 0.3);
   const finalAmount = totalCost - advanceAmount;
 

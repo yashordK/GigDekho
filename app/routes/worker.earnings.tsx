@@ -43,7 +43,7 @@ export default function EarningsScreen() {
 
       const fetchedApps = (data || []).filter(a => a.gig);
       setApps(fetchedApps);
-      setTotalEarned(fetchedApps.reduce((acc, app) => acc + gigTotalPay(app.gig.pay_rate, app.gig.duration_hrs), 0));
+      setTotalEarned(fetchedApps.reduce((acc, app) => acc + gigTotalPay(app.gig), 0));
     } catch (err) {
       console.error(err);
       setError('Something went wrong. Try again.');
@@ -64,7 +64,7 @@ export default function EarningsScreen() {
       end.setDate(end.getDate() + 7);
       const total = apps.reduce((acc, app) => {
         const d = new Date(app.gig.event_date);
-        return d >= start && d < end ? acc + gigTotalPay(app.gig.pay_rate, app.gig.duration_hrs) : acc;
+        return d >= start && d < end ? acc + gigTotalPay(app.gig) : acc;
       }, 0);
       buckets.push({
         label: i === 0 ? 'This wk' : start.toLocaleDateString('en-IN', { day: 'numeric', month: 'short' }),
@@ -192,7 +192,7 @@ export default function EarningsScreen() {
                       </div>
                       <div className="text-right shrink-0 ml-3">
                          <div className="font-black text-green-400 text-xl lg:text-2xl tracking-tighter">
-                           +₹{gigTotalPay(app.gig.pay_rate, app.gig.duration_hrs).toLocaleString('en-IN')}
+                           +₹{gigTotalPay(app.gig).toLocaleString('en-IN')}
                          </div>
                       </div>
                    </div>

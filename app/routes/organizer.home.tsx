@@ -163,7 +163,7 @@ export default function OrganizerHomeScreen() {
       // cover_* arrive with migration 011; fall back so the dashboard
       // still lists gigs if the deploy lands before the migration.
       const gigFields = `
-          id, title, role_type, custom_role, pay_rate, duration_hrs,
+          id, title, role_type, custom_role, pay_rate, duration_hrs, day_rate, day_count,
           event_date, location_text, is_urgent, slots_total, slots_filled,
           status, created_at, organizer_id, gig_type, work_mode, commitment,
           duration_months, stipend_min, stipend_max, is_unpaid,

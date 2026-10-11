@@ -33,12 +33,27 @@ export function formatRelativeDate(dateString) {
 /**
  * The advertised pay for one person on a gig, in whole rupees.
  *
- * pay_rate stopped being a whole number when multi-day gigs arrived: the day
- * rate is divided across the run's hours, so Rs 600 a day over three 11-hour
- * days stores 54.55/hr and multiplies back to Rs 1800.15. Nobody is paid
- * fifteen paise, and a price with a decimal tail on it reads like a mistake,
- * so every figure shown to a person goes through here.
+ * Two ways a gig is priced, and each is read the way it was agreed:
+ *
+ *   by the hour  ->  pay_rate x duration_hrs
+ *   by the day   ->  day_rate x day_count
+ *
+ * The day case used to be reconstructed from an hourly rate derived at save
+ * time (day_rate x days / hours). That made the stored price depend on a day
+ * count held in form state, and a gig once went live advertising one day's
+ * pay for three days' work. The day rate and the day count are both on the
+ * row now, so there is nothing to reconstruct.
+ *
+ * Takes either a gig row, or (payRate, durationHrs) for the callers that only
+ * ever had those two.
  */
-export function gigTotalPay(payRate, durationHrs) {
-  return Math.round(Number(payRate || 0) * Number(durationHrs || 0));
+export function gigTotalPay(gigOrRate, durationHrs) {
+  if (gigOrRate && typeof gigOrRate === "object") {
+    const g = gigOrRate;
+    if (g.day_rate != null) {
+      return Math.round(Number(g.day_rate) * Math.max(Number(g.day_count) || 1, 1));
+    }
+    return Math.round(Number(g.pay_rate || 0) * Number(g.duration_hrs || 0));
+  }
+  return Math.round(Number(gigOrRate || 0) * Number(durationHrs || 0));
 }

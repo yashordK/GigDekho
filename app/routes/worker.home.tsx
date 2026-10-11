@@ -70,7 +70,7 @@ export default function HomeScreen() {
         const [{ data }, { data: walletTxns }] = await Promise.all([
           supabase
             .from('applications')
-            .select('id, status, waitlist_position, applied_at, gig:gigs(id, title, pay_rate, duration_hrs, event_date, location_text)')
+            .select('id, status, waitlist_position, applied_at, gig:gigs(id, title, pay_rate, duration_hrs, day_rate, day_count, event_date, location_text)')
             .eq('worker_id', user.id)
             .order('applied_at', { ascending: false }),
           supabase
@@ -99,7 +99,7 @@ export default function HomeScreen() {
       // column of every open gig — descriptions, coordinates, JD links — and
       // was the single slowest request on the page.
       const FEED_FIELDS = `
-        id, title, role_type, custom_role, location_text, pay_rate, duration_hrs,
+        id, title, role_type, custom_role, location_text, pay_rate, duration_hrs, day_rate, day_count,
         event_date, is_urgent, slots_total, slots_filled, status, gig_type,
         work_mode, commitment, duration_months, stipend_min, stipend_max,
         is_unpaid, application_deadline, cover_mode, cover_image_url
@@ -138,7 +138,7 @@ export default function HomeScreen() {
       setTrendingGigs(trendingData);
 
       const open = gigsData || [];
-      const totalSum = open.reduce((acc, gig) => acc + gigTotalPay(gig.pay_rate, gig.duration_hrs), 0);
+      const totalSum = open.reduce((acc, gig) => acc + gigTotalPay(gig), 0);
       // Highest total a single gig pays, not the hourly rate — an hourly
       // figure undersells the same work.
       const topPay = open.reduce((max, gig) => Math.max(max, (gig.pay_rate || 0) * (gig.duration_hrs || 0)), 0);
@@ -167,7 +167,7 @@ export default function HomeScreen() {
       list = list.filter(gig => gig.role_type?.toLowerCase().includes(selectedRole.toLowerCase()));
     }
     const sorted = [...list];
-    if (sortBy === 'pay') sorted.sort((a, b) => gigTotalPay(b.pay_rate, b.duration_hrs) - gigTotalPay(a.pay_rate, a.duration_hrs));
+    if (sortBy === 'pay') sorted.sort((a, b) => gigTotalPay(b) - gigTotalPay(a));
     else if (sortBy === 'newest') sorted.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
     else sorted.sort((a, b) => Number(b.is_urgent) - Number(a.is_urgent) || new Date(a.event_date).getTime() - new Date(b.event_date).getTime());
     return sorted;
@@ -179,11 +179,11 @@ export default function HomeScreen() {
   // Derived worker activity
   const completedApps = myApps.filter(a => a.status === 'completed' && a.gig);
   const completedCount = completedApps.length;
-  const lifetimeEarned = completedApps.reduce((acc, a) => acc + gigTotalPay(a.gig.pay_rate, a.gig.duration_hrs), 0);
+  const lifetimeEarned = completedApps.reduce((acc, a) => acc + gigTotalPay(a.gig), 0);
   const weekAgo = Date.now() - 7 * 24 * 3600000;
   const weekEarned = completedApps
     .filter(a => new Date(a.gig.event_date).getTime() >= weekAgo)
-    .reduce((acc, a) => acc + gigTotalPay(a.gig.pay_rate, a.gig.duration_hrs), 0);
+    .reduce((acc, a) => acc + gigTotalPay(a.gig), 0);
   const activeApps = myApps.filter(a => ['pending', 'accepted'].includes(a.status) && a.gig).slice(0, 3);
   const pendingCount = myApps.filter(a => a.status === 'pending').length;
   const avgRating = profile?.avg_rating || 0;

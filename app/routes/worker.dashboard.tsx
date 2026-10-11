@@ -335,7 +335,7 @@ export default function DashboardScreen() {
             filteredApps.map(app => {
               if (!app.gig) return null;
               const sParams = getStatusParams(app);
-              const totalPay = gigTotalPay(app.gig.pay_rate, app.gig.duration_hrs);
+              const totalPay = gigTotalPay(app.gig);
               const canCancel = app.status === 'accepted' || (app.status === 'pending' && app.waitlist_position != null);
 
               return (

@@ -119,7 +119,7 @@ export default function ProfileScreen() {
 
       const completedGigs = count || 0;
       const totalEarned = (appsData || []).reduce((acc, app) =>
-        app.gig ? acc + gigTotalPay(app.gig.pay_rate, app.gig.duration_hrs) : acc, 0);
+        app.gig ? acc + gigTotalPay(app.gig) : acc, 0);
 
       const { data: ratingData } = await supabase
         .from('ratings')

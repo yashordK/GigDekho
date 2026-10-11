@@ -207,7 +207,7 @@ export async function computePayout(
 ): Promise<PayoutBreakdown | null> {
   const { data: app } = await admin
     .from("applications")
-    .select("id, gig_id, worker_id, status, gigs(pay_rate, duration_hrs, day_rate)")
+    .select("id, gig_id, worker_id, status, gigs(pay_rate, duration_hrs, day_rate, day_count)")
     .eq("id", applicationId)
     .maybeSingle();
   if (!app) return null;
