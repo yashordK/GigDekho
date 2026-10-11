@@ -170,7 +170,7 @@ export default function GigDetailScreen() {
   const [selectedDays, setSelectedDays] = useState<string[]>([]);
   const [dayFillKey, setDayFillKey] = useState(0);
   // Phone and an identity document, gathered the first time someone applies.
-  const [detailsNeeded, setDetailsNeeded] = useState<null | { phone: boolean; identity: boolean }>(null);
+  const [detailsNeeded, setDetailsNeeded] = useState<null | { phone: boolean; identity: boolean; gender: boolean }>(null);
   const [myProfile, setMyProfile] = useState<any>(null);
   const [applicationStatus, setApplicationStatus] = useState<string | null>(null);
   const [waitlistPosition, setWaitlistPosition] = useState<number | null>(null);
@@ -294,7 +294,10 @@ export default function GigDetailScreen() {
       supabase.from('verification_documents').select('id', { count: 'exact', head: true }).eq('user_id', user!.id),
     ]);
     setMyProfile(prof ?? null);
-    return { phone: !prof?.phone?.trim(), identity: !docs };
+    // Gender is asked here too. It is not a server gate — "Rather not say" is
+    // one tap — but a gig that reserves seats by gender waitlists anyone whose
+    // gender is unknown, so leaving it blank quietly costs them places.
+    return { phone: !prof?.phone?.trim(), identity: !docs, gender: !prof?.gender };
   };
 
   const handleApplyClick = async () => {
@@ -317,7 +320,7 @@ export default function GigDetailScreen() {
       }
     }
     const missing = await checkDetails();
-    if (missing.phone || missing.identity) {
+    if (missing.phone || missing.identity || missing.gender) {
       setDetailsNeeded(missing);
       return;
     }
@@ -351,7 +354,11 @@ export default function GigDetailScreen() {
         if (result.error === "details_required") {
           const miss: string[] = result.missing ?? [];
           setShowTerms(false);
-          setDetailsNeeded({ phone: miss.includes("phone"), identity: miss.includes("identity") });
+          setDetailsNeeded({
+            phone: miss.includes("phone"),
+            identity: miss.includes("identity"),
+            gender: miss.includes("gender"),
+          });
           return;
         }
         throw new Error(result.error || "Failed to apply");
@@ -513,11 +520,12 @@ export default function GigDetailScreen() {
           initialGender={myProfile?.gender ?? null}
           needsPhone={detailsNeeded.phone}
           needsIdentity={detailsNeeded.identity}
+          needsGender={detailsNeeded.gender}
           onComplete={async () => {
             // Re-read rather than trust the sheet: the server will check the
             // same thing in a moment and should not be able to disagree.
             const still = await checkDetails();
-            if (still.phone || still.identity) { setDetailsNeeded(still); return; }
+            if (still.phone || still.identity || still.gender) { setDetailsNeeded(still); return; }
             setDetailsNeeded(null);
             setShowTerms(true);
           }}

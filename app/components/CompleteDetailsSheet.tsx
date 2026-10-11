@@ -30,6 +30,7 @@ export default function CompleteDetailsSheet({
   initialGender,
   needsPhone,
   needsIdentity,
+  needsGender,
   onComplete,
 }: {
   isOpen: boolean;
@@ -39,14 +40,16 @@ export default function CompleteDetailsSheet({
   initialGender?: string | null;
   needsPhone: boolean;
   needsIdentity: boolean;
+  needsGender: boolean;
   /** Fired once everything required is present, so the caller can resume. */
   onComplete: () => void;
 }) {
   const sheetHeight = useViewportHeight(isOpen);
   const [phone, setPhone] = useState(initialPhone ?? "");
   const [gender, setGender] = useState<string | null>(initialGender ?? null);
-  const [savingPhone, setSavingPhone] = useState(false);
-  const [phoneSaved, setPhoneSaved] = useState(!needsPhone);
+  const [saving, setSaving] = useState(false);
+  // Phone and gender are written together, so one flag covers both.
+  const [detailsSaved, setDetailsSaved] = useState(!needsPhone && !needsGender);
   const [hasDoc, setHasDoc] = useState(!needsIdentity);
   const [error, setError] = useState("");
 
@@ -54,10 +57,10 @@ export default function CompleteDetailsSheet({
     if (!isOpen) return;
     setPhone(initialPhone ?? "");
     setGender(initialGender ?? null);
-    setPhoneSaved(!needsPhone);
+    setDetailsSaved(!needsPhone && !needsGender);
     setHasDoc(!needsIdentity);
     setError("");
-  }, [isOpen, initialPhone, initialGender, needsPhone, needsIdentity]);
+  }, [isOpen, initialPhone, initialGender, needsPhone, needsIdentity, needsGender]);
 
   // VerificationPanel owns the upload; this only asks whether one now exists.
   const refreshDocs = async () => {
@@ -68,18 +71,23 @@ export default function CompleteDetailsSheet({
     setHasDoc(Boolean(count));
   };
 
-  const savePhone = async () => {
+  const saveDetails = async () => {
     const trimmed = phone.replace(/\s+/g, "");
     // Ten digits, optionally with +91 in front — the only shape that is any
     // use for actually calling someone on the day.
-    if (!/^(\+?91)?[6-9]\d{9}$/.test(trimmed)) {
+    if (needsPhone && !/^(\+?91)?[6-9]\d{9}$/.test(trimmed)) {
       setError("Enter a 10-digit mobile number.");
       return;
     }
-    setSavingPhone(true);
+    if (needsGender && !gender) {
+      setError("Pick one of the three, or choose Rather not say.");
+      return;
+    }
+    setSaving(true);
     setError("");
     try {
-      const patch: Record<string, any> = { phone: trimmed };
+      const patch: Record<string, any> = {};
+      if (needsPhone) patch.phone = trimmed;
       if (gender) patch.gender = gender;
       const { data, error: err } = await supabase
         .from("profiles").update(patch).eq("id", userId).select("id");
@@ -89,17 +97,17 @@ export default function CompleteDetailsSheet({
       if (!data || data.length === 0) {
         throw new Error("Your session expired. Sign in again and retry.");
       }
-      setPhoneSaved(true);
+      setDetailsSaved(true);
     } catch (e: any) {
-      setError(e.message || "Could not save your number. Try again.");
+      setError(e.message || "Could not save your details. Try again.");
     } finally {
-      setSavingPhone(false);
+      setSaving(false);
     }
   };
 
   if (!isOpen) return null;
 
-  const ready = phoneSaved && hasDoc;
+  const ready = detailsSaved && hasDoc;
 
   return (
     <div className="fixed inset-0 z-[70] flex items-end md:items-center justify-center">
@@ -126,7 +134,7 @@ export default function CompleteDetailsSheet({
             <div>
               <label htmlFor="cd-phone" className="text-[11px] font-black text-white/60 uppercase tracking-wider flex items-center gap-1.5 mb-2">
                 <Phone size={12} className="text-[#F4511E]" /> Mobile number
-                {phoneSaved && <CheckCircle2 size={13} className="text-green-400" />}
+                {detailsSaved && <CheckCircle2 size={13} className="text-green-400" />}
               </label>
               <p className="text-[11px] font-medium text-white/40 mb-2 leading-relaxed">
                 Shared only with the hirer once you're confirmed, so they can reach you about timings on the day.
@@ -134,20 +142,14 @@ export default function CompleteDetailsSheet({
               <div className="flex gap-2">
                 <input
                   id="cd-phone" type="tel" inputMode="numeric" placeholder="98765 43210"
-                  value={phone} onChange={(e) => { setPhone(e.target.value); setPhoneSaved(false); }}
+                  value={phone} onChange={(e) => { setPhone(e.target.value); setDetailsSaved(false); }}
                   className="flex-1 h-11 px-4 rounded-xl bg-[#1C1C1C] border border-white/10 text-white text-sm font-semibold placeholder:text-white/30 focus:outline-none focus:border-[#F4511E]"
                 />
-                <button
-                  type="button" onClick={savePhone} disabled={savingPhone || phoneSaved}
-                  className="px-5 rounded-xl bg-[#F4511E] hover:bg-[#D84315] text-white text-xs font-black uppercase tracking-wider btn-tap disabled:opacity-40 transition-colors"
-                >
-                  {savingPhone ? <Loader2 size={14} className="animate-spin" /> : phoneSaved ? "Saved" : "Save"}
-                </button>
               </div>
             </div>
           )}
 
-          {!initialGender && (
+          {needsGender && (
             <div>
               <span className="text-[11px] font-black text-white/60 uppercase tracking-wider block mb-2">Gender</span>
               <p className="text-[11px] font-medium text-white/40 mb-2 leading-relaxed">
@@ -157,7 +159,7 @@ export default function CompleteDetailsSheet({
                 {([["male", "Male"], ["female", "Female"], ["undisclosed", "Rather not say"]] as const).map(([v, text]) => (
                   <button
                     key={v} type="button"
-                    onClick={() => { setGender(v); setPhoneSaved(false); }}
+                    onClick={() => { setGender(v); setDetailsSaved(false); }}
                     aria-pressed={gender === v}
                     className={`py-2.5 px-2 rounded-xl border text-xs font-black transition-colors btn-tap ${
                       gender === v
@@ -169,10 +171,18 @@ export default function CompleteDetailsSheet({
                   </button>
                 ))}
               </div>
-              {gender && !phoneSaved && needsPhone && (
-                <p className="text-[10px] font-medium text-white/35 mt-1.5">Saved along with your number.</p>
-              )}
             </div>
+          )}
+
+          {(needsPhone || needsGender) && (
+            <button
+              type="button" onClick={saveDetails} disabled={saving || detailsSaved}
+              className="w-full h-11 rounded-xl bg-[#F4511E] hover:bg-[#D84315] text-white text-xs font-black uppercase tracking-wider btn-tap disabled:opacity-40 transition-colors flex items-center justify-center gap-2"
+            >
+              {saving ? <><Loader2 size={14} className="animate-spin" /> Saving</>
+                : detailsSaved ? <><CheckCircle2 size={14} /> Saved</>
+                : "Save these details"}
+            </button>
           )}
 
           {needsIdentity && (
@@ -204,8 +214,8 @@ export default function CompleteDetailsSheet({
           >
             {ready
               ? "Continue to apply"
-              : !phoneSaved
-                ? "Add your number to continue"
+              : !detailsSaved
+                ? "Save your details to continue"
                 : "Upload your ID to continue"}
           </button>
         </div>
