@@ -11,6 +11,7 @@ import { gigCoverUrl } from "~/lib/cover";
 import InternshipApplyModal from "~/components/InternshipApplyModal";
 import ReportModal from "~/components/ReportModal";
 import GigDayPicker from "~/components/GigDayPicker";
+import CompleteDetailsSheet from "~/components/CompleteDetailsSheet";
 
 const GIG_FIELDS = `
   id, title, description, role_type, pay_rate, duration_hrs, event_date,
@@ -168,6 +169,9 @@ export default function GigDetailScreen() {
   // which is what a single-day or all-days gig always sends.
   const [selectedDays, setSelectedDays] = useState<string[]>([]);
   const [dayFillKey, setDayFillKey] = useState(0);
+  // Phone and an identity document, gathered the first time someone applies.
+  const [detailsNeeded, setDetailsNeeded] = useState<null | { phone: boolean; identity: boolean }>(null);
+  const [myProfile, setMyProfile] = useState<any>(null);
   const [applicationStatus, setApplicationStatus] = useState<string | null>(null);
   const [waitlistPosition, setWaitlistPosition] = useState<number | null>(null);
   const [applicationId, setApplicationId] = useState<string | null>(null);
@@ -279,7 +283,21 @@ export default function GigDetailScreen() {
     }, 3000);
   };
 
-  const handleApplyClick = () => {
+  /**
+   * Whether this worker still owes us a phone number or an identity document.
+   * Checked here as well as on the server so they meet a form they can fill
+   * rather than a refusal; /api/apply is what actually enforces it.
+   */
+  const checkDetails = async () => {
+    const [{ data: prof }, { count: docs }] = await Promise.all([
+      supabase.from('profiles').select('phone, gender').eq('id', user!.id).maybeSingle(),
+      supabase.from('verification_documents').select('id', { count: 'exact', head: true }).eq('user_id', user!.id),
+    ]);
+    setMyProfile(prof ?? null);
+    return { phone: !prof?.phone?.trim(), identity: !docs };
+  };
+
+  const handleApplyClick = async () => {
     if (!user) {
       localStorage.setItem('redirectAfterLogin', location.pathname);
       localStorage.setItem('userIntent', 'worker');
@@ -297,6 +315,11 @@ export default function GigDetailScreen() {
         showToast(`This gig needs at least ${gig.min_days} days from each person.`, true);
         return;
       }
+    }
+    const missing = await checkDetails();
+    if (missing.phone || missing.identity) {
+      setDetailsNeeded(missing);
+      return;
     }
     setShowTerms(true);
   };
@@ -321,6 +344,14 @@ export default function GigDetailScreen() {
         }
         if (result.error === "account_suspended") {
           showToast("Your account is suspended. Contact support for help.", true);
+          return;
+        }
+        // The server gate caught what the client check missed — open the same
+        // form rather than leaving them with a dead end.
+        if (result.error === "details_required") {
+          const miss: string[] = result.missing ?? [];
+          setShowTerms(false);
+          setDetailsNeeded({ phone: miss.includes("phone"), identity: miss.includes("identity") });
           return;
         }
         throw new Error(result.error || "Failed to apply");
@@ -473,6 +504,26 @@ export default function GigDetailScreen() {
       />
 
       {/* Terms and Conditions Modal */}
+      {detailsNeeded && user && (
+        <CompleteDetailsSheet
+          isOpen
+          onClose={() => setDetailsNeeded(null)}
+          userId={user.id}
+          initialPhone={myProfile?.phone ?? null}
+          initialGender={myProfile?.gender ?? null}
+          needsPhone={detailsNeeded.phone}
+          needsIdentity={detailsNeeded.identity}
+          onComplete={async () => {
+            // Re-read rather than trust the sheet: the server will check the
+            // same thing in a moment and should not be able to disagree.
+            const still = await checkDetails();
+            if (still.phone || still.identity) { setDetailsNeeded(still); return; }
+            setDetailsNeeded(null);
+            setShowTerms(true);
+          }}
+        />
+      )}
+
       {showTerms && (
         <div className="fixed inset-0 bg-black/80 z-[100] flex items-center justify-center p-4 animate-in fade-in">
            <div className="bg-[#1C1C1C] border border-white/10 w-full max-w-md rounded-3xl p-6 shadow-2xl relative">

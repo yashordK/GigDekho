@@ -15,15 +15,36 @@ export const action = jsonRoute(async ({ request }: ActionFunctionArgs) => {
 
   const admin = serviceClient();
 
-  // Verification is NOT required to apply. It stays a trust signal hirers can
-  // see and weigh — gating the application itself just meant nobody applied.
   const { data: workerProfile } = await admin
     .from("profiles")
-    .select("is_suspended")
+    .select("is_suspended, phone, gender")
     .eq("id", user.id)
     .single();
   if (workerProfile?.is_suspended) {
     return Response.json({ error: "account_suspended" }, { status: 403 });
+  }
+
+  /**
+   * A hirer has to be able to reach the person who is turning up, and to know
+   * the identity behind the name. Both are collected at the point of applying
+   * rather than at signup, where asking for them only lost people.
+   *
+   * The gate is on a document HAVING BEEN SUBMITTED, not on it being approved.
+   * Requiring approval would put every applicant behind a manual review queue
+   * — 3 of 62 workers are verified today, so that would stop applications
+   * almost entirely and make the wait a condition of working. Review still
+   * decides the badge; it just does not decide whether you may apply.
+   */
+  const { count: docCount } = await admin
+    .from("verification_documents")
+    .select("id", { count: "exact", head: true })
+    .eq("user_id", user.id);
+
+  const missing: string[] = [];
+  if (!workerProfile?.phone || !String(workerProfile.phone).trim()) missing.push("phone");
+  if (!docCount) missing.push("identity");
+  if (missing.length) {
+    return Response.json({ error: "details_required", missing }, { status: 400 });
   }
 
   // Validate the gig is still joinable ('open' or 'filled' — filled gigs go to waitlist)

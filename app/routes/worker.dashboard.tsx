@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { supabase } from '~/lib/supabase.client';
 import AttendanceCheckIn from '~/components/AttendanceCheckIn';
 import { useAuth } from '~/context/AuthContext';
-import { useNavigate } from 'react-router';
+import { useNavigate, Link } from 'react-router';
 import { Calendar, ChevronRight, Briefcase, Shield, XCircle, AlertTriangle, GraduationCap } from 'lucide-react';
 import { formatRelativeDate, gigTotalPay } from '~/lib/utils';
 import SpotlightCategories from '~/components/SpotlightCategories';
@@ -47,6 +47,25 @@ export default function DashboardScreen() {
   const [cancelling, setCancelling] = useState(false);
 
   const { user } = useAuth();
+  // Applying now requires a number and an identity document. People accepted
+  // before that keep their place — but the hirer still needs to be able to
+  // reach them, so they are asked here rather than silently left incomplete.
+  const [missingDetails, setMissingDetails] = useState<{ phone: boolean; identity: boolean } | null>(null);
+
+  useEffect(() => {
+    if (!user?.id) return;
+    let cancelled = false;
+    (async () => {
+      const [{ data: prof }, { count: docs }] = await Promise.all([
+        supabase.from('profiles').select('phone').eq('id', user.id).maybeSingle(),
+        supabase.from('verification_documents').select('id', { count: 'exact', head: true }).eq('user_id', user.id),
+      ]);
+      if (cancelled) return;
+      const miss = { phone: !prof?.phone?.trim(), identity: !docs };
+      setMissingDetails(miss.phone || miss.identity ? miss : null);
+    })();
+    return () => { cancelled = true; };
+  }, [user?.id]);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -142,6 +161,27 @@ export default function DashboardScreen() {
 
   return (
     <div className="bg-[#111111] min-h-screen pt-4">
+
+      {missingDetails && (
+        <div className="mx-4 md:mx-0 mb-4 bg-[#F4511E]/10 border border-[#F4511E]/30 rounded-2xl p-4 flex items-start gap-3">
+          <AlertTriangle size={17} className="text-[#F4511E] shrink-0 mt-0.5" />
+          <div className="min-w-0 flex-1">
+            <p className="text-sm font-black text-white leading-tight">
+              Add your {missingDetails.phone && missingDetails.identity
+                ? "phone number and ID"
+                : missingDetails.phone ? "phone number" : "ID proof"}
+            </p>
+            <p className="text-[11px] font-semibold text-white/50 leading-relaxed mt-1">
+              Your confirmed gigs are safe. Hirers need to be able to reach you on the day,
+              and you'll need this before you can apply to anything new.
+            </p>
+            <Link to="/worker/profile"
+              className="inline-flex items-center gap-1.5 mt-2.5 px-4 py-2 rounded-full bg-[#F4511E] hover:bg-[#D84315] text-white text-[11px] font-black uppercase tracking-wider btn-tap transition-colors">
+              Add them now
+            </Link>
+          </div>
+        </div>
+      )}
 
       {/* Cancel Modal */}
       {cancelModal && (

@@ -162,7 +162,14 @@ credit without that key.
   migration that defines a function; `apply_to_gig` shipped broken twice
   because SQL was read rather than run.
 
-**ID verification is NOT required to apply to a gig.** Deliberate decision.
+**Applying requires a phone number and an uploaded identity document** — but
+**not an approved one.** The gate is on the document existing, so an applicant
+unblocks themselves the moment they upload; review still decides the verified
+badge, it does not decide who may apply. Gating on *approval* would put every
+applicant behind a manual queue (3 of 62 workers were verified when this
+shipped) and is what the old "verification is not required" rule existed to
+avoid. Enforced in `api/apply.ts`; `CompleteDetailsSheet` collects both at the
+moment of applying, because asking at signup only lost people.
 
 ### Built but unproven
 
