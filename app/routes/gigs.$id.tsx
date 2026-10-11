@@ -2,7 +2,7 @@ import { useLoaderData, useParams, useNavigate, useLocation, Link } from 'react-
 import { useState, useEffect } from 'react';
 import { supabase } from '~/lib/supabase.client';
 import { useAuth } from '~/context/AuthContext';
-import { MapPin, Clock, Calendar, Info, CheckCircle2, AlertCircle, ShieldCheck, ChevronRight, Users, IndianRupee, Briefcase, GraduationCap, Link2, Hourglass } from 'lucide-react';
+import { MapPin, Clock, Calendar, Info, CheckCircle2, AlertCircle, ShieldCheck, ChevronRight, Users, IndianRupee, Briefcase, GraduationCap, Link2, Hourglass, Video } from 'lucide-react';
 import { formatRelativeDate, gigTotalPay } from '~/lib/utils';
 import { createSupabaseServerClient } from '~/lib/supabase.server';
 import { getMapsLoader } from "~/lib/maps";
@@ -77,7 +77,24 @@ export async function loader({ params, request }) {
     ? Math.round(((paidPayments || 0) / totalPayments) * 100) 
     : null;
 
-  return { gig, gigsHosted: gigsHosted || 0, paymentRate };
+  // Read from app_settings rather than hardcoded, so what the page promises
+  // and what the admin panel actually credits cannot drift apart.
+  const { data: settingRows } = await supabaseServer
+    .from('app_settings')
+    .select('key, value')
+    .in('key', ['reel_bonus_per_reel', 'reel_bonus_max_per_gig', 'reel_views_bonus',
+                'reel_views_threshold', 'reel_min_followers']);
+  const sget = (k: string, d: number) =>
+    Number((settingRows ?? []).find((r: any) => r.key === k)?.value ?? d);
+  const reels = {
+    perReel: sget('reel_bonus_per_reel', 50),
+    maxPerGig: sget('reel_bonus_max_per_gig', 100),
+    viewsBonus: sget('reel_views_bonus', 100),
+    viewsThreshold: sget('reel_views_threshold', 5000),
+    minFollowers: sget('reel_min_followers', 300),
+  };
+
+  return { gig, gigsHosted: gigsHosted || 0, paymentRate, reels };
 }
 
 // ── Internship display helpers ──────────────────────────────────────
@@ -142,7 +159,7 @@ export default function GigDetailScreen() {
   const location = useLocation();
   const { user } = useAuth();
   
-  const { gig: ssrGig, gigsHosted, paymentRate } = useLoaderData();
+  const { gig: ssrGig, gigsHosted, paymentRate, reels } = useLoaderData() as any;
 
   const [gig, setGig] = useState(ssrGig);
   const [loading, setLoading] = useState(false);
@@ -646,6 +663,55 @@ export default function GigDetailScreen() {
                 hasApplied={applicationStatus !== null && applicationStatus !== 'cancelled'}
                 userId={user?.id ?? null}
               />
+
+              {/* Reel rewards — only on gigs, and only where there is a reward
+                  to describe. Every figure comes from the loader, which reads
+                  app_settings, so the page cannot advertise a number the admin
+                  panel would not actually pay. */}
+              {!isInternship && reels && (
+                <div className="mb-10">
+                  <div className="bg-gradient-to-br from-[#F4511E]/10 to-transparent border border-[#F4511E]/25 rounded-2xl p-5">
+                    <div className="flex items-start gap-3 mb-3">
+                      <div className="w-9 h-9 rounded-xl bg-[#F4511E]/15 border border-[#F4511E]/30 flex items-center justify-center shrink-0">
+                        <Video size={17} className="text-[#F4511E]" />
+                      </div>
+                      <div className="min-w-0">
+                        <h3 className="font-black text-white text-base leading-tight">
+                          Earn up to ₹{reels.maxPerGig + reels.viewsBonus} more
+                        </h3>
+                        <p className="text-[12px] font-semibold text-white/50 leading-snug mt-0.5">
+                          Post a reel about your experience and tell people about GigDekho.
+                        </p>
+                      </div>
+                    </div>
+
+                    <ul className="space-y-2">
+                      <li className="flex items-start gap-2.5">
+                        <CheckCircle2 size={14} className="text-[#F4511E] shrink-0 mt-0.5" />
+                        <span className="text-[12px] font-semibold text-white/70 leading-snug">
+                          <span className="text-white font-black">₹{reels.perReel} per reel</span>, for up to{" "}
+                          {Math.floor(reels.maxPerGig / reels.perReel)} reels — ₹{reels.maxPerGig} in total
+                        </span>
+                      </li>
+                      <li className="flex items-start gap-2.5">
+                        <CheckCircle2 size={14} className="text-[#F4511E] shrink-0 mt-0.5" />
+                        <span className="text-[12px] font-semibold text-white/70 leading-snug">
+                          <span className="text-white font-black">₹{reels.viewsBonus} extra</span> if any reel passes{" "}
+                          {reels.viewsThreshold.toLocaleString("en-IN")} views
+                        </span>
+                      </li>
+                      <li className="flex items-start gap-2.5">
+                        <Info size={14} className="text-white/35 shrink-0 mt-0.5" />
+                        <span className="text-[12px] font-semibold text-white/50 leading-snug">
+                          Your account must be public with at least{" "}
+                          {reels.minFollowers.toLocaleString("en-IN")} followers. Each reel is checked by
+                          hand, and the money lands in your wallet.
+                        </span>
+                      </li>
+                    </ul>
+                  </div>
+                </div>
+              )}
 
               {/* Location Details */}
               <div className="mb-10">

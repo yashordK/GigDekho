@@ -118,7 +118,7 @@ hirer-side payment flow and does not charge anyone.
 | Late cancellation | **Rs 100** penalty if cancelled with under 2 days notice |
 | Minimum withdrawal | **Rs 150** |
 | Referral | **Rs 50 to each side**, paid when the referred person *works* a gig (not on signup). Cap **4/month**, counted at payout. Over-cap referrals are marked `qualified`, never rejected. Gigs and internships both count. |
-| Reels | **Rs 50 per reel**, max **2 per gig** (Rs 100). **+Rs 50** if it crosses **3,000 views**. Public account required. Manually verified — Instagram exposes no lawful view-count API, and the UI must never pretend otherwise. Claimable any time after the gig. |
+| Reels | **Rs 50 per reel**, max **2 per gig** (Rs 100). **+Rs 100** if a reel crosses **5,000 views**, so **Rs 200** is the ceiling. Public account with at least **300 followers**. Manually verified — Instagram exposes no lawful view-count API, and the UI must never pretend otherwise. Claimable any time after the gig. Every one of these numbers lives in `app_settings` (`reel_*`), and the gig page reads them from there — never hardcode a figure that the admin panel would have to pay. |
 | Services (planned) | **10%** commission |
 
 Wallet writes are idempotent, keyed on `reference_id` + `type`. Never write a

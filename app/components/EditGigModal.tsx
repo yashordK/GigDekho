@@ -50,7 +50,12 @@ export default function EditGigModal({
   const [splitLoaded, setSplitLoaded] = useState(false);
   // A multi-day gig is priced per day; its hourly rate and total hours both
   // come from the schedule, so neither is editable here.
-  const isDayPriced = Boolean(gig?.is_multi_day) && dayCount > 0;
+  // A multi-day gig is always priced per day — its hourly rate is only a
+  // derived mirror. A single-day gig can be either, because "Rs 800 for the
+  // day" is how most of this work is actually agreed, and making someone
+  // divide that by the hours to post it is pointless arithmetic.
+  const isDayPriced = Boolean(gig?.is_multi_day) ? dayCount > 0 : f.price_mode === "day";
+  const canChoosePricing = !gig?.is_multi_day && gig?.gig_type !== "internship";
 
   useEffect(() => {
     if (!isOpen || !gig) return;
@@ -79,6 +84,8 @@ export default function EditGigModal({
       commitment_mode: gig.commitment_mode === "pick_days" ? "pick_days" : "all_days",
       min_days: gig.min_days ?? "",
       day_rate: gig.day_rate ?? "",
+      // Day pricing is remembered by day_rate being set at all.
+      price_mode: gig.day_rate != null ? "day" : "hour",
       split_on: false,
       slots_male: "",
       slots_female: "",
@@ -152,6 +159,9 @@ export default function EditGigModal({
       if (!f.location_text?.trim()) e.location_text = "Add where this is happening";
       if (isDayPriced) {
         if (!f.day_rate || Number(f.day_rate) <= 0) e.day_rate = "Enter the pay per day";
+        if (!gig?.is_multi_day && (!f.duration_hrs || Number(f.duration_hrs) <= 0)) {
+          e.duration_hrs = "Enter how long the shift runs";
+        }
       } else {
         if (!f.pay_rate || Number(f.pay_rate) <= 0) e.pay_rate = "Enter the hourly pay";
         if (!f.duration_hrs || Number(f.duration_hrs) <= 0) e.duration_hrs = "Enter how many hours";
@@ -207,14 +217,23 @@ export default function EditGigModal({
           // of the app shows, so it is recomputed here rather than edited —
           // editing the two independently is how a gig ends up advertising one
           // price and paying another.
-          const hrs = Number(gig.duration_hrs) || 0;
+          // Hours still come from the form on a single-day gig, because they
+          // describe the shift, not the money.
+          const hrs = gig.is_multi_day
+            ? (Number(gig.duration_hrs) || 0)
+            : (Number(f.duration_hrs) || 0);
+          const days = gig.is_multi_day ? dayCount : 1;
           patch.day_rate = Number(f.day_rate);
           patch.pay_rate = hrs > 0
-            ? Math.round((Number(f.day_rate) * dayCount / hrs) * 100) / 100
+            ? Math.round((Number(f.day_rate) * days / hrs) * 100) / 100
             : Number(f.day_rate);
+          if (!gig.is_multi_day) patch.duration_hrs = Number(f.duration_hrs);
         } else {
           patch.pay_rate = Number(f.pay_rate);
           patch.duration_hrs = Number(f.duration_hrs);
+          // Leaving a stale day_rate behind would keep driving the payout,
+          // which reads it in preference to the hourly figure.
+          patch.day_rate = null;
         }
         patch.event_date = f.event_date;
         patch.is_urgent = f.is_urgent;
@@ -431,14 +450,53 @@ export default function EditGigModal({
                 <Err k="location_text" />
               </div>
 
-              {isDayPriced ? (
+              {canChoosePricing && (
                 <div>
-                  <label className={label} htmlFor="edit-day-rate">Pay (₹/day)</label>
-                  <input id="edit-day-rate" type="number" min={1} className={input}
-                    value={f.day_rate ?? ""} onChange={(e) => set("day_rate", e.target.value === "" ? "" : Number(e.target.value))} />
-                  <Err k="day_rate" />
-                  <p className="text-[10px] font-medium text-white/40 mt-1">
-                    Hours come from the schedule. Edit a day's timings to change them.
+                  <span className={label}>How is this priced?</span>
+                  <div className="grid grid-cols-2 gap-2 mt-1.5">
+                    {([
+                      ["day", "Per day", "A flat rate for the shift"],
+                      ["hour", "Per hour", "Rate × hours worked"],
+                    ] as const).map(([v, text, hint]) => (
+                      <button
+                        key={v}
+                        type="button"
+                        onClick={() => set("price_mode", v)}
+                        aria-pressed={f.price_mode === v}
+                        className={`p-2.5 rounded-xl border text-left transition-colors btn-tap ${
+                          f.price_mode === v
+                            ? "bg-[#F4511E]/15 border-[#F4511E]/40"
+                            : "bg-[#1C1C1C] border-white/10 hover:border-white/20"
+                        }`}
+                      >
+                        <span className={`block text-xs font-black ${f.price_mode === v ? "text-[#F4511E]" : "text-white/70"}`}>{text}</span>
+                        <span className="block text-[10px] font-medium text-white/40 leading-tight mt-0.5">{hint}</span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {isDayPriced ? (
+                <div className={gig?.is_multi_day ? "" : "grid grid-cols-2 gap-3"}>
+                  <div>
+                    <label className={label} htmlFor="edit-day-rate">Pay (₹/day)</label>
+                    <input id="edit-day-rate" type="number" min={1} className={input}
+                      value={f.day_rate ?? ""} onChange={(e) => set("day_rate", e.target.value === "" ? "" : Number(e.target.value))} />
+                    <Err k="day_rate" />
+                  </div>
+                  {!gig?.is_multi_day && (
+                    <div>
+                      <label className={label} htmlFor="edit-hrs">Shift length (hrs)</label>
+                      <input id="edit-hrs" type="number" step="0.5" min={0.5} className={input}
+                        value={f.duration_hrs ?? ""} onChange={(e) => set("duration_hrs", e.target.value === "" ? "" : Number(e.target.value))} />
+                      <Err k="duration_hrs" />
+                    </div>
+                  )}
+                  <p className="text-[10px] font-medium text-white/40 mt-1 col-span-2">
+                    {gig?.is_multi_day
+                      ? "Hours come from the schedule. Edit a day's timings to change them."
+                      : "The length is only used for the check-in window — the pay is the flat day rate."}
                   </p>
                 </div>
               ) : (
@@ -475,13 +533,23 @@ export default function EditGigModal({
 
               {isDayPriced ? (
                 f.day_rate ? (
-                  <p className="text-[11px] font-bold text-white/40">
-                    ₹{Number(f.day_rate).toLocaleString("en-IN")} per day × {dayCount} days ={" "}
-                    <span className="text-[#F4511E] font-black">
-                      ₹{Math.round(Number(f.day_rate) * dayCount).toLocaleString("en-IN")}
-                    </span>{" "}
-                    per person
-                  </p>
+                  gig?.is_multi_day ? (
+                    <p className="text-[11px] font-bold text-white/40">
+                      ₹{Number(f.day_rate).toLocaleString("en-IN")} per day × {dayCount} days ={" "}
+                      <span className="text-[#F4511E] font-black">
+                        ₹{Math.round(Number(f.day_rate) * dayCount).toLocaleString("en-IN")}
+                      </span>{" "}
+                      per person
+                    </p>
+                  ) : (
+                    <p className="text-[11px] font-bold text-white/40">
+                      Each person earns{" "}
+                      <span className="text-[#F4511E] font-black">
+                        ₹{Math.round(Number(f.day_rate)).toLocaleString("en-IN")}
+                      </span>{" "}
+                      for the day
+                    </p>
+                  )
                 ) : null
               ) : f.pay_rate && f.duration_hrs ? (
                 <p className="text-[11px] font-bold text-white/40">
