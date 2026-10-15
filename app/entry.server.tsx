@@ -86,7 +86,14 @@ export default function handleRequest(
                 "connect-src 'self' https://*.supabase.co wss://*.supabase.co https://api.razorpay.com https://maps.googleapis.com https://maps.gstatic.com",
                 "media-src 'self' blob:",
                 "worker-src 'self' blob:",
-                "frame-src https://api.razorpay.com",
+                // Verification documents are previewed from signed Supabase
+                // Storage URLs. Images were fine because img-src allows any
+                // https host, but a PDF renders in an iframe and frame-src
+                // named only Razorpay — so every PDF document came up as
+                // "This content is blocked", including ones waiting to be
+                // reviewed. Same shape as the Maps bug: invisible on
+                // localhost, because this whole block is skipped in dev.
+                "frame-src 'self' blob: https://*.supabase.co https://api.razorpay.com",
                 "frame-ancestors 'none'",
               ].join("; ")
             );

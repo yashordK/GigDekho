@@ -3,7 +3,7 @@ import { useLoaderData, useRevalidator, useSearchParams } from "react-router";
 import type { LoaderFunctionArgs, ActionFunctionArgs } from "react-router";
 import { requireAdmin, logAdminAction } from "~/lib/admin.server";
 import { PageTitle, Card, Pill, EmptyState } from "~/components/AdminUI";
-import { FileCheck, CheckCircle2, XCircle, Eye, ShieldCheck } from "lucide-react";
+import { FileCheck, CheckCircle2, XCircle, Eye, ShieldCheck, ExternalLink } from "lucide-react";
 
 const DOC_LABELS: Record<string, string> = {
   aadhaar: "Aadhaar (ID)", student_id: "College ID",
@@ -195,6 +195,19 @@ export default function AdminVerifications() {
             ) : (
               <img src={preview} alt="Verification document" className="w-full rounded-xl" />
             )}
+
+            {/* An embedded view can still be refused by the browser itself —
+                Brave's shields and some extensions block cross-site frames
+                regardless of what the site allows. Reviewing a document is not
+                something that should dead-end, so there is always a way out. */}
+            <a
+              href={preview}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="mt-3 inline-flex items-center gap-1.5 text-[11px] font-black uppercase tracking-wider text-white/50 hover:text-white transition-colors"
+            >
+              <ExternalLink size={12} /> Open in a new tab
+            </a>
           </div>
         </div>
       )}
