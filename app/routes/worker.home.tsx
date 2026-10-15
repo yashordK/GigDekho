@@ -91,37 +91,62 @@ export default function HomeScreen() {
     setLoading(true);
     setError('');
     try {
-      const nowIso = new Date().toISOString();
       const startOfDay = new Date();
       startOfDay.setHours(0, 0, 0, 0);
+      const todayIso = `${startOfDay.getFullYear()}-${String(startOfDay.getMonth() + 1).padStart(2, "0")}-${String(startOfDay.getDate()).padStart(2, "0")}`;
 
       // Only the columns the feed actually renders. `select('*')` pulled every
       // column of every open gig — descriptions, coordinates, JD links — and
       // was the single slowest request on the page.
       const FEED_FIELDS = `
         id, title, role_type, custom_role, location_text, pay_rate, duration_hrs, day_rate, day_count,
-        event_date, is_urgent, slots_total, slots_filled, status, gig_type,
+        event_date, last_day_date, is_urgent, slots_total, slots_filled, status, gig_type,
         work_mode, commitment, duration_months, stipend_min, stipend_max,
         is_unpaid, application_deadline, cover_mode, cover_image_url
       `;
 
       // Run together rather than one after another — they don't depend on
       // each other, and awaiting in sequence made the page wait for the sum.
-      const [gigsRes, hiredRes] = await Promise.all([
+      // A gig that has filled up stays on the board rather than vanishing. An
+      // empty-looking board reads as a dead marketplace, and a full gig is the
+      // clearest evidence there is that this one is not.
+      //
+      // The cutoff is the LAST day, not the first: event_date is the start, so
+      // a multi-day gig used to disappear the morning after it began, while it
+      // was still running and still short of people.
+      const feedQuery = () =>
         supabase
           .from('gigs')
           .select(FEED_FIELDS)
-          .eq('status', 'open')
-          .gt('event_date', nowIso)
+          .in('status', ['open', 'filled'])
+          .gte('last_day_date', todayIso)
           .order('is_urgent', { ascending: false })
-          .order('event_date', { ascending: true }),
+          .order('event_date', { ascending: true });
+
+      const [gigsRes, hiredRes] = await Promise.all([
+        feedQuery(),
         supabase
           .from('applications')
           .select('id', { count: 'exact', head: true })
           .gte('applied_at', startOfDay.toISOString()),
       ]);
 
-      const { data: gigsData, error: fetchError } = gigsRes;
+      let { data: gigsData, error: fetchError } = gigsRes;
+
+      // last_day_date arrives with migration 029. A deploy and a migration do
+      // not land at the same instant, and an empty job board is a far worse
+      // outcome than one that briefly hides a running gig, so fall back to the
+      // old start-date cutoff until the column exists.
+      if (fetchError && /last_day_date/.test(fetchError.message ?? '')) {
+        const retry = await supabase
+          .from('gigs')
+          .select(FEED_FIELDS.replace(' last_day_date,', ''))
+          .in('status', ['open', 'filled'])
+          .gt('event_date', new Date().toISOString())
+          .order('is_urgent', { ascending: false })
+          .order('event_date', { ascending: true });
+        if (!retry.error) { gigsData = retry.data as unknown as typeof gigsData; fetchError = null; }
+      }
       const { count: hiredCount } = hiredRes;
       if (fetchError) throw fetchError;
       setGigs(gigsData || []);

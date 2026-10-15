@@ -15,7 +15,7 @@ function stipendText(gig) {
 }
 
 export default function GigCard({ gig, onClick }) {
-  const { title, role_type, custom_role, location_text, pay_rate, duration_hrs, event_date, is_urgent, slots_total, slots_filled } = gig;
+  const { title, role_type, custom_role, location_text, pay_rate, duration_hrs, event_date, is_urgent, slots_total, slots_filled, status } = gig;
 
   // ── Internship / job variant: text-forward, no hero image ──
   if (gig.gig_type === 'internship') {
@@ -75,6 +75,10 @@ export default function GigCard({ gig, onClick }) {
   // ── Event gig variant ──
   const totalEarning = pay_rate * duration_hrs;
   const remainingSpots = (slots_total || 0) - (slots_filled || 0);
+  // 'filled' is the hirer's own statement that they are done taking people,
+  // and it outranks the seat count — a gig can be closed to applicants while
+  // the raw numbers still look like there is room.
+  const isFull = status === 'filled' || remainingSpots <= 0;
   const dateFormatted = formatRelativeDate(event_date);
   const imageUrl = gigCoverUrl(gig, 400);
 
@@ -112,13 +116,19 @@ export default function GigCard({ gig, onClick }) {
             )}
          </div>
 
-         {remainingSpots > 0 && (
+         {isFull ? (
+           <div className={imageUrl
+             ? "absolute top-4 right-4 bg-black/70 backdrop-blur-sm text-white/80 text-[10px] font-black uppercase tracking-wider px-2.5 py-1 rounded-md border border-white/20"
+             : "inline-block bg-white/10 text-white/70 text-[10px] font-black uppercase tracking-wider px-2.5 py-1 rounded-md border border-white/15"}>
+             Seats full
+           </div>
+         ) : remainingSpots > 0 ? (
            <div className={imageUrl
              ? "absolute top-4 right-4 bg-black/60 backdrop-blur-sm text-white text-[10px] font-bold tracking-wider px-2.5 py-1 rounded-md border border-white/10"
              : "inline-block bg-white/5 text-white/60 text-[10px] font-bold tracking-wider px-2.5 py-1 rounded-md border border-white/10"}>
              {remainingSpots} spot{remainingSpots !== 1 ? 's' : ''} left
            </div>
-         )}
+         ) : null}
        </div>
 
        {/* Body Texts */}
@@ -141,7 +151,15 @@ export default function GigCard({ gig, onClick }) {
        </div>
 
        {/* Full Width Apply Button */}
-       {is_urgent ? (
+       {isFull ? (
+         <button
+            type="button"
+            onClick={(e) => { e.stopPropagation(); onClick(); }}
+            className="w-full bg-white/5 border-2 border-white/10 text-white/50 font-black py-3 rounded-2xl text-[14px] transition-colors btn-tap"
+         >
+           Seats full · View details
+         </button>
+       ) : is_urgent ? (
          <button
             type="button"
             onClick={(e) => { e.stopPropagation(); onClick(); }}
