@@ -25,6 +25,19 @@ const COMMITMENTS = [
 
 const toDateInput = (v: string | null) => (v ? String(v).slice(0, 10) : "");
 
+/**
+ * Combine the date the hirer picked with the time the gig actually starts.
+ * IST has no DST, so the offset can be written into the literal rather than
+ * relying on the browser's zone, which would differ for anyone not in India.
+ */
+function buildEventDate(date: string, firstStart: string | null, previous?: string | null) {
+  if (!date) return previous ?? null;
+  const time = firstStart
+    ?? (previous ? new Date(previous).toLocaleTimeString("en-GB", { timeZone: "Asia/Kolkata", hour12: false }) : null)
+    ?? "10:00:00";
+  return new Date(`${date}T${time.slice(0, 8)}+05:30`).toISOString();
+}
+
 export default function EditGigModal({
   isOpen,
   onClose,
@@ -48,6 +61,9 @@ export default function EditGigModal({
   // The gender split as it currently stands on the gig's days. Read from the
   // days rather than the gig, because that is where capacity is enforced.
   const [splitLoaded, setSplitLoaded] = useState(false);
+  // Day one's start time. The date field is date-only, so without this the
+  // time of day is lost every time anything on the gig is edited.
+  const [firstStart, setFirstStart] = useState<string | null>(null);
   // A multi-day gig is priced per day; its hourly rate and total hours both
   // come from the schedule, so neither is editable here.
   // A multi-day gig is always priced per day — its hourly rate is only a
@@ -106,10 +122,11 @@ export default function EditGigModal({
     if (!isOpen || !gig?.id || gig?.gig_type === "internship") { setSplitLoaded(false); return; }
     let cancelled = false;
     supabase.from("gig_days")
-      .select("slots_male, slots_female").eq("gig_id", gig.id).order("day_number").limit(1)
+      .select("slots_male, slots_female, starts_at").eq("gig_id", gig.id).order("day_number").limit(1)
       .then(({ data }) => {
         if (cancelled) return;
         const d = data?.[0];
+        setFirstStart(d?.starts_at ?? null);
         const on = d?.slots_male != null || d?.slots_female != null;
         setF((prev: any) => ({
           ...prev,
@@ -237,7 +254,12 @@ export default function EditGigModal({
           // which reads it in preference to the hourly figure.
           patch.day_rate = null;
         }
-        patch.event_date = f.event_date;
+        // <input type="date"> yields a bare yyyy-mm-dd, and writing that
+        // straight through stored midnight UTC — 5:30am in Indore. Four live
+        // gigs were sitting at 5:30am as a result, which is also the hour
+        // their reminder emails were counting back from. The clock comes from
+        // day one of the schedule; the hirer edits a day's timings to move it.
+        patch.event_date = buildEventDate(f.event_date, firstStart, gig.event_date);
         patch.is_urgent = f.is_urgent;
         patch.location_text = f.location_text.trim();
         if (gig.is_multi_day) {
