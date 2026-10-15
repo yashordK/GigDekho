@@ -6,6 +6,7 @@ import { PageTitle, Card, Pill, EmptyState } from "~/components/AdminUI";
 import { Briefcase, Search, ExternalLink, XCircle, CheckCircle2, GraduationCap, Users, Pencil } from "lucide-react";
 import EditGigModal from "~/components/EditGigModal";
 import Toast from "~/components/Toast";
+import { gigTotalPay } from "~/lib/utils";
 
 export async function loader({ request }: LoaderFunctionArgs) {
   const { admin } = await requireAdmin(request);
@@ -16,7 +17,7 @@ export async function loader({ request }: LoaderFunctionArgs) {
 
   let query = admin
     .from("gigs")
-    .select("id, title, description, gig_type, status, event_date, created_at, location_text, slots_total, slots_filled, pay_rate, duration_hrs, is_urgent, role_type, custom_role, work_mode, commitment, duration_months, stipend_min, stipend_max, is_unpaid, jd_url, preferences, application_deadline, organizer_id, profiles!gigs_organizer_id_fkey(full_name, company_name, is_managed)")
+    .select("id, title, description, gig_type, status, event_date, created_at, location_text, slots_total, slots_filled, pay_rate, duration_hrs, day_rate, day_count, is_multi_day, is_urgent, role_type, custom_role, work_mode, commitment, duration_months, stipend_min, stipend_max, is_unpaid, jd_url, preferences, application_deadline, organizer_id, profiles!gigs_organizer_id_fkey(full_name, company_name, is_managed)")
     .order("created_at", { ascending: false })
     .limit(80);
 
@@ -157,7 +158,14 @@ export default function AdminGigs() {
                     </p>
                     <p className="text-[11px] font-semibold text-white/30 mt-0.5 flex items-center gap-3">
                       <Link to={`/admin/gigs/${g.id}`} className="flex items-center gap-1 hover:text-[#F4511E] transition-colors underline decoration-white/20 underline-offset-4"><Users size={10} /> {applied[g.id] ?? 0} applied</Link>
-                      {!isIntern && <span>{g.slots_filled}/{g.slots_total} filled · ₹{g.pay_rate}/hr</span>}
+                      {!isIntern && (
+                        <span>
+                          {g.slots_filled}/{g.slots_total} filled ·{" "}
+                          {g.day_rate != null
+                            ? `₹${g.day_rate}/day × ${Math.max(g.day_count ?? 1, 1)} = ₹${gigTotalPay(g).toLocaleString("en-IN")}`
+                            : `₹${g.pay_rate}/hr · ₹${gigTotalPay(g).toLocaleString("en-IN")}`}
+                        </span>
+                      )}
                       {isIntern && <span>{g.is_unpaid ? "Unpaid" : g.stipend_min ? `₹${g.stipend_min}/mo` : "—"}</span>}
                     </p>
                   </div>

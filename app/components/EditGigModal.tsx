@@ -64,13 +64,25 @@ export default function EditGigModal({
   // Day one's start time. The date field is date-only, so without this the
   // time of day is lost every time anything on the gig is edited.
   const [firstStart, setFirstStart] = useState<string | null>(null);
+  /**
+   * The pricing fields, read from the database rather than taken from the row
+   * the caller passed in. Callers select different columns — the admin gigs
+   * page asks for neither day_rate nor day_count — and this modal used to read
+   * whatever it was handed. A missing day_rate looked like "priced by the
+   * hour", so saving wrote day_rate = null and destroyed the per-day price; a
+   * missing day_count made the multiplier 1, so a three-day gig was repriced
+   * at one day's pay. Both happened to live gigs.
+   */
+  const [pricing, setPricing] = useState<{ day_rate: number | null; day_count: number; duration_hrs: number } | null>(null);
   // A multi-day gig is priced per day; its hourly rate and total hours both
   // come from the schedule, so neither is editable here.
   // A multi-day gig is always priced per day — its hourly rate is only a
   // derived mirror. A single-day gig can be either, because "Rs 800 for the
   // day" is how most of this work is actually agreed, and making someone
   // divide that by the hours to post it is pointless arithmetic.
-  const isDayPriced = Boolean(gig?.is_multi_day) ? dayCount > 0 : f.price_mode === "day";
+  // A multi-day gig is always priced per day. For a single-day gig it is the
+  // hirer's choice, seeded from whether a day rate actually exists on the row.
+  const isDayPriced = Boolean(gig?.is_multi_day) || f.price_mode === "day";
   const canChoosePricing = !gig?.is_multi_day && gig?.gig_type !== "internship";
 
   useEffect(() => {
@@ -107,6 +119,26 @@ export default function EditGigModal({
       slots_female: "",
     });
   }, [isOpen, gig]);
+
+  useEffect(() => {
+    if (!isOpen || !gig?.id) { setPricing(null); return; }
+    let cancelled = false;
+    supabase.from("gigs").select("day_rate, day_count, duration_hrs").eq("id", gig.id).maybeSingle()
+      .then(({ data }) => {
+        if (cancelled || !data) return;
+        setPricing({
+          day_rate: data.day_rate ?? null,
+          day_count: Math.max(Number(data.day_count) || 1, 1),
+          duration_hrs: Number(data.duration_hrs) || 0,
+        });
+        setF((prev: any) => ({
+          ...prev,
+          day_rate: data.day_rate ?? "",
+          price_mode: data.day_rate != null ? "day" : "hour",
+        }));
+      });
+    return () => { cancelled = true; };
+  }, [isOpen, gig?.id]);
 
   useEffect(() => {
     if (!isOpen || !gig?.id || !gig?.is_multi_day) { setDayCount(0); return; }
@@ -201,6 +233,10 @@ export default function EditGigModal({
 
   const save = async () => {
     if (!validate()) return;
+    if (gig?.gig_type !== "internship" && !pricing) {
+      showToast("Still loading this gig's pricing — try again in a moment.", "error");
+      return;
+    }
     setSaving(true);
     try {
       const patch: any = {
@@ -241,8 +277,8 @@ export default function EditGigModal({
           // is true even before this modal has finished counting them. Reading
           // the count from component state is what once saved a three-day gig
           // priced for one day.
-          const hrs = Number(gig.duration_hrs) || 0;
-          const days = Math.max(Number(gig.day_count) || dayCount || 1, 1);
+          const hrs = pricing?.duration_hrs || Number(gig.duration_hrs) || 0;
+          const days = Math.max(pricing?.day_count ?? Number(gig.day_count) ?? dayCount ?? 1, 1);
           patch.day_rate = Number(f.day_rate);
           patch.pay_rate = hrs > 0
             ? Math.round((Number(f.day_rate) * days / hrs) * 100) / 100
@@ -549,9 +585,9 @@ export default function EditGigModal({
                 f.day_rate ? (
                   gig?.is_multi_day ? (
                     <p className="text-[11px] font-bold text-white/40">
-                      ₹{Number(f.day_rate).toLocaleString("en-IN")} per day × {gig.day_count ?? dayCount} days ={" "}
+                      ₹{Number(f.day_rate).toLocaleString("en-IN")} per day × {pricing?.day_count ?? dayCount} days ={" "}
                       <span className="text-[#F4511E] font-black">
-                        ₹{Math.round(Number(f.day_rate) * (gig.day_count ?? dayCount)).toLocaleString("en-IN")}
+                        ₹{Math.round(Number(f.day_rate) * (pricing?.day_count ?? dayCount ?? 1)).toLocaleString("en-IN")}
                       </span>{" "}
                       per person
                     </p>

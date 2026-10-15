@@ -1,5 +1,5 @@
 import { Clock, Calendar, Zap, MapPin, GraduationCap, Hourglass, Briefcase } from 'lucide-react';
-import { formatRelativeDate } from '~/lib/utils';
+import { formatRelativeDate, gigTotalPay } from '~/lib/utils';
 import { gigCoverUrl } from '~/lib/cover';
 
 const WORK_MODE = { onsite: 'On-site', hybrid: 'Hybrid', remote: 'Remote' };
@@ -15,7 +15,7 @@ function stipendText(gig) {
 }
 
 export default function GigCard({ gig, onClick }) {
-  const { title, role_type, custom_role, location_text, pay_rate, duration_hrs, event_date, is_urgent, slots_total, slots_filled, status } = gig;
+  const { title, role_type, custom_role, location_text, duration_hrs, event_date, is_urgent, slots_total, slots_filled, status } = gig;
 
   // ── Internship / job variant: text-forward, no hero image ──
   if (gig.gig_type === 'internship') {
@@ -73,7 +73,10 @@ export default function GigCard({ gig, onClick }) {
   }
 
   // ── Event gig variant ──
-  const totalEarning = pay_rate * duration_hrs;
+  // Through the shared helper, so a gig priced per day shows the whole run
+  // rather than one day of it. Doing the multiplication here is how this card
+  // ended up advertising a single day's pay for a three-day event.
+  const totalEarning = gigTotalPay(gig);
   const remainingSpots = (slots_total || 0) - (slots_filled || 0);
   // 'filled' is the hirer's own statement that they are done taking people,
   // and it outranks the seat count — a gig can be closed to applicants while
