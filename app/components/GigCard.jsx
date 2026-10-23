@@ -14,8 +14,9 @@ function stipendText(gig) {
   return `₹${gig.stipend_min.toLocaleString('en-IN')}`;
 }
 
-export default function GigCard({ gig, onClick }) {
-  const { title, role_type, custom_role, location_text, duration_hrs, event_date, is_urgent, slots_total, slots_filled, status } = gig;
+export default function GigCard({ gig, onClick, isPast = false }) {
+  const { title, role_type, custom_role, location_text, event_date, is_urgent, slots_total, slots_filled, status } = gig;
+  const dayCount = Math.max(Number(gig.day_count) || 1, 1);
 
   // ── Internship / job variant: text-forward, no hero image ──
   if (gig.gig_type === 'internship') {
@@ -82,6 +83,10 @@ export default function GigCard({ gig, onClick }) {
   // and it outranks the seat count — a gig can be closed to applicants while
   // the raw numbers still look like there is room.
   const isFull = status === 'filled' || remainingSpots <= 0;
+  // A finished gig that nobody worked was closed, not completed. Saying
+  // "Completed" over an empty roster would be a claim about work that never
+  // happened.
+  const pastLabel = status === 'completed' || (slots_filled || 0) > 0 ? 'Completed' : 'Closed';
   const dateFormatted = formatRelativeDate(event_date);
   const imageUrl = gigCoverUrl(gig, 400);
 
@@ -107,19 +112,25 @@ export default function GigCard({ gig, onClick }) {
          )}
 
          <div className={imageUrl ? "absolute top-4 left-4 flex gap-2" : "flex gap-2 flex-wrap"}>
-            {is_urgent && (
+            {is_urgent && !isPast && (
               <span className="bg-[#F4511E] text-white text-[10px] font-black uppercase tracking-widest px-3 py-1.5 rounded-full shadow-lg flex items-center">
                  <Zap size={10} className="mr-1" fill="currentColor"/> URGENT
               </span>
             )}
-            {!is_urgent && role_type && (
+            {(!is_urgent || isPast) && role_type && (
                <span className="bg-white/10 backdrop-blur-md text-white text-[10px] font-black uppercase tracking-widest px-3 py-1.5 rounded-full shadow-sm border border-white/20">
                  {role_type}
                </span>
             )}
          </div>
 
-         {isFull ? (
+         {isPast ? (
+           <div className={imageUrl
+             ? "absolute top-4 right-4 bg-black/70 backdrop-blur-sm text-white/70 text-[10px] font-black uppercase tracking-wider px-2.5 py-1 rounded-md border border-white/20"
+             : "inline-block bg-white/10 text-white/60 text-[10px] font-black uppercase tracking-wider px-2.5 py-1 rounded-md border border-white/15"}>
+             {pastLabel}
+           </div>
+         ) : isFull ? (
            <div className={imageUrl
              ? "absolute top-4 right-4 bg-black/70 backdrop-blur-sm text-white/80 text-[10px] font-black uppercase tracking-wider px-2.5 py-1 rounded-md border border-white/20"
              : "inline-block bg-white/10 text-white/70 text-[10px] font-black uppercase tracking-wider px-2.5 py-1 rounded-md border border-white/15"}>
@@ -147,14 +158,29 @@ export default function GigCard({ gig, onClick }) {
 
           <MapPin size={12} className="mr-1 shrink-0 lg:ml-0 md:ml-0 sm:ml-0" />
           <span className="mr-2 truncate max-w-[120px]">{location_text}</span>
-          <span className="mr-2 text-white/20">•</span>
 
-          <Clock size={12} className="mr-1 shrink-0" />
-          <span>{duration_hrs}h</span>
+          {/* Days, not hours. A total like "89.76h" is arithmetic nobody
+              asked for — it describes a twelve-day run as one number that
+              matches no shift anyone works. */}
+          {dayCount > 1 && (
+            <>
+              <span className="mr-2 text-white/20">•</span>
+              <Clock size={12} className="mr-1 shrink-0" />
+              <span>{dayCount} days</span>
+            </>
+          )}
        </div>
 
        {/* Full Width Apply Button */}
-       {isFull ? (
+       {isPast ? (
+         <button
+            type="button"
+            onClick={(e) => { e.stopPropagation(); onClick(); }}
+            className="w-full bg-white/5 border-2 border-white/10 text-white/40 font-black py-3 rounded-2xl text-[14px] transition-colors btn-tap"
+         >
+           {pastLabel} · View details
+         </button>
+       ) : isFull ? (
          <button
             type="button"
             onClick={(e) => { e.stopPropagation(); onClick(); }}

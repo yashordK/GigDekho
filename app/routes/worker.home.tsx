@@ -43,6 +43,10 @@ function levelFor(completed: number) {
 
 export default function HomeScreen() {
   const [gigs, setGigs] = useState<any[]>([]);
+  // Gigs that have already run. Kept in their own list, never merged into
+  // `gigs`, because every stat on this page is derived from that one — and
+  // "you could earn X today" must only ever count work still open.
+  const [pastGigs, setPastGigs] = useState<any[]>([]);
   const [trendingGigs, setTrendingGigs] = useState<any[]>([]);
   const [stats, setStats] = useState({ live: 0, topPay: 0, hiredToday: 0, sumToday: 0 });
   const [myApps, setMyApps] = useState<any[]>([]);
@@ -123,13 +127,29 @@ export default function HomeScreen() {
           .order('is_urgent', { ascending: false })
           .order('event_date', { ascending: true });
 
-      const [gigsRes, hiredRes] = await Promise.all([
+      // Work that has already happened. Shown so the board reflects that this
+      // is a going concern — on a quiet week the live feed can be a single
+      // gig, which reads as a dead marketplace rather than a calendar gap.
+      const pastQuery = () =>
+        supabase
+          .from('gigs')
+          .select(FEED_FIELDS)
+          .in('status', ['open', 'filled', 'completed'])
+          .lt('last_day_date', todayIso)
+          .order('last_day_date', { ascending: false })
+          .limit(12);
+
+      const [gigsRes, hiredRes, pastRes] = await Promise.all([
         feedQuery(),
         supabase
           .from('applications')
           .select('id', { count: 'exact', head: true })
           .gte('applied_at', startOfDay.toISOString()),
+        pastQuery(),
       ]);
+
+      // Same column as the feed, so it degrades the same way before 029.
+      if (!pastRes.error) setPastGigs(pastRes.data ?? []);
 
       let { data: gigsData, error: fetchError } = gigsRes;
 
@@ -197,6 +217,15 @@ export default function HomeScreen() {
     else sorted.sort((a, b) => Number(b.is_urgent) - Number(a.is_urgent) || new Date(a.event_date).getTime() - new Date(b.event_date).getTime());
     return sorted;
   }, [gigs, selectedRole, sortBy, feedTab]);
+
+  const filteredPast = useMemo(() => {
+    let list = pastGigs;
+    if (feedTab !== 'all') list = list.filter(g => (g.gig_type ?? 'event') === feedTab);
+    if (selectedRole !== 'All Roles') {
+      list = list.filter(g => g.role_type?.toLowerCase().includes(selectedRole.toLowerCase()));
+    }
+    return list;
+  }, [pastGigs, feedTab, selectedRole]);
 
   const internshipCount = gigs.filter(g => g.gig_type === 'internship').length;
   const eventCount = gigs.length - internshipCount;
@@ -479,6 +508,33 @@ export default function HomeScreen() {
                   onClick={() => navigate(`/gigs/${gig.id}`)}
                 />
               ))}
+            </div>
+          )}
+
+          {/* Already happened. Below the live gigs and visibly separate, so
+              nobody reads a finished event as something they can still take. */}
+          {!loading && filteredPast.length > 0 && (
+            <div className="mt-12">
+              <div className="flex items-baseline justify-between mb-4 px-1">
+                <h2 className="text-lg font-black text-white">Recently on GigDekho</h2>
+                <span className="text-[11px] font-bold text-white/35">
+                  {filteredPast.length} finished {filteredPast.length === 1 ? 'gig' : 'gigs'}
+                </span>
+              </div>
+              <p className="text-[12px] font-medium text-white/40 mb-4 px-1 leading-relaxed">
+                Work that has already run. Listed so you can see the kind of gigs and pay
+                that come up — these are closed and can't be applied to.
+              </p>
+              <div className="space-y-4 md:grid md:grid-cols-2 md:gap-5 md:space-y-0 lg:grid-cols-2 opacity-80">
+                {filteredPast.map(gig => (
+                  <GigCard
+                    key={gig.id}
+                    gig={gig}
+                    isPast
+                    onClick={() => navigate(`/gigs/${gig.id}`)}
+                  />
+                ))}
+              </div>
             </div>
           )}
         </section>
