@@ -148,10 +148,21 @@ export default function HomeScreen() {
         pastQuery(),
       ]);
 
-      // Same columns as the feed. If either is missing because a migration
-      // has not run yet, the past section simply stays empty rather than
-      // taking the live board down with it.
-      if (!pastRes.error) setPastGigs(pastRes.data ?? []);
+      // Same columns as the feed, and the same retry: a deploy and a migration
+      // do not land together, and letting the section fall silent in the gap
+      // would hide the finished gigs it exists to show.
+      if (!pastRes.error) {
+        setPastGigs(pastRes.data ?? []);
+      } else if (/last_day_date|training_day_count/.test(pastRes.error.message ?? '')) {
+        const retry = await supabase
+          .from('gigs')
+          .select(FEED_FIELDS.replace(' last_day_date,', '').replace(' training_day_count,', ''))
+          .in('status', ['open', 'filled', 'completed'])
+          .lt('event_date', new Date().toISOString())
+          .order('event_date', { ascending: false })
+          .limit(12);
+        if (!retry.error) setPastGigs((retry.data ?? []) as any[]);
+      }
 
       let { data: gigsData, error: fetchError } = gigsRes;
 

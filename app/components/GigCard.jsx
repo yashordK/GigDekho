@@ -7,11 +7,15 @@ const COMMITMENT = { full_time: 'Full-time', part_time: 'Part-time' };
 
 function stipendText(gig) {
   if (gig.is_unpaid) return 'Unpaid';
-  if (gig.stipend_min == null) return 'Stipend TBD';
-  if (gig.stipend_max && gig.stipend_max > gig.stipend_min) {
-    return `₹${gig.stipend_min.toLocaleString('en-IN')}–${gig.stipend_max.toLocaleString('en-IN')}`;
+  const min = gig.stipend_min, max = gig.stipend_max;
+  if (min == null && max == null) return 'Stipend TBD';
+  if (min != null && max != null && max > min) {
+    return `₹${min.toLocaleString('en-IN')}–${max.toLocaleString('en-IN')}`;
   }
-  return `₹${gig.stipend_min.toLocaleString('en-IN')}`;
+  // Only one figure worth showing — a listing that filled in just the top of
+  // its range should advertise that, not fall back to "TBD".
+  const single = Math.max(min ?? 0, max ?? 0);
+  return `₹${single.toLocaleString('en-IN')}`;
 }
 
 export default function GigCard({ gig, onClick, isPast = false }) {
@@ -25,7 +29,8 @@ export default function GigCard({ gig, onClick, isPast = false }) {
 
   // ── Internship / job variant: text-forward, no hero image ──
   if (gig.gig_type === 'internship') {
-    const deadlineSoon = gig.application_deadline
+    const closedLabel = status === 'completed' ? 'Completed' : 'Closed';
+    const deadlineSoon = !isPast && gig.application_deadline
       && new Date(gig.application_deadline) > new Date()
       && (new Date(gig.application_deadline) - Date.now()) < 5 * 24 * 3600000;
 
@@ -38,6 +43,11 @@ export default function GigCard({ gig, onClick, isPast = false }) {
           <span className="bg-blue-500/10 text-blue-400 border border-blue-500/25 text-[10px] font-black uppercase tracking-widest px-3 py-1.5 rounded-full flex items-center gap-1">
             <GraduationCap size={11} /> Internship
           </span>
+          {isPast && (
+            <span className="bg-white/10 text-white/60 border border-white/15 text-[10px] font-black uppercase tracking-widest px-3 py-1.5 rounded-full">
+              {closedLabel}
+            </span>
+          )}
           {deadlineSoon && (
             <span className="bg-[#F4511E]/15 text-[#F4511E] border border-[#F4511E]/25 text-[10px] font-black uppercase tracking-widest px-3 py-1.5 rounded-full">
               Closes {new Date(gig.application_deadline).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}
@@ -70,9 +80,13 @@ export default function GigCard({ gig, onClick, isPast = false }) {
         <button
           type="button"
           onClick={(e) => { e.stopPropagation(); onClick(); }}
-          className="w-full bg-[#F4511E] hover:bg-[#D84315] text-white font-black py-3.5 rounded-2xl text-[14px] transition-colors shadow-sm btn-tap mt-auto"
+          className={`w-full font-black py-3.5 rounded-2xl text-[14px] transition-colors btn-tap mt-auto ${
+            isPast
+              ? 'bg-white/5 border-2 border-white/10 text-white/40'
+              : 'bg-[#F4511E] hover:bg-[#D84315] text-white shadow-sm'
+          }`}
         >
-          View & Apply
+          {isPast ? `${closedLabel} · View details` : 'View & Apply'}
         </button>
       </div>
     );
