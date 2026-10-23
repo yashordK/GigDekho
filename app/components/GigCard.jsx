@@ -16,7 +16,12 @@ function stipendText(gig) {
 
 export default function GigCard({ gig, onClick, isPast = false }) {
   const { title, role_type, custom_role, location_text, event_date, is_urgent, slots_total, slots_filled, status } = gig;
+  // Working days, not calendar days: a one-hour briefing is not a shift, and
+  // counting it makes the run look longer than what someone is signing up to.
+  // Pay still follows day_count, so the agreed total is unaffected.
   const dayCount = Math.max(Number(gig.day_count) || 1, 1);
+  const workingDays = Math.max(dayCount - (Number(gig.training_day_count) || 0), 1);
+  const trainingDays = Number(gig.training_day_count) || 0;
 
   // ── Internship / job variant: text-forward, no hero image ──
   if (gig.gig_type === 'internship') {
@@ -166,7 +171,12 @@ export default function GigCard({ gig, onClick, isPast = false }) {
             <>
               <span className="mr-2 text-white/20">•</span>
               <Clock size={12} className="mr-1 shrink-0" />
-              <span>{dayCount} days</span>
+              <span>
+                {workingDays} days
+                {trainingDays > 0 && (
+                  <span className="text-white/30"> + {trainingDays} training</span>
+                )}
+              </span>
             </>
           )}
        </div>

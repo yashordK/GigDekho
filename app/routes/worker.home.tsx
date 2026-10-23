@@ -104,7 +104,7 @@ export default function HomeScreen() {
       // was the single slowest request on the page.
       const FEED_FIELDS = `
         id, title, role_type, custom_role, location_text, pay_rate, duration_hrs, day_rate, day_count,
-        event_date, last_day_date, is_urgent, slots_total, slots_filled, status, gig_type,
+        event_date, last_day_date, is_urgent, slots_total, slots_filled, status, gig_type, training_day_count,
         work_mode, commitment, duration_months, stipend_min, stipend_max,
         is_unpaid, application_deadline, cover_mode, cover_image_url
       `;
@@ -148,7 +148,9 @@ export default function HomeScreen() {
         pastQuery(),
       ]);
 
-      // Same column as the feed, so it degrades the same way before 029.
+      // Same columns as the feed. If either is missing because a migration
+      // has not run yet, the past section simply stays empty rather than
+      // taking the live board down with it.
       if (!pastRes.error) setPastGigs(pastRes.data ?? []);
 
       let { data: gigsData, error: fetchError } = gigsRes;
@@ -157,10 +159,10 @@ export default function HomeScreen() {
       // not land at the same instant, and an empty job board is a far worse
       // outcome than one that briefly hides a running gig, so fall back to the
       // old start-date cutoff until the column exists.
-      if (fetchError && /last_day_date/.test(fetchError.message ?? '')) {
+      if (fetchError && /last_day_date|training_day_count/.test(fetchError.message ?? '')) {
         const retry = await supabase
           .from('gigs')
-          .select(FEED_FIELDS.replace(' last_day_date,', ''))
+          .select(FEED_FIELDS.replace(' last_day_date,', '').replace(' training_day_count,', ''))
           .in('status', ['open', 'filled'])
           .gt('event_date', new Date().toISOString())
           .order('is_urgent', { ascending: false })
